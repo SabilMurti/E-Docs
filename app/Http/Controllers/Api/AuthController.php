@@ -88,10 +88,10 @@ class AuthController extends Controller
             // Check if user exists with this GitHub ID
             $user = User::where('github_id', $githubUser->getId())->first();
 
-            if (!$user) {
+            if (! $user) {
                 // Check if email exists (link accounts)
                 $user = User::where('email', $githubUser->getEmail())->first();
-                
+
                 if ($user) {
                     // Link GitHub to existing account
                     $user->update([
@@ -142,7 +142,7 @@ class AuthController extends Controller
     {
         $json = json_encode($data);
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
-        
+
         $html = <<<HTML
 <!DOCTYPE html>
 <html>
@@ -185,6 +185,7 @@ class AuthController extends Controller
         (function() {
             const data = {$json};
             const frontendUrl = '{$frontendUrl}';
+            const targetOrigin = frontendUrl;
             
             // Strategy 1: Try postMessage to opener (may be blocked by COOP)
             let messageSent = false;
@@ -221,7 +222,7 @@ class AuthController extends Controller
 </html>
 HTML;
 
-        return response($html)->header('Content-Type', 'text/html');
+        return response($html)->header('Content-Type', 'text/html')->header('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'");
     }
 
     /**

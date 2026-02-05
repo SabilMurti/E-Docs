@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Page extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'space_id',
@@ -124,11 +125,12 @@ class Page extends Model
      */
     public function getExcerptAttribute(): string
     {
-        if (!$this->content) {
+        if (! $this->content) {
             return '';
         }
 
         $text = $this->extractTextFromContent($this->content);
+
         return Str::limit($text, 150);
     }
 
@@ -142,7 +144,7 @@ class Page extends Model
         if (isset($content['content'])) {
             foreach ($content['content'] as $node) {
                 if (isset($node['text'])) {
-                    $text .= $node['text'] . ' ';
+                    $text .= $node['text'].' ';
                 }
                 if (isset($node['content'])) {
                     $text .= $this->extractTextFromContent($node);
