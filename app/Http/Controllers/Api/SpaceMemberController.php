@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Mail;
 class SpaceMemberController extends Controller
 {
     /**
-     * List members of a space
+     * List members of a space (including owner)
      */
     public function index(Request $request, Space $space)
     {
@@ -23,12 +23,28 @@ class SpaceMemberController extends Controller
             abort(403);
         }
 
+        // Get actual members
         $members = $space->memberships()
             ->with('user:id,name,email,avatar_url')
             ->orderBy('created_at')
             ->get();
 
-        return SpaceMemberResource::collection($members);
+        // Add owner as first "member" with owner role
+        $owner = $space->owner;
+        $ownerMember = new SpaceMember([
+            'id' => 'owner-' . $owner->id,
+            'space_id' => $space->id,
+            'user_id' => $owner->id,
+            'email' => $owner->email,
+            'role' => 'owner',
+            'status' => 'accepted',
+        ]);
+        $ownerMember->setRelation('user', $owner);
+        
+        // Prepend owner to the collection
+        $allMembers = collect([$ownerMember])->concat($members);
+
+        return SpaceMemberResource::collection($allMembers);
     }
 
     /**
@@ -55,17 +71,20 @@ class SpaceMemberController extends Controller
         // Check if user exists in system
         $existingUser = User::where('email', $email)->first();
 
+        // If user exists, directly add them as accepted member
+        // Otherwise, create pending invite
         $member = $space->memberships()->create([
             'user_id' => $existingUser?->id,
             'email' => $email,
             'role' => $validated['role'],
-            'status' => 'pending',
+            'status' => $existingUser ? 'accepted' : 'pending',
+            'accepted_at' => $existingUser ? now() : null,
         ]);
 
-        // Send email
-        Mail::to($email)->send(new \App\Mail\SpaceInvitationMail($space, $member));
+        // TODO: Send invitation email for pending invites
+        // Mail::to($email)->send(new \App\Mail\SpaceInvitationMail($space, $member));
 
-        return new SpaceMemberResource($member);
+        return new SpaceMemberResource($member->load('user'));
     }
 
     /**

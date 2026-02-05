@@ -111,6 +111,8 @@ class PageController extends Controller
         $validated['updated_by'] = $request->user()->id;
 
         $page->update($validated);
+        
+        $page->load('updater');
 
         return new PageResource($page);
     }
