@@ -28,6 +28,8 @@ class AuthController extends Controller
      */
     public function handleGoogleCallback()
     {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
 
@@ -43,21 +45,20 @@ class AuthController extends Controller
             // Create token
             $token = $user->createToken('auth-token')->plainTextToken;
 
-            return $this->postMessageResponse([
-                'type' => 'oauth-success',
+            // Redirect to frontend with token
+            $params = http_build_query([
                 'token' => $token,
-                'user' => [
+                'user' => json_encode([
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'avatar_url' => $user->avatar_url,
-                ],
+                ]),
             ]);
+
+            return redirect($frontendUrl . '/auth/callback?' . $params);
         } catch (\Exception $e) {
-            return $this->postMessageResponse([
-                'type' => 'oauth-error',
-                'error' => $e->getMessage(),
-            ]);
+            return redirect($frontendUrl . '/login?error=' . urlencode($e->getMessage()));
         }
     }
 
@@ -79,6 +80,8 @@ class AuthController extends Controller
      */
     public function handleGithubCallback()
     {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        
         try {
             $githubUser = Socialite::driver('github')->stateless()->user();
 
@@ -114,24 +117,27 @@ class AuthController extends Controller
             // Create token
             $token = $user->createToken('auth-token')->plainTextToken;
 
-            return $this->postMessageResponse([
-                'type' => 'oauth-success',
+            // Redirect to frontend with token
+            $params = http_build_query([
                 'token' => $token,
-                'user' => [
+                'user' => json_encode([
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'avatar_url' => $user->avatar_url,
-                ],
+                ]),
             ]);
+
+            return redirect($frontendUrl . '/auth/callback?' . $params);
         } catch (\Exception $e) {
-            return $this->postMessageResponse([
-                'type' => 'oauth-error',
-                'error' => $e->getMessage(),
-            ]);
+            return redirect($frontendUrl . '/login?error=' . urlencode($e->getMessage()));
         }
     }
 
+    /**
+     * Return HTML page that sends data via postMessage to opener window
+     * With fallback to redirect if postMessage is blocked by COOP
+     */
     private function postMessageResponse(array $data)
     {
         $json = json_encode($data);
@@ -181,23 +187,35 @@ class AuthController extends Controller
             const frontendUrl = '{$frontendUrl}';
             const targetOrigin = frontendUrl;
             
-            // Send to opener window (popup mode)
-            if (window.opener) {
-                window.opener.postMessage(data, targetOrigin);
-                window.close();
-            } 
-            // Fallback: send to parent (iframe mode)
-            else if (window.parent !== window) {
-                window.parent.postMessage(data, targetOrigin);
-            }
-            // No opener - redirect to frontend with token in hash
-            else {
-                if (data.type === 'oauth-success') {
-                    window.location.href = frontendUrl + '/login/callback#token=' + data.token;
-                } else {
-                    window.location.href = frontendUrl + '/login#error=' + encodeURIComponent(data.error);
+            // Strategy 1: Try postMessage to opener (may be blocked by COOP)
+            let messageSent = false;
+            try {
+                if (window.opener && !window.opener.closed) {
+                    window.opener.postMessage(data, frontendUrl);
+                    messageSent = true;
+                    // Try to close, but may fail due to COOP
+                    setTimeout(() => {
+                        try { window.close(); } catch(e) {}
+                    }, 100);
                 }
+            } catch (e) {
+                console.log('postMessage failed:', e);
             }
+            
+            // Strategy 2: Always redirect after short delay
+            // This ensures login works even if postMessage fails
+            setTimeout(() => {
+                if (data.type === 'oauth-success') {
+                    // Redirect to frontend with token
+                    const params = new URLSearchParams({
+                        token: data.token,
+                        user: JSON.stringify(data.user)
+                    });
+                    window.location.href = frontendUrl + '/auth/callback?' + params.toString();
+                } else {
+                    window.location.href = frontendUrl + '/login?error=' + encodeURIComponent(data.error || 'Login failed');
+                }
+            }, messageSent ? 500 : 0);
         })();
     </script>
 </body>

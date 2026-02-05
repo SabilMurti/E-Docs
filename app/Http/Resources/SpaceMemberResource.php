@@ -11,7 +11,9 @@ class SpaceMemberResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user' => new UserResource($this->whenLoaded('user')),
+            'user' => $this->relationLoaded('user') && $this->user
+                ? new UserResource($this->user)
+                : null,
             'email' => $this->email,
             'role' => $this->role,
             'status' => $this->status,
