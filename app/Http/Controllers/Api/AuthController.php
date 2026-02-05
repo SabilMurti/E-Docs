@@ -85,10 +85,10 @@ class AuthController extends Controller
             // Check if user exists with this GitHub ID
             $user = User::where('github_id', $githubUser->getId())->first();
 
-            if (!$user) {
+            if (! $user) {
                 // Check if email exists (link accounts)
                 $user = User::where('email', $githubUser->getEmail())->first();
-                
+
                 if ($user) {
                     // Link GitHub to existing account
                     $user->update([
@@ -132,14 +132,11 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Return HTML page that sends data via postMessage to opener window
-     */
     private function postMessageResponse(array $data)
     {
         $json = json_encode($data);
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
-        
+
         $html = <<<HTML
 <!DOCTYPE html>
 <html>
@@ -182,15 +179,16 @@ class AuthController extends Controller
         (function() {
             const data = {$json};
             const frontendUrl = '{$frontendUrl}';
+            const targetOrigin = frontendUrl;
             
             // Send to opener window (popup mode)
             if (window.opener) {
-                window.opener.postMessage(data, '*');
+                window.opener.postMessage(data, targetOrigin);
                 window.close();
             } 
             // Fallback: send to parent (iframe mode)
             else if (window.parent !== window) {
-                window.parent.postMessage(data, '*');
+                window.parent.postMessage(data, targetOrigin);
             }
             // No opener - redirect to frontend with token in hash
             else {
@@ -206,7 +204,7 @@ class AuthController extends Controller
 </html>
 HTML;
 
-        return response($html)->header('Content-Type', 'text/html');
+        return response($html)->header('Content-Type', 'text/html')->header('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'");
     }
 
     /**
