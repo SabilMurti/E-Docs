@@ -115,7 +115,10 @@ class SpaceController extends Controller
             abort(403, 'Only the owner can publish this space.');
         }
 
-        $space->update(['is_published' => true]);
+        $space->update([
+            'is_published' => true,
+            'visibility' => 'public'
+        ]);
 
         return (new SpaceResource($space))
             ->additional(['message' => 'Space published successfully.']);
@@ -130,7 +133,10 @@ class SpaceController extends Controller
             abort(403, 'Only the owner can unpublish this space.');
         }
 
-        $space->update(['is_published' => false]);
+        $space->update([
+            'is_published' => false,
+            'visibility' => 'private'
+        ]);
 
         return (new SpaceResource($space))
             ->additional(['message' => 'Space unpublished successfully.']);
