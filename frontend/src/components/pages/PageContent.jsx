@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Check, History, Settings, Eye, Edit3, Save,
-  Image as ImageIcon, ChevronRight, MoreHorizontal, Menu
+  Image as ImageIcon, ChevronRight, MoreHorizontal, Menu, GitPullRequest
 } from 'lucide-react';
+import { toast } from 'sonner';
 import usePageStore from '../../stores/pageStore';
 import useSiteStore from '../../stores/siteStore';
-import PageEditor from '../editor/PageEditor';
+import RichEditor from '../editor/RichEditor';
 import LoadingSpinner from '../common/LoadingSpinner';
+import PageViewer from './PageViewer';
+import { createChangeRequest } from '../../api/pages';
 
 export default function PageContent() {
   const { pageId, siteId } = useParams();
@@ -20,6 +23,7 @@ export default function PageContent() {
   const [localContent, setLocalContent] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [draftSaving, setDraftSaving] = useState(false);
 
   // Fetch page on mount
   useEffect(() => {
@@ -42,43 +46,67 @@ export default function PageContent() {
     setHasUnsavedChanges(true);
   }, []);
 
-  // Save page
-  const handleSave = useCallback(async () => {
-    if (!siteId || !currentPage || !localContent) return;
+  // NEW: Handle Request Review (Save Button)
+  const handleRequestReview = useCallback(async () => {
+    if (!currentPage || !localContent) return;
     
-    const result = await updatePage(siteId, currentPage.id, {
-      content: localContent
-    });
-    
-    if (result.success) {
-      setHasUnsavedChanges(false);
-      setLastSaved(new Date());
+    try {
+      // Status 'open' means Submit for Review
+      const result = await createChangeRequest(currentPage.id, {
+        content: localContent,
+        title: currentPage.title,
+        status: 'open',
+        description: 'Update content'
+      });
+      
+      if (result) {
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+        toast.success('Changes submitted for review!');
+      }
+    } catch (error) {
+      console.error('Failed to request review:', error);
+      toast.error('Failed to submit review');
     }
-  }, [siteId, currentPage, localContent, updatePage]);
+  }, [currentPage, localContent]);
 
-  // Auto-save with debounce
+  // NEW: Auto-Draft (Git-style auto-save)
   useEffect(() => {
     if (!hasUnsavedChanges) return;
     
-    const timer = setTimeout(() => {
-      handleSave();
-    }, 3000);
+    const timer = setTimeout(async () => {
+       setDraftSaving(true);
+       try {
+         // Status 'draft' means saving progress without publishing
+         await createChangeRequest(currentPage.id, {
+            content: localContent,
+            title: currentPage.title,
+            status: 'draft'
+         });
+         setLastSaved(new Date());
+         // We consider draft saved, but changes are not "Merged" yet.
+       } catch (e) {
+         console.error('Auto-draft failed', e);
+       } finally {
+         setDraftSaving(false);
+       }
+    }, 5000);
     
     return () => clearTimeout(timer);
-  }, [localContent, hasUnsavedChanges, handleSave]);
+  }, [localContent, hasUnsavedChanges, currentPage]);
 
   // Keyboard shortcut for save
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        handleSave();
+        handleRequestReview();
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSave]);
+  }, [handleRequestReview]);
 
   // Breadcrumbs
   const breadcrumbs = useMemo(() => {
@@ -136,11 +164,11 @@ export default function PageContent() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            {/* Save Status */}
-            {isSaving ? (
+            {/* Save Status & Draft Indicator */}
+            {draftSaving ? (
               <span className="text-xs text-[color:var(--color-text-muted)] flex items-center gap-1">
                 <LoadingSpinner size="sm" />
-                Saving...
+                Saving draft...
               </span>
             ) : hasUnsavedChanges ? (
               <span className="text-xs text-[color:var(--color-warning)] flex items-center gap-1">
@@ -149,7 +177,7 @@ export default function PageContent() {
             ) : lastSaved && (
               <span className="text-xs text-[color:var(--color-text-muted)] flex items-center gap-1">
                 <Check size={12} />
-                Saved
+                Draft Saved
               </span>
             )}
 
@@ -179,14 +207,24 @@ export default function PageContent() {
               </button>
             </div>
 
-            {/* Save Button */}
+            {/* Request Review Button (Formerly Save) */}
             <button
-              onClick={handleSave}
-              disabled={!hasUnsavedChanges || isSaving}
+              onClick={handleRequestReview}
+              disabled={isSaving} // isSaving from store might not be true here, but whatever
               className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[color:var(--color-accent)] text-white hover:bg-[color:var(--color-accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Submit Pull Request (Review)"
             >
-              <Save size={12} />
-              Save
+              <GitPullRequest size={12} />
+              Request Review
+            </button>
+
+            {/* View Requests */}
+            <button
+              onClick={() => navigate(`/sites/${siteId}/pages/${pageId}/requests`)}
+              className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
+              title="View Open Requests"
+            >
+              <GitPullRequest size={16} />
             </button>
 
             {/* History */}
@@ -235,17 +273,15 @@ export default function PageContent() {
         <div className="px-4 py-6 md:px-16 lg:px-24 xl:px-32">
           <div className="max-w-3xl mx-auto">
             {mode === 'edit' ? (
-              <PageEditor
+              <RichEditor
                 content={localContent}
                 onChange={handleContentChange}
                 editable={true}
               />
             ) : (
-              <PageEditor
-                content={localContent}
-                onChange={() => {}}
-                editable={false}
-              />
+              <div className="bg-[var(--color-bg-primary)] p-8 rounded-lg shadow-sm border border-[var(--color-border-secondary)] min-h-[500px]">
+                <PageViewer content={localContent} />
+              </div>
             )}
           </div>
         </div>

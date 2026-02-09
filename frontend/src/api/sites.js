@@ -51,10 +51,34 @@ export const publishSite = async (id) => {
 /**
  * Unpublish site
  */
-export const unpublishSite = async (id) => {
-  const response = await client.post(`/sites/${id}/unpublish`);
-  return response.data;
-};
+export async function unpublishSite(id) {
+  const { data } = await client.post(`/sites/${id}/unpublish`);
+  return data;
+}
+
+/**
+ * Get site members
+ */
+export async function getSiteMembers(id) {
+  const { data } = await client.get(`/sites/${id}/members`);
+  return data;
+}
+
+/**
+ * Add site member
+ */
+export async function addSiteMember(id, email, role) {
+  const { data } = await client.post(`/sites/${id}/members`, { email, role });
+  return data;
+}
+
+/**
+ * Remove site member
+ */
+export async function removeSiteMember(id, userId) {
+  const { data } = await client.delete(`/sites/${id}/members/${userId}`);
+  return data;
+}
 
 /**
  * Add space to site

@@ -43,8 +43,31 @@ export const deletePage = async (siteId, pageId) => {
 /**
  * Reorder pages
  */
+/**
+ * Reorder pages
+ */
 export const reorderPages = async (siteId, pages) => {
   const response = await client.post(`/sites/${siteId}/pages/reorder`, { pages });
+  return response.data;
+};
+
+/**
+ * Create or update a change request (Draft / PR)
+ * @param {string} pageId
+ * @param {object} data { content, title, status: 'draft'|'open', description }
+ */
+export const createChangeRequest = async (pageId, data) => {
+  const response = await client.post(`/pages/${pageId}/requests`, data);
+  return response.data;
+};
+
+export const getChangeRequests = async (pageId) => {
+  const response = await client.get(`/pages/${pageId}/requests`);
+  return response.data;
+};
+
+export const mergeChangeRequest = async (requestId) => {
+  const response = await client.post(`/requests/${requestId}/merge`);
   return response.data;
 };
 
@@ -55,4 +78,7 @@ export default {
   updatePage,
   deletePage,
   reorderPages,
+  createChangeRequest,
+  getChangeRequests,
+  mergeChangeRequest,
 };

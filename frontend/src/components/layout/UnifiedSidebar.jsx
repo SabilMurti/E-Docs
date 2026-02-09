@@ -17,7 +17,8 @@ import {
   MoreHorizontal,
   Trash2,
   Settings,
-  Book
+  Book,
+  Share2
 } from 'lucide-react';
 import useAuthStore from '../../stores/authStore';
 import useSiteStore from '../../stores/siteStore';
@@ -26,6 +27,7 @@ import { useTheme } from '../../stores/ThemeContext';
 import Dropdown from '../common/Dropdown';
 import ConfirmModal from '../common/ConfirmModal';
 import InputModal from '../common/InputModal';
+import PublishModal from '../sites/PublishModal';
 
 // Page Tree Item Component
 function PageTreeItem({ page, siteId, level = 0, onDeleteRequest, onAddSubpageRequest }) {
@@ -141,7 +143,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const { siteId } = useParams();
   const { user, logout } = useAuthStore();
-  const { sites, fetchSites, currentSite } = useSiteStore();
+  const { sites, fetchSites, createSite, currentSite } = useSiteStore();
   const { pages, fetchPages, createPage, deletePage, isLoading: pagesLoading } = usePageStore();
   const { theme, toggleTheme } = useTheme();
   
@@ -151,9 +153,13 @@ function UnifiedSidebar({ isOpen, onClose }) {
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
   const [parentIdForNewPage, setParentIdForNewPage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Site creation modal state
+  const [showCreateSiteModal, setShowCreateSiteModal] = useState(false);
 
   useEffect(() => {
     fetchSites();
@@ -210,6 +216,20 @@ function UnifiedSidebar({ isOpen, onClose }) {
       await deletePage(siteId, pageToDelete.id);
       setShowDeleteModal(false);
       setPageToDelete(null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle create new site
+  const handleCreateSite = async (name) => {
+    setIsSubmitting(true);
+    try {
+      const result = await createSite({ name });
+      if (result.success && result.data?.id) {
+        setShowCreateSiteModal(false);
+        navigate(`/sites/${result.data.id}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -285,12 +305,22 @@ function UnifiedSidebar({ isOpen, onClose }) {
                 <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate flex-1">
                   {currentSite?.name || 'Loading...'}
                 </span>
-                <button
-                  onClick={() => navigate(`/sites/${siteId}/settings`)}
-                  className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
-                >
-                  <Settings size={14} />
-                </button>
+                
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => setShowPublishModal(true)}
+                    className={`p-1 rounded hover:bg-[var(--color-bg-hover)] transition-colors ${currentSite?.is_published ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'}`}
+                    title={currentSite?.is_published ? "Site is Live" : "Publish Site"}
+                  >
+                    <Globe size={14} />
+                  </button>
+                  <button
+                    onClick={() => navigate(`/sites/${siteId}/settings`)}
+                    className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
+                  >
+                    <Settings size={14} />
+                  </button>
+                </div>
               </div>
 
               {/* Pages Section */}
@@ -337,6 +367,39 @@ function UnifiedSidebar({ isOpen, onClose }) {
                   ))}
                 </div>
               )}
+
+              {/* Other Sites Section - when in site view */}
+              <div className="mt-4 pt-4 border-t border-[var(--color-border-secondary)]">
+                <div className="flex items-center justify-between px-2 py-1 mb-1">
+                  <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                    Other Sites
+                  </span>
+                  <button
+                    onClick={() => setShowCreateSiteModal(true)}
+                    className="p-0.5 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                    title="Create new site"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+                <div className="space-y-0.5">
+                  {sites.filter(s => s.id !== siteId).slice(0, 5).map((site) => (
+                    <SiteItem 
+                      key={site.id} 
+                      site={site} 
+                      isActive={false}
+                    />
+                  ))}
+                  {sites.filter(s => s.id !== siteId).length === 0 && (
+                    <button 
+                      onClick={() => setShowCreateSiteModal(true)}
+                      className="w-full px-2.5 py-2 text-center text-xs text-[var(--color-accent)] hover:underline"
+                    >
+                      + Create new site
+                    </button>
+                  )}
+                </div>
+              </div>
             </>
           ) : (
             /* === HOME VIEW: Show Sites === */
@@ -363,8 +426,9 @@ function UnifiedSidebar({ isOpen, onClose }) {
                     Your Sites
                   </span>
                   <button
-                    onClick={() => navigate('/')}
+                    onClick={() => setShowCreateSiteModal(true)}
                     className="p-0.5 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                    title="Create new site"
                   >
                     <Plus size={12} />
                   </button>
@@ -375,6 +439,12 @@ function UnifiedSidebar({ isOpen, onClose }) {
                     <div className="px-2.5 py-6 text-center">
                       <Layers size={28} className="mx-auto text-[var(--color-text-muted)] opacity-50 mb-2" />
                       <p className="text-xs text-[var(--color-text-muted)]">No sites yet</p>
+                      <button 
+                        onClick={() => setShowCreateSiteModal(true)}
+                        className="mt-2 text-[var(--color-accent)] text-xs hover:underline"
+                      >
+                        Create one?
+                      </button>
                     </div>
                   ) : (
                     sites.map((site) => (
@@ -435,6 +505,25 @@ function UnifiedSidebar({ isOpen, onClose }) {
         confirmText="Delete"
         variant="danger"
         isLoading={isSubmitting}
+      />
+
+      {/* Create Site Modal */}
+      <InputModal
+        isOpen={showCreateSiteModal}
+        onClose={() => setShowCreateSiteModal(false)}
+        onSubmit={handleCreateSite}
+        title="Create New Site"
+        message="Enter a name for your documentation site."
+        placeholder="e.g. My Documentation"
+        submitText="Create Site"
+        isLoading={isSubmitting}
+      />
+
+      {/* Publish Modal */}
+      <PublishModal 
+        isOpen={showPublishModal} 
+        onClose={() => setShowPublishModal(false)}
+        site={currentSite}
       />
     </>
   );

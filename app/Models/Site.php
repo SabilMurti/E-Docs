@@ -68,14 +68,26 @@ class Site extends Model
     /**
      * Check if user can view this site
      */
+    /**
+     * Members of this site
+     */
+    public function members()
+    {
+        return $this->belongsToMany(User::class, 'site_members')
+            ->withPivot('role', 'id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if user can view this site (Dashboard access)
+     */
     public function canView(User $user): bool
     {
         if ($this->user_id === $user->id) {
             return true;
         }
 
-        // Add team/member logic here later if needed
-        return $this->is_published; // Or check collaborators
+        return $this->members()->where('user_id', $user->id)->exists();
     }
 
     /**
@@ -83,7 +95,14 @@ class Site extends Model
      */
     public function canEdit(User $user): bool
     {
-        return $this->user_id === $user->id;
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        return $this->members()
+            ->where('user_id', $user->id)
+            ->whereIn('role', ['admin', 'editor'])
+            ->exists();
     }
 
     /**

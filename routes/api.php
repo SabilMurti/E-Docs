@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\PageRevisionController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\PublicSiteController;
+use App\Http\Controllers\Api\SiteMemberController;
+use App\Http\Controllers\Api\UploadController;
 use Illuminate\Support\Facades\Route;
 
 // Auth Routes
@@ -30,7 +32,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sites
     Route::apiResource('sites', SiteController::class);
     Route::post('sites/{site}/publish', [SiteController::class, 'publish']);
+
     Route::post('sites/{site}/unpublish', [SiteController::class, 'unpublish']);
+
+    // Site Members (Collaboration)
+    Route::get('sites/{site}/members', [SiteMemberController::class, 'index']);
+    Route::post('sites/{site}/members', [SiteMemberController::class, 'store']);
+    Route::delete('sites/{site}/members/{userId}', [SiteMemberController::class, 'destroy']);
 
     // Pages (Directly under Sites now)
     Route::post('sites/{site}/pages', [PageController::class, 'store']);
@@ -45,16 +53,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('sites/{site}/pages/{page}/revisions/{revision}', [PageRevisionController::class, 'show']);
     Route::post('sites/{site}/pages/{page}/revisions/{revision}/restore', [PageRevisionController::class, 'restore']);
 
+    // Change Requests (Drafts & PRs)
+    Route::get('pages/{page}/requests', [\App\Http\Controllers\PageChangeRequestController::class, 'index']);
+    Route::post('pages/{page}/requests', [\App\Http\Controllers\PageChangeRequestController::class, 'store']);
+    Route::get('requests/{changeRequest}', [\App\Http\Controllers\PageChangeRequestController::class, 'show']);
+    Route::post('requests/{changeRequest}/merge', [\App\Http\Controllers\PageChangeRequestController::class, 'merge']);
+
     // Search
     Route::get('sites/{site}/search', [SearchController::class, 'search']);
+
+    // Uploads
+    Route::post('upload', [UploadController::class, 'store']);
 });
 
 // Public Routes (supports both slug and UUID)
 Route::prefix('public')->group(function () {
     // Public Site routes
     Route::get('sites/{identifier}', [PublicSiteController::class, 'show']);
-
-    // Updated public routes structure... (TODO: Update PublicSiteController)
-    // Route::get('sites/{identifier}/pages', [PublicSiteController::class, 'pages']);
-    // Route::get('sites/{identifier}/pages/{pageId}', [PublicSiteController::class, 'page']);
+    Route::get('sites/{identifier}/pages/{pageId}', [PublicSiteController::class, 'page']);
 });

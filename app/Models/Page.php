@@ -96,6 +96,14 @@ class Page extends Model
     }
 
     /**
+     * Change requests (Drafts & PRs)
+     */
+    public function changeRequests(): HasMany
+    {
+        return $this->hasMany(PageChangeRequest::class)->orderByDesc('created_at');
+    }
+
+    /**
      * User who created this page
      */
     public function creator(): BelongsTo
