@@ -1,159 +1,138 @@
-import { useState, useCallback } from 'react';
-import { Search, X, FileText, Folder } from 'lucide-react';
-import { searchSpace } from '../../api/spaces';
-import { debounce } from '../../utils/helpers';
-import LoadingSpinner from '../common/LoadingSpinner';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Search, FileText, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { debounce } from 'lodash';
+import api from '../../api/axios';
 
-function SearchBar({ spaceId, onResultClick }) {
+function SearchBar({ siteId, onResultClick }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef(null);
+  const containerRef = useRef(null);
+  const navigate = useNavigate();
 
-  // Debounced search
-  const performSearch = useCallback(
-    debounce(async (searchQuery) => {
-      if (!searchQuery.trim() || !spaceId) {
-        setResults([]);
-        setIsLoading(false);
-        return;
-      }
+  // Create debounced search function with useMemo
+  const performSearch = useMemo(
+    () =>
+      debounce(async (searchQuery, currentSiteId) => {
+        if (!searchQuery.trim() || !currentSiteId) {
+          setResults([]);
+          return;
+        }
 
-      setIsLoading(true);
-      try {
-        const response = await searchSpace(spaceId, searchQuery);
-        setResults(response.data || response || []);
-      } catch (error) {
-        console.error('Search error:', error);
-        setResults([]);
-      }
-      setIsLoading(false);
-    }, 300),
-    [spaceId]
+        setIsLoading(true);
+        try {
+          const response = await api.get(`/sites/${currentSiteId}/search`, {
+            params: { q: searchQuery }
+          });
+          setResults(response.data.data || []);
+        } catch (error) {
+          console.error('Search error:', error);
+          setResults([]);
+        } finally {
+          setIsLoading(false);
+        }
+      }, 300),
+    []
   );
 
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    setQuery(value);
-    setIsOpen(true);
-    performSearch(value);
-  };
+  useEffect(() => {
+    performSearch(query, siteId);
+    return () => performSearch.cancel();
+  }, [query, siteId, performSearch]);
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsFocused(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleResultClick = (result) => {
-    setIsOpen(false);
-    setQuery('');
-    if (onResultClick) onResultClick(result);
-  };
-
-  const handleClear = () => {
     setQuery('');
     setResults([]);
-    setIsOpen(false);
+    setIsFocused(false);
+    if (onResultClick) {
+      onResultClick(result);
+    } else {
+      navigate(`/sites/${siteId}/pages/${result.id}`);
+    }
   };
 
+  const showResults = isFocused && (query.trim() || results.length > 0);
+
   return (
-    <div className="relative">
-      {/* Search Input */}
+    <div ref={containerRef} className="relative w-full">
+      {/* Input */}
       <div className="relative">
         <Search 
-          size={18} 
+          size={14} 
           className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" 
         />
         <input
+          ref={inputRef}
           type="text"
           value={query}
-          onChange={handleInputChange}
-          onFocus={() => query && setIsOpen(true)}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setIsFocused(true)}
           placeholder="Search pages..."
-          className="
-            w-full pl-10 pr-10 py-2.5
-            bg-[var(--color-bg-secondary)]
-            border border-[var(--color-border)]
-            rounded-lg
-            text-[var(--color-text-primary)]
-            placeholder:text-[var(--color-text-muted)]
-            focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]
-            focus:border-transparent
-            transition-all
-          "
+          className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg py-1.5 pl-9 pr-8 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
         />
         {query && (
           <button
-            onClick={handleClear}
-            className="
-              absolute right-3 top-1/2 -translate-y-1/2
-              text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]
-            "
+            onClick={() => {
+              setQuery('');
+              setResults([]);
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
           >
-            <X size={16} />
+            <X size={12} />
           </button>
         )}
       </div>
 
       {/* Results Dropdown */}
-      {isOpen && query && (
-        <div className="
-          absolute top-full left-0 right-0 mt-2
-          bg-[var(--color-bg-primary)]
-          border border-[var(--color-border)]
-          rounded-lg shadow-xl
-          max-h-80 overflow-auto
-          z-50
-        ">
+      {showResults && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-lg shadow-lg overflow-hidden z-50">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <LoadingSpinner size="md" />
+            <div className="px-3 py-4 text-center text-sm text-[var(--color-text-muted)]">
+              Searching...
             </div>
-          ) : results.length === 0 ? (
-            <div className="py-8 text-center text-[var(--color-text-secondary)]">
-              <Search size={32} className="mx-auto mb-2 opacity-50" />
-              <p>No results found for "{query}"</p>
-            </div>
-          ) : (
-            <div className="py-2">
+          ) : results.length > 0 ? (
+            <div className="max-h-64 overflow-y-auto py-1">
               {results.map((result) => (
                 <button
                   key={result.id}
                   onClick={() => handleResultClick(result)}
-                  className="
-                    w-full flex items-start gap-3 px-4 py-3
-                    hover:bg-[var(--color-bg-secondary)]
-                    text-left transition-colors
-                  "
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
                 >
-                  <div className="
-                    w-8 h-8 rounded-lg
-                    bg-[var(--color-bg-secondary)]
-                    flex items-center justify-center flex-shrink-0
-                  ">
-                    <FileText size={16} className="text-[var(--color-text-muted)]" />
-                  </div>
+                  <FileText size={14} className="text-[var(--color-text-muted)] shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-[var(--color-text-primary)] truncate">
-                      {result.title || 'Untitled'}
-                    </h4>
-                    {result.excerpt && (
-                      <p className="
-                        text-sm text-[var(--color-text-secondary)]
-                        line-clamp-2 mt-0.5
-                      ">
-                        {result.excerpt}
+                    <p className="text-sm text-[var(--color-text-primary)] truncate">
+                      {result.title}
+                    </p>
+                    {result.snippet && (
+                      <p className="text-xs text-[var(--color-text-muted)] truncate">
+                        {result.snippet}
                       </p>
                     )}
                   </div>
                 </button>
               ))}
             </div>
-          )}
+          ) : query.trim() ? (
+            <div className="px-3 py-4 text-center text-sm text-[var(--color-text-muted)]">
+              No results found
+            </div>
+          ) : null}
         </div>
-      )}
-
-      {/* Backdrop to close dropdown */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setIsOpen(false)} 
-        />
       )}
     </div>
   );

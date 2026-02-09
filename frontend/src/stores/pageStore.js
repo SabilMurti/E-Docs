@@ -8,11 +8,11 @@ const usePageStore = create((set, get) => ({
   isSaving: false,
   error: null,
 
-  // Fetch page tree for a space
-  fetchPages: async (spaceId) => {
+  // Fetch page tree for a site
+  fetchPages: async (siteId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await pagesApi.getPages(spaceId);
+      const response = await pagesApi.getPages(siteId);
       set({ 
         pages: response.data || response,
         isLoading: false 
@@ -26,10 +26,10 @@ const usePageStore = create((set, get) => ({
   },
 
   // Fetch single page
-  fetchPage: async (spaceId, pageId) => {
+  fetchPage: async (siteId, pageId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await pagesApi.getPage(spaceId, pageId);
+      const response = await pagesApi.getPage(siteId, pageId);
       const page = response.data || response;
       set({ 
         currentPage: page,
@@ -46,13 +46,13 @@ const usePageStore = create((set, get) => ({
   },
 
   // Create page
-  createPage: async (spaceId, data) => {
+  createPage: async (siteId, data) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await pagesApi.createPage(spaceId, data);
+      const response = await pagesApi.createPage(siteId, data);
       const page = response.data || response;
       // Refetch the tree to get updated structure
-      await get().fetchPages(spaceId);
+      await get().fetchPages(siteId);
       return { success: true, page };
     } catch (error) {
       set({ 
@@ -64,10 +64,10 @@ const usePageStore = create((set, get) => ({
   },
 
   // Update page
-  updatePage: async (spaceId, pageId, data) => {
+  updatePage: async (siteId, pageId, data) => {
     set({ isSaving: true, error: null });
     try {
-      const response = await pagesApi.updatePage(spaceId, pageId, data);
+      const response = await pagesApi.updatePage(siteId, pageId, data);
       const updatedPage = response.data || response;
       set((state) => ({ 
         currentPage: state.currentPage?.id === pageId ? updatedPage : state.currentPage,
@@ -75,7 +75,7 @@ const usePageStore = create((set, get) => ({
       }));
       // Refetch tree if title changed
       if (data.title) {
-        await get().fetchPages(spaceId);
+        await get().fetchPages(siteId);
       }
       return { success: true, page: updatedPage };
     } catch (error) {
@@ -88,12 +88,12 @@ const usePageStore = create((set, get) => ({
   },
 
   // Delete page
-  deletePage: async (spaceId, pageId) => {
+  deletePage: async (siteId, pageId) => {
     set({ isLoading: true, error: null });
     try {
-      await pagesApi.deletePage(spaceId, pageId);
+      await pagesApi.deletePage(siteId, pageId);
       // Refetch tree
-      await get().fetchPages(spaceId);
+      await get().fetchPages(siteId);
       set((state) => ({ 
         currentPage: state.currentPage?.id === pageId ? null : state.currentPage,
         isLoading: false 
@@ -109,10 +109,10 @@ const usePageStore = create((set, get) => ({
   },
 
   // Reorder pages
-  reorderPages: async (spaceId, pageUpdates) => {
+  reorderPages: async (siteId, pageUpdates) => {
     try {
-      await pagesApi.reorderPages(spaceId, pageUpdates);
-      await get().fetchPages(spaceId);
+      await pagesApi.reorderPages(siteId, pageUpdates);
+      await get().fetchPages(siteId);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -122,7 +122,7 @@ const usePageStore = create((set, get) => ({
   // Set current page
   setCurrentPage: (page) => set({ currentPage: page }),
 
-  // Clear pages (when switching spaces)
+  // Clear pages (when switching sites)
   clearPages: () => set({ pages: [], currentPage: null }),
 
   // Clear error

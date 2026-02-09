@@ -1,228 +1,255 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, Clock, Check, History, Printer, ChevronRight, Eye, Edit2 } from 'lucide-react';
+import { 
+  Check, History, Settings, Eye, Edit3, Save,
+  Image as ImageIcon, ChevronRight, MoreHorizontal, Menu
+} from 'lucide-react';
 import usePageStore from '../../stores/pageStore';
-import TiptapEditor from '../editor/TiptapEditor';
-import PageViewer from './PageViewer';
-import Button from '../common/Button';
+import useSiteStore from '../../stores/siteStore';
+import PageEditor from '../editor/PageEditor';
 import LoadingSpinner from '../common/LoadingSpinner';
 
-// Helper to find path through tree
-const findPagePath = (nodes, targetId) => {
-  for (const node of nodes) {
-    if (node.id === targetId) return [node];
-    if (node.children) {
-      const path = findPagePath(node.children, targetId);
-      if (path) return [node, ...path];
-    }
-  }
-  return null;
-};
-
-function PageContent() {
-  const { spaceId, pageId } = useParams();
+export default function PageContent() {
+  const { pageId, siteId } = useParams();
   const navigate = useNavigate();
-  const { pages, currentPage, fetchPage, updatePage, isLoading, isSaving } = usePageStore();
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState(null);
-  const [hasChanges, setHasChanges] = useState(false);
+  
+  const { currentPage, fetchPage, updatePage, isLoading, isSaving } = usePageStore();
+  const { currentSite } = useSiteStore();
+  
+  const [mode, setMode] = useState('edit'); // 'edit' | 'preview'
+  const [localContent, setLocalContent] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-
-  // Compute breadcrumbs
-  const breadcrumbs = useMemo(() => {
-    if (!pages || !pageId) return [];
-    return findPagePath(pages, pageId) || [];
-  }, [pages, pageId]);
 
   // Fetch page on mount
   useEffect(() => {
-    if (spaceId && pageId) {
-      fetchPage(spaceId, pageId);
+    if (siteId && pageId) {
+      fetchPage(siteId, pageId);
     }
-  }, [spaceId, pageId, fetchPage]);
+  }, [siteId, pageId, fetchPage]);
 
-  // Update local state when page loads
+  // Set local content when page loads
   useEffect(() => {
-    if (currentPage) {
-      setTitle(currentPage.title || '');
-      setContent(currentPage.content || {});
-      setHasChanges(false);
-      setIsPreviewMode(false); // Reset preview mode on page change
+    if (currentPage?.content) {
+      setLocalContent(currentPage.content);
+      setHasUnsavedChanges(false);
     }
   }, [currentPage]);
 
-  // Handle content change
+  // Handle content changes
   const handleContentChange = useCallback((newContent) => {
-    setContent(newContent);
-    setHasChanges(true);
+    setLocalContent(newContent);
+    setHasUnsavedChanges(true);
   }, []);
 
-  // Handle title change
-  const handleTitleChange = (e) => {
-    setTitle(e.target.value);
-    setHasChanges(true);
-  };
-
   // Save page
-  const handleSave = async () => {
-    if (!spaceId || !pageId) return;
+  const handleSave = useCallback(async () => {
+    if (!siteId || !currentPage || !localContent) return;
     
-    const result = await updatePage(spaceId, pageId, { title, content });
+    const result = await updatePage(siteId, currentPage.id, {
+      content: localContent
+    });
+    
     if (result.success) {
-      setHasChanges(false);
+      setHasUnsavedChanges(false);
       setLastSaved(new Date());
-    } else {
-      alert(`Failed to save page: ${result.error}`);
     }
-  };
+  }, [siteId, currentPage, localContent, updatePage]);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // Auto-save with debounce
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, [localContent, hasUnsavedChanges, handleSave]);
 
-  // Auto-save on Ctrl+S
+  // Keyboard shortcut for save
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        if (hasChanges) handleSave();
+        handleSave();
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [hasChanges, handleSave]);
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave]);
 
-  if (isLoading && !currentPage) {
+  // Breadcrumbs
+  const breadcrumbs = useMemo(() => {
+    const items = [];
+    if (currentSite) {
+      items.push({
+        label: currentSite.name,
+        href: `/sites/${currentSite.id}`
+      });
+    }
+    if (currentPage) {
+      items.push({
+        label: currentPage.title,
+        href: null
+      });
+    }
+    return items;
+  }, [currentSite, currentPage]);
+
+  if (isLoading || !currentPage) {
     return (
-      <div className="flex items-center justify-center h-[400px]">
+      <div className="h-full flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  if (!currentPage) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[400px] text-center">
-        <p className="text-[var(--color-text-muted)]">
-          Select a page from the sidebar to start editing
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto px-8 py-8">
-      {/* Breadcrumbs */}
-      <div className="flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] mb-4 no-print overflow-x-auto whitespace-nowrap">
-        <Link to={`/spaces/${spaceId}`} className="hover:text-[var(--color-text-primary)] transition-colors">
-          Document
-        </Link>
-        {breadcrumbs.map((crumb) => (
-          <div key={crumb.id} className="flex items-center gap-1.5">
-            <ChevronRight size={14} className="text-[var(--color-text-muted)] mt-0.5" />
-            <Link 
-              to={`/spaces/${spaceId}/pages/${crumb.id}`}
-              className={`hover:text-[var(--color-text-primary)] transition-colors ${crumb.id === pageId ? 'font-medium text-[var(--color-text-primary)]' : ''}`}
-            >
-              {crumb.title}
-            </Link>
-          </div>
-        ))}
-      </div>
+    <div className="h-full flex flex-col">
+      {/* Page Header */}
+      <header className="sticky top-0 z-20 bg-[color:var(--color-bg-primary)] border-b border-[color:var(--color-border-primary)]">
+        <div className="flex items-center justify-between px-4 h-12">
+          {/* Left: Breadcrumbs */}
+          <nav className="flex items-center gap-1 text-sm">
+            {breadcrumbs.map((crumb, index) => (
+              <div key={index} className="flex items-center gap-1">
+                {index > 0 && (
+                  <ChevronRight size={14} className="text-[color:var(--color-text-muted)]" />
+                )}
+                {crumb.href ? (
+                  <Link 
+                    to={crumb.href}
+                    className="text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)] transition-colors"
+                  >
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span className="text-[color:var(--color-text-primary)] font-medium">
+                    {crumb.label}
+                  </span>
+                )}
+              </div>
+            ))}
+          </nav>
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 no-print">
-        <div className="flex items-center gap-3 text-sm text-[var(--color-text-muted)]">
-          {!isPreviewMode && (
-            <>
-              {lastSaved && (
-                <span className="flex items-center gap-1">
-                  <Check size={14} className="text-[var(--color-success)]" />
-                  Saved {lastSaved.toLocaleTimeString()}
-                </span>
-              )}
-              {hasChanges && (
-                <span className="flex items-center gap-1">
-                  <Clock size={14} />
-                  Unsaved changes
-                </span>
-              )}
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsPreviewMode(!isPreviewMode)}
-            title={isPreviewMode ? "Back to Edit" : "Preview Mode"}
-          >
-            {isPreviewMode ? <Edit2 size={16} /> : <Eye size={16} />}
-            {isPreviewMode ? 'Edit' : 'Preview'}
-          </Button>
-          {!isPreviewMode && (
-             <Button
-               variant="ghost"
-               size="sm"
-               onClick={handlePrint}
-               title="Print / Export to PDF"
-             >
-               <Printer size={16} />
-               Export
-             </Button>
-          )}
-          {!isPreviewMode && (
-            <Button 
-              variant="primary" 
-              size="sm"
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            {/* Save Status */}
+            {isSaving ? (
+              <span className="text-xs text-[color:var(--color-text-muted)] flex items-center gap-1">
+                <LoadingSpinner size="sm" />
+                Saving...
+              </span>
+            ) : hasUnsavedChanges ? (
+              <span className="text-xs text-[color:var(--color-warning)] flex items-center gap-1">
+                Unsaved changes
+              </span>
+            ) : lastSaved && (
+              <span className="text-xs text-[color:var(--color-text-muted)] flex items-center gap-1">
+                <Check size={12} />
+                Saved
+              </span>
+            )}
+
+            {/* Mode Toggle */}
+            <div className="flex items-center bg-[color:var(--color-bg-secondary)] rounded-lg p-0.5">
+              <button
+                onClick={() => setMode('edit')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                  mode === 'edit'
+                    ? 'bg-[color:var(--color-bg-primary)] text-[color:var(--color-text-primary)] shadow-sm'
+                    : 'text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]'
+                }`}
+              >
+                <Edit3 size={12} />
+                Edit
+              </button>
+              <button
+                onClick={() => setMode('preview')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                  mode === 'preview'
+                    ? 'bg-[color:var(--color-bg-primary)] text-[color:var(--color-text-primary)] shadow-sm'
+                    : 'text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]'
+                }`}
+              >
+                <Eye size={12} />
+                Preview
+              </button>
+            </div>
+
+            {/* Save Button */}
+            <button
               onClick={handleSave}
-              isLoading={isSaving}
-              disabled={!hasChanges}
+              disabled={!hasUnsavedChanges || isSaving}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[color:var(--color-accent)] text-white hover:bg-[color:var(--color-accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
-              <Save size={16} />
+              <Save size={12} />
               Save
-            </Button>
-          )}
+            </button>
+
+            {/* History */}
+            <button
+              onClick={() => navigate(`/sites/${siteId}/pages/${pageId}/history`)}
+              className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
+              title="Version History"
+            >
+              <History size={16} />
+            </button>
+
+            {/* More Options */}
+            <button
+              className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
+              title="More Options"
+            >
+              <MoreHorizontal size={16} />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Page Title & Icon */}
+      <div className="px-4 py-6 md:px-16 lg:px-24 xl:px-32 border-b border-[color:var(--color-border-secondary)]">
+        <div className="max-w-3xl mx-auto">
+          {/* Page Icon */}
+          <div className="mb-4">
+            <button className="w-12 h-12 rounded-xl bg-[color:var(--color-bg-secondary)] border border-[color:var(--color-border-primary)] hover:border-[color:var(--color-border-hover)] transition-colors flex items-center justify-center group">
+              {currentPage.icon ? (
+                <span className="text-2xl">{currentPage.icon}</span>
+              ) : (
+                <ImageIcon size={20} className="text-[color:var(--color-text-muted)] group-hover:text-[color:var(--color-text-secondary)]" />
+              )}
+            </button>
+          </div>
+
+          {/* Page Title */}
+          <h1 className="text-3xl font-bold text-[color:var(--color-text-primary)]">
+            {currentPage.title}
+          </h1>
         </div>
       </div>
 
-      {/* Title & Editor / Preview */}
-      {isPreviewMode ? (
-        <div className="animate-fadeIn">
-           <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-8">
-             {title || 'Untitled'}
-           </h1>
-           <div className="text-[var(--color-text-primary)]">
-             <PageViewer content={content} />
-           </div>
+      {/* Editor / Content Area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 py-6 md:px-16 lg:px-24 xl:px-32">
+          <div className="max-w-3xl mx-auto">
+            {mode === 'edit' ? (
+              <PageEditor
+                content={localContent}
+                onChange={handleContentChange}
+                editable={true}
+              />
+            ) : (
+              <PageEditor
+                content={localContent}
+                onChange={() => {}}
+                editable={false}
+              />
+            )}
+          </div>
         </div>
-      ) : (
-        <div className="animate-fadeIn">
-          <input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            placeholder="Untitled"
-            className="
-              w-full mb-6 px-0
-              text-4xl font-bold
-              bg-transparent
-              text-[var(--color-text-primary)]
-              placeholder:text-[var(--color-text-muted)]
-              border-none outline-none
-            "
-          />
-
-          <TiptapEditor
-            content={content}
-            onChange={handleContentChange}
-            placeholder="Start writing your documentation..."
-          />
-        </div>
-      )}
+      </div>
     </div>
   );
 }
-
-export default PageContent;
