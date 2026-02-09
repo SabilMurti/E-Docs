@@ -5,38 +5,34 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PageResource;
 use App\Models\Page;
-use App\Models\Space;
+use App\Models\Site;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Str;
 
 class PageController extends Controller
 {
     /**
      * List pages (tree structure)
      */
-    public function index(Request $request, Space $space)
+    public function index(Request $request, Site $site)
     {
-        if (!$space->canView($request->user())) {
+        if (!$site->canView($request->user())) {
             abort(403);
         }
 
-        $pages = $space->rootPages()
-            ->with(['children' => function($query) {
-                // Ensure recursive loading works by relying on lazy loading depth limit or recursive resource
-            }])
+        $pages = $site->rootPages()
+            ->with(['children']) // Resource handles recursive structure
             ->get();
 
-        // PageResource handles recursive children transformation
         return PageResource::collection($pages);
     }
 
     /**
      * Create new page
      */
-    public function store(Request $request, Space $space)
+    public function store(Request $request, Site $site)
     {
-        if (!$space->canEdit($request->user())) {
+        if (!$site->canEdit($request->user())) {
             abort(403);
         }
 
@@ -44,25 +40,31 @@ class PageController extends Controller
             'title' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:pages,id',
             'content' => 'nullable|array', // Tiptap JSON
+            'icon' => 'nullable|string|max:255',
+            'cover_image' => 'nullable|string|max:1000',
+            'is_hidden' => 'boolean',
         ]);
 
-        // Verify parent belongs to same space
+        // Verify parent belongs to same site
         if (!empty($validated['parent_id'])) {
             $parent = Page::find($validated['parent_id']);
-            if ($parent->space_id !== $space->id) {
-                return response()->json(['message' => 'Parent page must belong to the same space.'], 422);
+            if ($parent->site_id !== $site->id) {
+                return response()->json(['message' => 'Parent page must belong to the same site.'], 422);
             }
         }
 
         // Calculate order (append to end)
-        $order = Page::where('space_id', $space->id)
+        $order = Page::where('site_id', $site->id)
             ->where('parent_id', $validated['parent_id'] ?? null)
             ->max('order') + 1;
 
-        $page = $space->pages()->create([
+        $page = $site->pages()->create([
             'title' => $validated['title'],
             'parent_id' => $validated['parent_id'] ?? null,
             'content' => $validated['content'] ?? null,
+            'icon' => $validated['icon'] ?? null,
+            'cover_image' => $validated['cover_image'] ?? null,
+            'is_hidden' => $validated['is_hidden'] ?? false,
             'order' => $order,
             'created_by' => $request->user()->id,
             'updated_by' => $request->user()->id,
@@ -74,13 +76,13 @@ class PageController extends Controller
     /**
      * Get page details
      */
-    public function show(Request $request, Space $space, Page $page)
+    public function show(Request $request, Site $site, Page $page)
     {
-        if (!$space->canView($request->user())) {
+        if (!$site->canView($request->user())) {
             abort(403);
         }
 
-        if ($page->space_id !== $space->id) {
+        if ($page->site_id !== $site->id) {
             abort(404);
         }
 
@@ -92,13 +94,13 @@ class PageController extends Controller
     /**
      * Update page
      */
-    public function update(Request $request, Space $space, Page $page)
+    public function update(Request $request, Site $site, Page $page)
     {
-        if (!$space->canEdit($request->user())) {
+        if (!$site->canEdit($request->user())) {
             abort(403);
         }
 
-        if ($page->space_id !== $space->id) {
+        if ($page->site_id !== $site->id) {
             abort(404);
         }
 
@@ -106,12 +108,15 @@ class PageController extends Controller
             'title' => 'sometimes|required|string|max:255',
             'content' => 'nullable|array',
             'is_published' => 'boolean',
+            'icon' => 'nullable|string|max:255',
+            'cover_image' => 'nullable|string|max:1000',
+            'is_hidden' => 'boolean',
         ]);
 
         $validated['updated_by'] = $request->user()->id;
 
         $page->update($validated);
-        
+
         $page->load('updater');
 
         return new PageResource($page);
@@ -120,13 +125,13 @@ class PageController extends Controller
     /**
      * Delete page
      */
-    public function destroy(Request $request, Space $space, Page $page): JsonResponse
+    public function destroy(Request $request, Site $site, Page $page): JsonResponse
     {
-        if (!$space->canEdit($request->user())) {
+        if (!$site->canEdit($request->user())) {
             abort(403);
         }
 
-        if ($page->space_id !== $space->id) {
+        if ($page->site_id !== $site->id) {
             abort(404);
         }
 
@@ -138,9 +143,9 @@ class PageController extends Controller
     /**
      * Reorder pages
      */
-    public function reorder(Request $request, Space $space): JsonResponse
+    public function reorder(Request $request, Site $site): JsonResponse
     {
-        if (!$space->canEdit($request->user())) {
+        if (!$site->canEdit($request->user())) {
             abort(403);
         }
 
@@ -153,7 +158,7 @@ class PageController extends Controller
 
         foreach ($validated['pages'] as $item) {
             $page = Page::find($item['id']);
-            if ($page && $page->space_id === $space->id) {
+            if ($page && $page->site_id === $site->id) {
                 $page->update([
                     'order' => $item['order'],
                     'parent_id' => $item['parent_id'] ?? null,

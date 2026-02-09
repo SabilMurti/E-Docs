@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FileText, ChevronRight, Menu, X, ChevronDown, ExternalLink, Sparkles } from 'lucide-react';
-import { getPublicSpace, getPublicPages, getPublicPage } from '../api/public';
+import { FileText, ChevronRight, Menu, X, ExternalLink, Sparkles, Home, Layers } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import PageViewer from '../components/pages/PageViewer';
+import client from '../api/client';
 
-// Flatten nested pages for easier rendering
+// Flatten nested pages
 function flattenPages(pages, parentId = null) {
   let result = [];
   for (const page of pages) {
@@ -76,10 +76,12 @@ function PageTreeItem({ page, allPages, currentPageId, onSelect, depth = 0 }) {
   );
 }
 
-function PublicSpacePage() {
-  const { identifier, pageSlug } = useParams();
+function PublicSitePage() {
+  const { identifier, spaceSlug, pageSlug } = useParams();
   const navigate = useNavigate();
-  const [space, setSpace] = useState(null);
+  const [site, setSite] = useState(null);
+  const [spaces, setSpaces] = useState([]);
+  const [currentSpace, setCurrentSpace] = useState(null);
   const [pages, setPages] = useState([]);
   const [currentPage, setCurrentPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,53 +89,88 @@ function PublicSpacePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Fetch space info
-        const spaceRes = await getPublicSpace(identifier);
-        setSpace(spaceRes.data || spaceRes);
+    fetchSiteData();
+  }, [identifier, spaceSlug, pageSlug]);
 
-        // Fetch pages
-        const pagesRes = await getPublicPages(identifier);
-        const pageList = flattenPages(pagesRes.data || pagesRes);
+  const fetchSiteData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch site info
+      const siteRes = await client.get(`/public/sites/${identifier}`);
+      const siteData = siteRes.data.data;
+      setSite(siteData);
+      setSpaces(siteData.spaces || []);
+
+      // Determine which space to show
+      let targetSpace = null;
+      if (spaceSlug) {
+        targetSpace = siteData.spaces.find(s => s.id === spaceSlug || s.slug === spaceSlug);
+      } else {
+        // Find home space or first space
+        targetSpace = siteData.spaces.find(s => s.is_home) || siteData.spaces[0];
+      }
+
+      if (targetSpace) {
+        setCurrentSpace(targetSpace);
+        
+        // Fetch pages for this space
+        const pagesRes = await client.get(`/public/sites/${identifier}/spaces/${targetSpace.id}/pages`);
+        const pageList = flattenPages(pagesRes.data.data || []);
         setPages(pageList);
 
-        // If pageSlug provided, fetch that page
+        // Determine which page to show
         if (pageSlug) {
-          const pageRes = await getPublicPage(identifier, pageSlug);
-          setCurrentPage(pageRes.data || pageRes);
+          const targetPage = pageList.find(p => p.id === pageSlug || p.slug === pageSlug);
+          if (targetPage) {
+            await loadPageContent(targetPage);
+          }
         } else if (pageList.length > 0) {
-          // Default to first root page
           const firstPage = pageList.find(p => !p.parent_id) || pageList[0];
-          setCurrentPage(firstPage);
+          await loadPageContent(firstPage);
         }
-      } catch (err) {
-        console.error(err);
-        setError('This documentation is not available or has been made private.');
       }
-      
-      setIsLoading(false);
-    };
+    } catch (err) {
+      console.error(err);
+      setError('This documentation is not available or has been made private.');
+    }
+    
+    setIsLoading(false);
+  };
 
-    fetchData();
-  }, [identifier, pageSlug]);
+  const loadPageContent = async (page) => {
+    try {
+      const pageRes = await client.get(`/public/sites/${identifier}/spaces/${currentSpace?.id || page.space_id}/pages/${page.id}`);
+      setCurrentPage(pageRes.data.data || pageRes.data);
+    } catch (err) {
+      setCurrentPage(page);
+    }
+  };
 
-  const handlePageSelect = async (page) => {
-    setCurrentPage(page);
+  const handleSpaceSelect = async (space) => {
+    setCurrentSpace(space);
     setSidebarOpen(false);
     
-    // Fetch full page content if needed
-    if (!page.content) {
-      try {
-        const pageRes = await getPublicPage(identifier, page.slug || page.id);
-        setCurrentPage(pageRes.data || pageRes);
-      } catch (err) {
-        console.error('Failed to load page:', err);
+    try {
+      const pagesRes = await client.get(`/public/sites/${identifier}/spaces/${space.id}/pages`);
+      const pageList = flattenPages(pagesRes.data.data || []);
+      setPages(pageList);
+      
+      if (pageList.length > 0) {
+        const firstPage = pageList.find(p => !p.parent_id) || pageList[0];
+        await loadPageContent(firstPage);
+      } else {
+        setCurrentPage(null);
       }
+    } catch (err) {
+      console.error('Failed to load space pages:', err);
     }
+  };
+
+  const handlePageSelect = async (page) => {
+    setSidebarOpen(false);
+    await loadPageContent(page);
   };
 
   if (isLoading) {
@@ -187,12 +224,12 @@ function PublicSpacePage() {
             
             {/* Logo */}
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <div className="w-8 h-8 rounded-lg bg-linear-to-br from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                 <Sparkles size={16} className="text-white" />
               </div>
               <div>
                 <h1 className="font-semibold text-white text-sm leading-tight">
-                  {space?.name}
+                  {site?.name}
                 </h1>
                 <p className="text-[10px] text-gray-500">E-Docs</p>
               </div>
@@ -219,19 +256,52 @@ function PublicSpacePage() {
           transform lg:transform-none transition-transform duration-300
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
-          <nav className="p-4 space-y-1">
-            <p className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Pages
-            </p>
-            {rootPages.map(page => (
-              <PageTreeItem
-                key={page.id}
-                page={page}
-                allPages={pages}
-                currentPageId={currentPage?.id}
-                onSelect={handlePageSelect}
-              />
-            ))}
+          <nav className="p-4">
+            {/* Spaces Navigation */}
+            {spaces.length > 1 && (
+              <div className="mb-6">
+                <p className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Sections
+                </p>
+                <div className="space-y-1">
+                  {spaces.map(space => (
+                    <button
+                      key={space.id}
+                      onClick={() => handleSpaceSelect(space)}
+                      className={`
+                        w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm
+                        transition-all
+                        ${currentSpace?.id === space.id 
+                          ? 'bg-emerald-500/20 text-emerald-400' 
+                          : 'text-gray-400 hover:bg-white/5 hover:text-white'}
+                      `}
+                    >
+                      <Layers size={14} />
+                      <span className="truncate">{space.label || space.name}</span>
+                      {space.is_home && <Home size={10} className="text-emerald-400" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pages */}
+            <div>
+              <p className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {currentSpace?.label || currentSpace?.name || 'Pages'}
+              </p>
+              <div className="space-y-0.5">
+                {rootPages.map(page => (
+                  <PageTreeItem
+                    key={page.id}
+                    page={page}
+                    allPages={pages}
+                    currentPageId={currentPage?.id}
+                    onSelect={handlePageSelect}
+                  />
+                ))}
+              </div>
+            </div>
           </nav>
         </aside>
 
@@ -310,7 +380,9 @@ function PublicSpacePage() {
                   <FileText size={32} className="text-gray-600" />
                 </div>
                 <p className="text-gray-500">
-                  Select a page from the sidebar to start reading
+                  {pages.length === 0 
+                    ? 'This section has no pages yet'
+                    : 'Select a page from the sidebar to start reading'}
                 </p>
               </div>
             )}
@@ -322,11 +394,11 @@ function PublicSpacePage() {
       <footer className="border-t border-white/5 py-6">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-xs text-gray-600">
           <p>Powered by E-Docs</p>
-          <p>© {new Date().getFullYear()} {space?.name}</p>
+          <p>© {new Date().getFullYear()} {site?.name}</p>
         </div>
       </footer>
     </div>
   );
 }
 
-export default PublicSpacePage;
+export default PublicSitePage;

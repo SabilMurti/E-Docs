@@ -2,50 +2,19 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Search, LogOut, Settings, User, Moon, Sun, Menu } from 'lucide-react';
 import useAuthStore from '../../stores/authStore';
 import useSpaceStore from '../../stores/spaceStore';
+import { useTheme } from '../../stores/ThemeContext';
 import Button from '../common/Button';
 import Dropdown from '../common/Dropdown';
 import SearchBar from '../common/SearchBar';
-import { useState, useEffect } from 'react';
 
 function Navbar({ onMenuClick }) {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { currentSpace } = useSpaceStore();
-  const { spaceId } = useParams();
+  const { siteId } = useParams();
   const navigate = useNavigate();
-  const [isDark, setIsDark] = useState(false);
-
-  // Check for dark mode preference on mount
-  // Check for dark mode preference on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDarkMode = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    setIsDark(isDarkMode);
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.remove('dark');
-      if (savedTheme === 'light') {
-        document.documentElement.classList.add('light');
-      }
-    }
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newDark = !isDark;
-    setIsDark(newDark);
-    localStorage.setItem('theme', newDark ? 'dark' : 'light');
-    
-    if (newDark) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-    }
-  };
+  const { theme, toggleTheme } = useTheme();
+  
+  const isDark = theme === 'dark';
 
   const handleLogout = async () => {
     await logout();
@@ -54,8 +23,8 @@ function Navbar({ onMenuClick }) {
 
   const handleSearchResult = (result) => {
     // Navigate to the selected page
-    if (spaceId && result.id) {
-      navigate(`/spaces/${spaceId}/pages/${result.id}`);
+    if (siteId && result.id) {
+      navigate(`/sites/${siteId}/pages/${result.id}`);
     }
   };
 
@@ -111,7 +80,7 @@ function Navbar({ onMenuClick }) {
         <div className="flex items-center gap-2">
           {/* Dark Mode Toggle */}
           <button
-            onClick={toggleDarkMode}
+            onClick={toggleTheme}
             className="
               p-2 rounded-lg
               hover:bg-[var(--color-bg-secondary)]

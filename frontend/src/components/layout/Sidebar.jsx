@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { NavLink, useParams, useNavigate } from 'react-router-dom';
 import { 
   ChevronRight, 
@@ -7,39 +7,41 @@ import {
   Plus,
   MoreHorizontal,
   Trash2,
-  Edit,
-  History
+  Copy,
+  ExternalLink,
+  Grid,
+  Book,
+  X
 } from 'lucide-react';
 import usePageStore from '../../stores/pageStore';
-import Button from '../common/Button';
 import Dropdown from '../common/Dropdown';
+import ConfirmModal from '../common/ConfirmModal';
+import InputModal from '../common/InputModal';
 
-function PageTreeItem({ page, spaceId, level = 0 }) {
+// Compact Page Tree Item
+function PageTreeItem({ page, siteId, level = 0, onDeleteRequest, onAddSubpageRequest }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const { pageId } = useParams();
   const navigate = useNavigate();
-  const { deletePage } = usePageStore();
   const hasChildren = page.children && page.children.length > 0;
   const isActive = pageId === page.id;
 
-  const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this page?')) {
-      await deletePage(spaceId, page.id);
-    }
-  };
+  // Compact indentation: 16px per level
+  const paddingLeft = level * 16 + 8;
 
   return (
     <div>
       <div 
         className={`
-          group flex items-center gap-1 py-1.5 px-2 rounded-lg
-          cursor-pointer transition-colors
+          group flex items-center gap-1.5 py-1 pr-1.5 rounded-md
+          cursor-pointer transition-colors text-[13px] select-none
           ${isActive 
-            ? 'bg-[var(--color-accent-light)] text-[var(--color-accent)]' 
-            : 'hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' 
+            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
           }
         `}
-        style={{ paddingLeft: `${level * 12 + 8}px` }}
+        style={{ paddingLeft: `${paddingLeft}px` }}
+        onClick={() => navigate(`/sites/${siteId}/pages/${page.id}`)}
       >
         {/* Expand/Collapse */}
         <button
@@ -48,54 +50,43 @@ function PageTreeItem({ page, spaceId, level = 0 }) {
             setIsExpanded(!isExpanded);
           }}
           className={`
-            p-0.5 rounded transition-colors
-            ${hasChildren ? 'hover:bg-[var(--color-bg-tertiary)]' : 'invisible'}
+            p-0.5 rounded hover:bg-[var(--color-bg-hover)] transition-colors
+            ${hasChildren ? '' : 'invisible'}
           `}
         >
           {isExpanded ? (
-            <ChevronDown size={14} />
+            <ChevronDown size={12} strokeWidth={2.5} />
           ) : (
-            <ChevronRight size={14} />
+            <ChevronRight size={12} strokeWidth={2.5} />
           )}
         </button>
 
-        {/* Page Link */}
-        <NavLink
-          to={`/spaces/${spaceId}/pages/${page.id}`}
-          className="flex-1 flex items-center gap-2 text-sm truncate"
-        >
-          <FileText size={14} className="shrink-0" />
-          <span className="truncate">{page.title}</span>
-        </NavLink>
+        {/* Icon */}
+        {page.icon && (
+          <span className="text-sm leading-none shrink-0">{page.icon}</span>
+        )}
 
-        {/* Actions */}
-        <div className={`transition-opacity flex items-center ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              navigate(`/spaces/${spaceId}/pages/${page.id}/history`);
-            }}
-            className="p-1 rounded hover:bg-[var(--color-bg-tertiary)] mr-1 text-[var(--color-text-secondary)]"
-            title="View History"
-          >
-            <History size={14} />
-          </button>
-          
+        {/* Title */}
+        <span className="truncate flex-1">{page.title || 'Untitled'}</span>
+
+        {/* Actions (hover only) */}
+        <div 
+          className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Dropdown
             trigger={
-              <button className="p-1 rounded hover:bg-[var(--color-bg-tertiary)]">
-                <MoreHorizontal size={14} />
+              <button className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]">
+                <MoreHorizontal size={12} />
               </button>
             }
             align="right"
           >
-            <Dropdown.Item icon={Edit} onClick={() => navigate(`/spaces/${spaceId}/pages/${page.id}`)}>
-              Edit
+            <Dropdown.Item icon={Plus} onClick={() => onAddSubpageRequest(page.id)}>
+              Add subpage
             </Dropdown.Item>
-            <Dropdown.Item icon={Plus}>Add subpage</Dropdown.Item>
             <Dropdown.Divider />
-            <Dropdown.Item icon={Trash2} onClick={handleDelete} danger>
+            <Dropdown.Item icon={Trash2} onClick={() => onDeleteRequest(page)} danger>
               Delete
             </Dropdown.Item>
           </Dropdown>
@@ -109,8 +100,10 @@ function PageTreeItem({ page, spaceId, level = 0 }) {
             <PageTreeItem 
               key={child.id} 
               page={child} 
-              spaceId={spaceId}
-              level={level + 1} 
+              siteId={siteId}
+              level={level + 1}
+              onDeleteRequest={onDeleteRequest}
+              onAddSubpageRequest={onAddSubpageRequest}
             />
           ))}
         </div>
@@ -119,84 +112,218 @@ function PageTreeItem({ page, spaceId, level = 0 }) {
   );
 }
 
-function Sidebar({ spaceId }) {
-  const { pages, isLoading, createPage } = usePageStore();
+// Main Sidebar Component
+function Sidebar({ siteId, isOpen, onClose }) {
+  const { pages, isLoading, createPage, deletePage } = usePageStore();
+  const [activeTab, setActiveTab] = useState('pages');
+  
+  // Modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pageToDelete, setPageToDelete] = useState(null);
+  const [parentIdForNewPage, setParentIdForNewPage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAddPage = async () => {
-    const title = prompt('Enter page title:');
-    if (title) {
-      await createPage(spaceId, { title, content: {} });
+  const handleAddPage = (e) => {
+    e?.stopPropagation();
+    setParentIdForNewPage(null);
+    setShowAddModal(true);
+  };
+
+  const handleAddSubpage = (parentId) => {
+    setParentIdForNewPage(parentId);
+    setShowAddModal(true);
+  };
+
+  const handleCreatePage = async (title) => {
+    setIsSubmitting(true);
+    try {
+      await createPage(siteId, { 
+        title, 
+        content: {},
+        parent_id: parentIdForNewPage 
+      });
+      setShowAddModal(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteRequest = (page) => {
+    setPageToDelete(page);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pageToDelete) return;
+    setIsSubmitting(true);
+    try {
+      await deletePage(siteId, pageToDelete.id);
+      setShowDeleteModal(false);
+      setPageToDelete(null);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <aside className="
-      fixed left-0 top-[var(--navbar-height)]
-      w-[var(--sidebar-width)] h-[calc(100vh-var(--navbar-height))]
-      bg-[var(--color-bg-sidebar)]
-      border-r border-[var(--color-border)]
-      flex flex-col
-    ">
-      <div className="flex-1 overflow-y-auto p-3">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-medium text-sm text-[var(--color-text-primary)]">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:static top-0 left-0 z-50 lg:z-auto
+        w-[220px] h-screen lg:h-[calc(100vh-var(--navbar-height,0px))]
+        bg-[var(--color-bg-secondary)] 
+        border-r border-[var(--color-border-primary)]
+        flex flex-col
+        transition-transform duration-200 ease-out
+        lg:translate-x-0
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Header Tabs */}
+        <div className="flex items-center px-3 pt-3 pb-2 border-b border-[var(--color-border-primary)]">
+          <button 
+            onClick={() => setActiveTab('pages')}
+            className={`
+              pb-2 text-xs font-medium mr-4 transition-colors relative
+              ${activeTab === 'pages' 
+                ? 'text-[var(--color-text-primary)]' 
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+              }
+            `}
+          >
             Pages
-          </h3>
-          <Button variant="ghost" size="sm" onClick={handleAddPage} className="!p-1.5">
-            <Plus size={16} />
-          </Button>
+            {activeTab === 'pages' && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--color-accent)] rounded-full" />
+            )}
+          </button>
+          <button 
+            onClick={() => setActiveTab('library')}
+            className={`
+              pb-2 text-xs font-medium transition-colors relative
+              ${activeTab === 'library' 
+                ? 'text-[var(--color-text-primary)]' 
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+              }
+            `}
+          >
+            Library
+            {activeTab === 'library' && (
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--color-accent)] rounded-full" />
+            )}
+          </button>
+
+          {/* Mobile Close */}
+          <button
+            onClick={onClose}
+            className="lg:hidden ml-auto p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        {/* Page Tree */}
-        {isLoading ? (
-          <div className="py-8 text-center text-sm text-[var(--color-text-muted)]">
-            Loading...
-          </div>
-        ) : pages.length === 0 ? (
-          <div className="py-8 text-center">
-            <p className="text-sm text-[var(--color-text-muted)] mb-3">
-              No pages yet
-            </p>
-            <Button variant="secondary" size="sm" onClick={handleAddPage}>
-              <Plus size={14} />
-              Add your first page
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            {pages.map((page) => (
-              <PageTreeItem 
-                key={page.id} 
-                page={page} 
-                spaceId={spaceId}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-2">
+          {activeTab === 'pages' ? (
+            <>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-2 px-1">
+                <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                  Pages
+                </span>
+                <button 
+                  onClick={handleAddPage}
+                  className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                  title="Create new page"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
 
-      {/* Bottom - Settings Link */}
-      <div className="border-t border-[var(--color-border)] p-3">
-        <NavLink
-          to={`/spaces/${spaceId}/settings`}
-          className={({ isActive }) => `
-            flex items-center gap-2 px-3 py-2 rounded-lg
-            text-sm transition-colors
-            ${isActive 
-              ? 'bg-[var(--color-accent-light)] text-[var(--color-accent)]' 
-              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text-primary)]'
-            }
-          `}
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          Settings
-        </NavLink>
-      </div>
-    </aside>
+              {/* Page Tree */}
+              {isLoading ? (
+                <div className="py-6 text-center">
+                  <div className="w-full h-0.5 bg-[var(--color-bg-hover)] overflow-hidden rounded-full">
+                    <div className="h-full bg-[var(--color-accent)]/50 w-1/3 animate-pulse" />
+                  </div>
+                </div>
+              ) : pages.length === 0 ? (
+                <div className="py-8 text-center">
+                  <FileText size={20} className="mx-auto mb-2 text-[var(--color-text-muted)] opacity-50" />
+                  <p className="text-xs text-[var(--color-text-muted)]">No pages yet</p>
+                  <button 
+                    onClick={handleAddPage}
+                    className="mt-2 text-[var(--color-accent)] text-xs hover:underline"
+                  >
+                    Create one?
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {pages.map((page) => (
+                    <PageTreeItem 
+                      key={page.id} 
+                      page={page} 
+                      siteId={siteId}
+                      onDeleteRequest={handleDeleteRequest}
+                      onAddSubpageRequest={handleAddSubpage}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-32 text-center">
+              <Book size={20} className="text-[var(--color-text-muted)] mb-2" />
+              <p className="text-xs text-[var(--color-text-muted)]">Library is empty</p>
+              <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Reusable blocks appear here</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-2 border-t border-[var(--color-border-primary)]">
+          <button className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors">
+            <Grid size={14} />
+            <span>Developer Platform</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Add Page Modal */}
+      <InputModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleCreatePage}
+        title={parentIdForNewPage ? "Add Subpage" : "Add New Page"}
+        message="Enter a title for your page."
+        placeholder="e.g. Getting Started"
+        submitText="Create"
+        isLoading={isSubmitting}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setPageToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Page"
+        message={`Are you sure you want to delete "${pageToDelete?.title}"?`}
+        confirmText="Delete"
+        variant="danger"
+        isLoading={isSubmitting}
+      />
+    </>
   );
 }
 

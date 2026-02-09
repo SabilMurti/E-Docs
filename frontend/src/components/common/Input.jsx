@@ -1,40 +1,45 @@
 import { forwardRef } from 'react';
 
-const Input = forwardRef(({ 
-  label,
-  error,
-  className = '',
-  ...props 
-}, ref) => {
+const Input = forwardRef(function Input(
+  { 
+    label,
+    error,
+    className = '',
+    ...props 
+  }, 
+  ref
+) {
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1.5">
+        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
           {label}
         </label>
       )}
       <input
         ref={ref}
         className={`
-          w-full px-3 py-2 rounded-lg
-          bg-[var(--color-bg-primary)]
-          border border-[var(--color-border)]
-          text-[var(--color-text-primary)]
-          placeholder:text-[var(--color-text-muted)]
-          focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:border-transparent
-          transition-all duration-200
-          ${error ? 'border-[var(--color-error)] focus:ring-[var(--color-error)]' : ''}
+          w-full px-3 py-2 text-sm
+          bg-[var(--color-bg-secondary)] 
+          border rounded-lg
+          text-[var(--color-text-primary)] 
+          placeholder-[var(--color-text-muted)]
+          transition-colors duration-150
+          focus:outline-none
+          ${error 
+            ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)]' 
+            : 'border-[var(--color-border-primary)] focus:border-[var(--color-accent)]'
+          }
+          disabled:opacity-50 disabled:cursor-not-allowed
           ${className}
         `}
         {...props}
       />
       {error && (
-        <p className="mt-1.5 text-sm text-[var(--color-error)]">{error}</p>
+        <p className="mt-1 text-xs text-[var(--color-danger)]">{error}</p>
       )}
     </div>
   );
 });
-
-Input.displayName = 'Input';
 
 export default Input;

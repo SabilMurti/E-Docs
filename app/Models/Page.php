@@ -15,11 +15,14 @@ class Page extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
-        'space_id',
+        'site_id',
         'parent_id',
         'title',
         'slug',
         'content',
+        'icon',
+        'cover_image',
+        'is_hidden',
         'order',
         'is_published',
         'created_by',
@@ -60,9 +63,12 @@ class Page extends Model
     /**
      * The space this page belongs to
      */
-    public function space(): BelongsTo
+    /**
+     * The site this page belongs to
+     */
+    public function site(): BelongsTo
     {
-        return $this->belongsTo(Space::class);
+        return $this->belongsTo(Site::class);
     }
 
     /**
@@ -144,7 +150,7 @@ class Page extends Model
         if (isset($content['content'])) {
             foreach ($content['content'] as $node) {
                 if (isset($node['text'])) {
-                    $text .= $node['text'].' ';
+                    $text .= $node['text'] . ' ';
                 }
                 if (isset($node['content'])) {
                     $text .= $this->extractTextFromContent($node);

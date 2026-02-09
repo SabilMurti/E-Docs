@@ -1,84 +1,121 @@
-import { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronDown, Check } from 'lucide-react';
 
 function Dropdown({ 
   trigger, 
   children, 
-  align = 'right',
-  className = ''
+  align = 'left',
+  className = '' 
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const triggerRef = useRef(null);
 
-  // Close on click outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const alignments = {
-    left: 'left-0',
-    right: 'right-0',
+  const handleItemClick = (callback) => {
+    if (callback) callback();
+    setIsOpen(false);
   };
 
   return (
-    <div ref={dropdownRef} className={`relative ${className}`}>
-      <div onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
+    <div className={`relative inline-block ${className}`}>
+      <div 
+        ref={triggerRef}
+        onClick={() => setIsOpen(!isOpen)}
+      >
         {trigger}
       </div>
-      
+
       {isOpen && (
-        <div 
+        <div
+          ref={dropdownRef}
           className={`
-            absolute top-full mt-2 ${alignments[align]}
-            min-w-[180px] py-1
-            bg-[var(--color-bg-primary)]
-            border border-[var(--color-border)]
-            rounded-lg shadow-lg
-            z-50 animate-slideIn
+            absolute z-50 mt-1 min-w-[160px]
+            bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)]
+            rounded-lg shadow-lg overflow-hidden
+            animate-in fade-in-0 zoom-in-95 duration-150
+            ${align === 'right' ? 'right-0' : 'left-0'}
           `}
         >
-          {children}
+          <div className="py-1">
+            {Array.isArray(children)
+              ? children.map((child, index) =>
+                  child ? (
+                    <DropdownContext.Provider
+                      key={index}
+                      value={{ handleItemClick }}
+                    >
+                      {child}
+                    </DropdownContext.Provider>
+                  ) : null
+                )
+              : children && (
+                  <DropdownContext.Provider value={{ handleItemClick }}>
+                    {children}
+                  </DropdownContext.Provider>
+                )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+// Context for passing click handler
+import { createContext, useContext } from 'react';
+const DropdownContext = createContext({});
+
 function DropdownItem({ 
   children, 
+  icon: Icon, 
   onClick, 
-  icon: Icon,
   danger = false,
-  className = ''
+  selected = false,
+  disabled = false 
 }) {
+  const { handleItemClick } = useContext(DropdownContext);
+
   return (
     <button
-      onClick={onClick}
+      onClick={() => !disabled && handleItemClick(onClick)}
+      disabled={disabled}
       className={`
-        w-full flex items-center gap-2 px-3 py-2
-        text-sm text-left
-        transition-colors duration-150
-        ${danger 
-          ? 'text-[var(--color-error)] hover:bg-red-50 dark:hover:bg-red-950' 
-          : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
+        w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left
+        transition-colors
+        ${disabled 
+          ? 'opacity-50 cursor-not-allowed' 
+          : danger 
+            ? 'text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10' 
+            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
         }
-        ${className}
+        ${selected ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : ''}
       `}
     >
-      {Icon && <Icon size={16} />}
-      {children}
+      {Icon && <Icon size={14} className="shrink-0" />}
+      <span className="flex-1 truncate">{children}</span>
+      {selected && <Check size={14} className="shrink-0" />}
     </button>
   );
 }
 
 function DropdownDivider() {
-  return <div className="my-1 border-t border-[var(--color-border)]" />;
+  return <div className="my-1 h-px bg-[var(--color-border-primary)]" />;
 }
 
 Dropdown.Item = DropdownItem;

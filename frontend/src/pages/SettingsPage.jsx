@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Settings, Users, Globe, Lock, Trash2, ArrowLeft } from 'lucide-react';
+import { Settings, Users, Globe, Lock, Trash2, ArrowLeft, Copy, Check, ExternalLink } from 'lucide-react';
 import useSpaceStore from '../stores/spaceStore';
 import useAuthStore from '../stores/authStore';
 import MemberList from '../components/members/MemberList';
@@ -18,6 +18,7 @@ function SettingsPage() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (spaceId) {
@@ -45,7 +46,7 @@ function SettingsPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this space? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this workspace? This action cannot be undone.')) {
       return;
     }
     
@@ -57,9 +58,17 @@ function SettingsPage() {
     setIsDeleting(false);
   };
 
+  const publicUrl = `${window.location.origin}/public/${currentSpace?.id}`;
+  
+  const copyUrl = () => {
+    navigator.clipboard.writeText(publicUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (isLoading && !currentSpace) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#141414]">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -71,38 +80,38 @@ function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-secondary)]">
+    <div className="min-h-screen bg-[#141414]">
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button 
             onClick={() => navigate(`/spaces/${spaceId}`)}
-            className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+            className="p-2 rounded-lg hover:bg-white/10 text-gray-400 transition-colors"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-              Space Settings
+            <h1 className="text-2xl font-bold text-white">
+              Workspace Settings
             </h1>
-            <p className="text-[var(--color-text-secondary)]">
+            <p className="text-gray-400">
               {currentSpace?.name}
             </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-[var(--color-bg-primary)] p-1 rounded-lg border border-[var(--color-border)] w-fit">
+        <div className="flex gap-1 mb-6 bg-[#1c1c1c] p-1 rounded-xl border border-white/10 w-fit">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
                 flex items-center gap-2 px-4 py-2 rounded-lg
-                text-sm font-medium transition-colors
+                text-sm font-medium transition-all duration-200
                 ${activeTab === tab.id 
-                  ? 'bg-[var(--color-accent)] text-white' 
-                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }
               `}
             >
@@ -116,13 +125,13 @@ function SettingsPage() {
         {activeTab === 'general' && (
           <div className="space-y-6">
             {/* Space Info */}
-            <div className="bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-border)] p-6">
+            <div className="bg-[#1c1c1c] rounded-2xl border border-white/10 p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                  <h2 className="text-lg font-semibold text-white">
                     {currentSpace?.name}
                   </h2>
-                  <p className="text-[var(--color-text-secondary)] mt-1">
+                  <p className="text-gray-400 mt-1">
                     {currentSpace?.description || 'No description'}
                   </p>
                 </div>
@@ -132,31 +141,32 @@ function SettingsPage() {
               </div>
             </div>
 
-            {/* Visibility */}
-            <div className="bg-[var(--color-bg-primary)] rounded-xl border border-[var(--color-border)] p-6">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                Visibility
+            {/* Publishing */}
+            <div className="bg-[#1c1c1c] rounded-2xl border border-white/10 p-6">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Globe size={20} className="text-emerald-400" />
+                Published Documentation
               </h3>
               
-              <div className="flex items-center justify-between p-4 bg-[var(--color-bg-secondary)] rounded-lg">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between p-4 bg-[#252525] rounded-xl">
+                <div className="flex items-center gap-4">
                   {currentSpace?.is_published ? (
-                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                      <Globe size={20} className="text-green-600" />
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                      <Globe size={22} className="text-emerald-400" />
                     </div>
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                      <Lock size={20} className="text-gray-600" />
+                    <div className="w-12 h-12 rounded-xl bg-gray-700/50 flex items-center justify-center">
+                      <Lock size={22} className="text-gray-400" />
                     </div>
                   )}
                   <div>
-                    <p className="font-medium text-[var(--color-text-primary)]">
-                      {currentSpace?.is_published ? 'Public' : 'Private'}
+                    <p className="font-medium text-white">
+                      {currentSpace?.is_published ? 'Published' : 'Private'}
                     </p>
-                    <p className="text-sm text-[var(--color-text-secondary)]">
+                    <p className="text-sm text-gray-500">
                       {currentSpace?.is_published 
-                        ? 'Anyone with the link can view this space'
-                        : 'Only members can access this space'
+                        ? 'Your documentation is live and accessible to everyone'
+                        : 'Only workspace members can access this content'
                       }
                     </p>
                   </div>
@@ -170,28 +180,49 @@ function SettingsPage() {
                 </Button>
               </div>
 
-              {currentSpace?.is_published && currentSpace?.slug && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-700">
-                    Public URL: <code className="bg-blue-100 px-1.5 py-0.5 rounded">/public/{currentSpace.slug}</code>
+              {currentSpace?.is_published && (
+                <div className="mt-4 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                  <p className="text-sm text-emerald-400 font-medium mb-2">
+                    Public URL
                   </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-[#1c1c1c] text-gray-300 px-3 py-2 rounded-lg text-sm font-mono truncate">
+                      {publicUrl}
+                    </code>
+                    <button
+                      onClick={copyUrl}
+                      className="p-2 rounded-lg bg-[#1c1c1c] hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                      title="Copy URL"
+                    >
+                      {copied ? <Check size={18} className="text-emerald-400" /> : <Copy size={18} />}
+                    </button>
+                    <a
+                      href={publicUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-[#1c1c1c] hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                      title="Open in new tab"
+                    >
+                      <ExternalLink size={18} />
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Danger Zone */}
-            <div className="bg-[var(--color-bg-primary)] rounded-xl border border-red-200 p-6">
-              <h3 className="text-lg font-semibold text-red-600 mb-4">
+            <div className="bg-[#1c1c1c] rounded-2xl border border-red-500/30 p-6">
+              <h3 className="text-lg font-semibold text-red-400 mb-4">
                 Danger Zone
               </h3>
               
-              <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
                 <div>
-                  <p className="font-medium text-[var(--color-text-primary)]">
-                    Delete this space
+                  <p className="font-medium text-white">
+                    Delete this workspace
                   </p>
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    Once deleted, this space and all its pages will be permanently removed.
+                  <p className="text-sm text-gray-400">
+                    Once deleted, this workspace and all its pages will be permanently removed.
                   </p>
                 </div>
                 <Button 

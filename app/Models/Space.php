@@ -46,6 +46,16 @@ class Space extends Model
     }
 
     /**
+     * Sites that contain this space
+     */
+    public function sites(): BelongsToMany
+    {
+        return $this->belongsToMany(Site::class, 'site_spaces')
+            ->withPivot(['label', 'icon', 'order', 'is_home'])
+            ->withTimestamps();
+    }
+
+    /**
      * All pages in this space
      */
     public function pages(): HasMany

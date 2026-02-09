@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './stores/authStore';
+import { ThemeProvider } from './stores/ThemeContext';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
-import SpacePage from './pages/SpacePage';
-import SettingsPage from './pages/SettingsPage';
+import SitePage from './pages/SitePage';
+import SiteSettingsPage from './pages/SiteSettingsPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
-import PublicSpacePage from './pages/PublicSpacePage';
+import PublicSitePage from './pages/PublicSitePage';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
 // Protected Route wrapper
@@ -16,7 +17,7 @@ function ProtectedRoute({ children }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--color-bg-primary)]">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -35,7 +36,7 @@ function PublicRoute({ children }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--color-bg-primary)]">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -60,47 +61,51 @@ function App() {
   }, [fetchUser]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Auth callback route - handles OAuth redirect */}
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        
-        {/* Public Space Routes - No auth required */}
-        <Route path="/public/:slug" element={<PublicSpacePage />} />
-        <Route path="/public/:slug/:pageSlug" element={<PublicSpacePage />} />
-        
-        {/* Auth Routes */}
-        <Route 
-          path="/login" 
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          } 
-        />
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Auth callback route - handles OAuth redirect */}
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          
+          {/* Public Docs Routes - No auth required */}
+          <Route path="/public/:identifier" element={<PublicSitePage />} />
+          <Route path="/public/:identifier/:pageSlug" element={<PublicSitePage />} />
+          
+          {/* Auth Routes */}
+          <Route 
+            path="/login" 
+            element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            } 
+          />
 
-        {/* Protected Routes */}
-        <Route 
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/" element={<HomePage />} />
-          <Route path="/spaces/:spaceId" element={<SpacePage />} />
-          <Route path="/spaces/:spaceId/pages/:pageId" element={<SpacePage />} />
-          <Route path="/spaces/:spaceId/pages/:pageId/history" element={<SpacePage historyMode={true} />} />
-          <Route path="/spaces/:spaceId/settings" element={<SettingsPage />} />
-        </Route>
+          {/* Protected Routes */}
+          <Route 
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            {/* Dashboard */}
+            <Route path="/" element={<HomePage />} />
+            
+            {/* Site Routes */}
+            <Route path="/sites/:siteId" element={<SitePage />} />
+            <Route path="/sites/:siteId/pages/:pageId" element={<SitePage />} />
+            <Route path="/sites/:siteId/settings" element={<SiteSettingsPage />} />
+            
+          </Route>
 
-        {/* Catch all - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
 export default App;
-
 
