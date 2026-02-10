@@ -1,8 +1,8 @@
 /**
  * InsertToolbar - Fixed toolbar for inserting block types
  * 
- * Provides quick access to insert various content blocks
- * without needing to use slash commands.
+ * Provides quick access to insert various content blocks,
+ * undo/redo, and block transformation.
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -26,7 +26,9 @@ import {
   XCircle,
   ChevronDown,
   Youtube,
-  Columns,
+  Undo2,
+  Redo2,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { TableCreationModal } from './TablePlus';
 
@@ -78,6 +80,7 @@ const BLOCK_CATEGORIES = [
 
 function InsertToolbar({ editor }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showTurnInto, setShowTurnInto] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -86,10 +89,11 @@ function InsertToolbar({ editor }) {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false);
+        setShowTurnInto(false);
       }
     };
 
-    if (isOpen) {
+    if (isOpen || showTurnInto) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
@@ -178,11 +182,56 @@ function InsertToolbar({ editor }) {
     setIsOpen(false);
   };
 
+  // Turn Into: detect current block type
+  const getCurrentBlockLabel = () => {
+    if (editor.isActive('heading', { level: 1 })) return 'Heading 1';
+    if (editor.isActive('heading', { level: 2 })) return 'Heading 2';
+    if (editor.isActive('heading', { level: 3 })) return 'Heading 3';
+    if (editor.isActive('bulletList')) return 'Bullet List';
+    if (editor.isActive('orderedList')) return 'Numbered List';
+    if (editor.isActive('taskList')) return 'Task List';
+    if (editor.isActive('blockquote')) return 'Quote';
+    if (editor.isActive('codeBlock')) return 'Code Block';
+    return 'Paragraph';
+  };
+
+  const TURN_INTO_OPTIONS = [
+    { id: 'paragraph', label: 'Paragraph', icon: Type, action: () => editor.chain().focus().setParagraph().run() },
+    { id: 'h1', label: 'Heading 1', icon: Heading1, action: () => editor.chain().focus().toggleHeading({ level: 1 }).run() },
+    { id: 'h2', label: 'Heading 2', icon: Heading2, action: () => editor.chain().focus().toggleHeading({ level: 2 }).run() },
+    { id: 'h3', label: 'Heading 3', icon: Heading3, action: () => editor.chain().focus().toggleHeading({ level: 3 }).run() },
+    { id: 'bullet', label: 'Bullet List', icon: List, action: () => editor.chain().focus().toggleBulletList().run() },
+    { id: 'numbered', label: 'Numbered List', icon: ListOrdered, action: () => editor.chain().focus().toggleOrderedList().run() },
+    { id: 'task', label: 'Task List', icon: CheckSquare, action: () => editor.chain().focus().toggleTaskList().run() },
+    { id: 'quote', label: 'Quote', icon: Quote, action: () => editor.chain().focus().toggleBlockquote().run() },
+    { id: 'code', label: 'Code Block', icon: Code, action: () => editor.chain().focus().toggleCodeBlock().run() },
+  ];
+
   return (
-    <div className="insert-toolbar relative" ref={dropdownRef}>
-      {/* Trigger Button */}
+    <div className="insert-toolbar flex items-center gap-1" ref={dropdownRef}>
+      {/* Undo / Redo */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={!editor.can().undo()}
+        className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Undo (Ctrl+Z)"
+      >
+        <Undo2 size={16} />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={!editor.can().redo()}
+        className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Redo (Ctrl+Shift+Z)"
+      >
+        <Redo2 size={16} />
+      </button>
+
+      <div className="w-px h-5 bg-[var(--color-border-secondary)] mx-1" />
+
+      {/* Insert Block Button */}
+      <button
+        onClick={() => { setIsOpen(!isOpen); setShowTurnInto(false); }}
         className={`
           flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
           transition-all duration-150
@@ -197,7 +246,51 @@ function InsertToolbar({ editor }) {
         <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Turn Into Button */}
+      <div className="relative">
+        <button
+          onClick={() => { setShowTurnInto(!showTurnInto); setIsOpen(false); }}
+          className={`
+            flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
+            transition-all duration-150
+            ${showTurnInto
+              ? 'bg-[var(--color-accent)] text-white'
+              : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
+            }
+          `}
+        >
+          <ArrowRightLeft size={14} />
+          <span>{getCurrentBlockLabel()}</span>
+          <ChevronDown size={14} className={`transition-transform ${showTurnInto ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showTurnInto && (
+          <div className="absolute top-full left-0 mt-2 w-56 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-xl z-50 overflow-hidden py-1">
+            <div className="px-3 py-1.5">
+              <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Turn into</span>
+            </div>
+            {TURN_INTO_OPTIONS.map((opt) => {
+              const isActive = getCurrentBlockLabel() === opt.label;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => { opt.action(); setShowTurnInto(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-[var(--color-bg-hover)] transition-colors text-left ${
+                    isActive ? 'bg-[var(--color-accent-light)]' : ''
+                  }`}
+                >
+                  <opt.icon size={16} className={isActive ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'} />
+                  <span className={`text-sm ${isActive ? 'text-[var(--color-accent)] font-medium' : 'text-[var(--color-text-primary)]'}`}>
+                    {opt.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Insert Dropdown Menu */}
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-64 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-150">
           <div className="max-h-[400px] overflow-y-auto py-2">

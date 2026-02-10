@@ -156,7 +156,13 @@ export default function RichEditor({
       {editable && (
         <div className="editor-toolbar sticky top-0 z-20 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-secondary)] px-4 py-2 flex items-center gap-2">
           <InsertToolbar editor={editor} />
-          <span className="text-xs text-[var(--color-text-muted)] ml-auto">Type <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono">/</kbd> for commands</span>
+          <div className="ml-auto flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
+            <span>Type <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono">/</kbd> for commands</span>
+            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:flex items-center gap-1">
+              <kbd className="px-1 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono">Ctrl+Z</kbd> undo
+            </span>
+          </div>
         </div>
       )}
       

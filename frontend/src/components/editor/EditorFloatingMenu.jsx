@@ -68,8 +68,7 @@ function EditorFloatingMenu({ editor }) {
         if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
-
-  const addYoutube = useCallback(() => {
+const addYoutube = useCallback(() => {
     const url = window.prompt('Enter YouTube URL:');
     if (url) {
       editor.commands.setYoutubeVideo({ src: url });

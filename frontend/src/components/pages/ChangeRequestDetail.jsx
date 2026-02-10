@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GitPullRequest, ArrowLeft, Check, Merge, XCircle } from 'lucide-react';
+import { GitPullRequest, ArrowLeft, Check, GitMerge, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getChangeRequests, mergeChangeRequest } from '../../api/pages';
 import { getPage } from '../../api/pages';
@@ -93,7 +93,7 @@ export default function ChangeRequestDetail() {
           </button>
           
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <span className="text-emerald-400">#{request.id.slice(0, 8)}</span>
+            <span className="text-emerald-400">#{String(request.id).slice(0, 8)}</span>
             {request.title || 'Untitled Update'}
           </h1>
           
@@ -117,7 +117,7 @@ export default function ChangeRequestDetail() {
               disabled={isMerging}
               className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isMerging ? <LoadingSpinner size="sm" /> : <Merge size={20} />}
+              {isMerging ? <LoadingSpinner size="sm" /> : <GitMerge size={20} />}
               Merge Request
             </button>
           )}
@@ -194,7 +194,7 @@ export default function ChangeRequestDetail() {
         title="Merge Change Request"
         message="Are you sure you want to merge these changes? This will overwrite the live content of the page."
         confirmText="Merge Changes"
-        variant="success" // Custom variant if supported, otherwise normal
+        variant="primary"
         isLoading={isMerging}
       />
     </div>

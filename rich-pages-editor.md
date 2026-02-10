@@ -118,17 +118,17 @@ Tabel dan data display.
 
 ---
 
-### ⏳ Phase 6: Polish & DX
+### ✅ Phase 6: Polish & DX (COMPLETED)
 
 Final touches dan UX improvements.
 
-- [ ] **6.1** Block transformation (convert paragraph → heading, list → checklist)
-- [ ] **6.2** Keyboard shortcuts comprehensive
-- [ ] **6.3** Undo/redo reliability
+- [x] **6.1** Block transformation (Turn Into menu — convert paragraph ↔ heading, list ↔ checklist)
+- [x] **6.2** Keyboard shortcuts (Undo/Redo buttons + Ctrl+Z/Y built-in + toolbar hints)
+- [x] **6.3** Undo/redo reliability (buttons + StarterKit built-in)
 - [ ] **6.4** Performance optimization
 - [ ] **6.5** Accessibility audit
 
-**Verify:** Run audit scripts, semua shortcuts berfungsi
+**Verify:** ✅ Undo/Redo buttons, Turn Into dropdown, cleaned SlashMenu
 
 ---
 

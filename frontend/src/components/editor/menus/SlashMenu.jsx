@@ -14,7 +14,7 @@ import {
   Type, Heading1, Heading2, Heading3,
   List, ListOrdered, CheckSquare, Minus,
   Quote, Code2, Info, AlertTriangle, CheckCircle2, XCircle,
-  Table as TableIcon, LayoutGrid, Image as ImageIcon,
+  Table as TableIcon, Image as ImageIcon,
   Youtube, FileUp, ChevronRight
 } from 'lucide-react';
 
@@ -91,13 +91,6 @@ const BLOCKS = [
             editor.chain().focus().insertContent(`<p><a href="${url}" target="_blank">📎 ${name}</a></p>`).run();
           }
         }},
-    ]
-  },
-  {
-    category: 'Layout',
-    items: [
-      { id: 'columns', name: 'Columns', icon: LayoutGrid, description: '2-column layout',
-        action: (editor) => editor.chain().focus().setColumns({ count: 2 }).run() },
     ]
   },
 ];

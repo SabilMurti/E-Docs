@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BubbleMenu } from '@tiptap/react';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
@@ -46,62 +46,10 @@ const FontSizeSelector = ({ editor }) => {
   );
 };
 
-// Image Width control - uses Tiptap commands API
-const ImageWidthSelector = ({ editor }) => {
-  const [widthValue, setWidthValue] = useState('');
-
-  useEffect(() => {
-    // Get width from current image node
-    const attrs = editor.getAttributes('image');
-    if (attrs && attrs.width) {
-      const w = attrs.width;
-      if (typeof w === 'number') {
-        setWidthValue(w.toString());
-      } else if (typeof w === 'string' && w !== '100%') {
-        const parsed = parseInt(w);
-        setWidthValue(parsed ? parsed.toString() : '');
-      } else {
-        setWidthValue('');
-      }
-    }
-  }, [editor.state]);
-
-  const handleChange = (e) => {
-    const inputVal = e.target.value;
-    setWidthValue(inputVal);
-    
-    const val = parseInt(inputVal);
-    if (!isNaN(val) && val >= 50) {
-      // Use Tiptap's built-in updateAttributes command
-      editor.commands.updateAttributes('image', { width: val });
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-1.5 mx-1">
-      <span className="text-xs font-medium text-gray-400">W</span>
-      <input 
-        type="number"
-        value={widthValue}
-        onChange={handleChange}
-        onKeyDown={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-        className="w-14 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white text-center focus:outline-none focus:border-blue-500"
-        min="50"
-        max="2000"
-        title="Image Width"
-        placeholder="auto"
-      />
-    </div>
-  );
-};
-
 export default function BubbleToolbar({ editor }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   if (!editor) return null;
-
-  const isImageSelected = editor.isActive('image');
 
   const colors = [
     { name: 'Default', value: null },
@@ -116,18 +64,9 @@ export default function BubbleToolbar({ editor }) {
     { name: 'Pink', value: '#ec4899' }
   ];
 
-  // Show for text selection OR image selection
-  const shouldShow = ({ editor, state }) => {
+  const shouldShow = ({ state }) => {
     const { selection } = state;
-    const { empty } = selection;
-    
-    // Show for non-empty text selection
-    if (!empty) return true;
-    
-    // Show for image node
-    if (editor.isActive('image')) return true;
-    
-    return false;
+    return !selection.empty;
   };
 
   return (
@@ -143,14 +82,6 @@ export default function BubbleToolbar({ editor }) {
       }}
       className="flex items-center gap-0.5 p-1.5 bg-[#1f2937] rounded-lg shadow-xl border border-gray-700 max-w-[90vw] overflow-visible"
     >
-      {/* Width for images, Font Size for text */}
-      {isImageSelected ? (
-        <ImageWidthSelector editor={editor} />
-      ) : (
-        <FontSizeSelector editor={editor} />
-      )}
-      
-      <Divider />
 
       <ToolbarButton
         isActive={editor.isActive('bold')}
