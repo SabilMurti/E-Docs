@@ -27,6 +27,9 @@ import { CodeBlockPlus } from './extensions/CodeBlockPlus/index.jsx';
 import { DragHandle } from './extensions/DragHandle';
 import { ImageUpload } from './extensions/ImageUpload';
 import { FontSize } from './extensions/FontSize';
+import { Columns, Column } from './extensions/Columns';
+import { Toggle } from './extensions/Toggle';
+import { Card } from './extensions/Card';
 
 export const getExtensions = (placeholderText = 'Start typing...') => [
   StarterKit.configure({
@@ -78,10 +81,39 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
     HTMLAttributes: { class: 'task-item' },
   }),
   
-  Table.configure({ resizable: true }),
+  Table.configure({
+    resizable: true,
+  }).extend({
+    addAttributes() {
+      return {
+        style: {
+          default: 'default',
+          parseHTML: element => element.getAttribute('data-style'),
+          renderHTML: attributes => ({ 'data-style': attributes.style }),
+        },
+      };
+    },
+  }),
   TableRow,
   TableHeader,
-  TableCell,
+  TableCell.extend({
+    addAttributes() {
+      return {
+        ...this.parent?.(),
+        backgroundColor: {
+          default: null,
+          parseHTML: element => element.getAttribute('data-background-color'),
+          renderHTML: attributes => {
+            if (!attributes.backgroundColor) return {};
+            return {
+              'data-background-color': attributes.backgroundColor,
+              style: `background-color: ${attributes.backgroundColor}`,
+            };
+          },
+        },
+      };
+    },
+  }),
   
   Highlight.configure({ multicolor: true }),
   Underline,
@@ -111,4 +143,8 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   DragHandle,
   ImageUpload,
   FontSize,
+  Columns,
+  Column,
+  Toggle,
+  Card,
 ];

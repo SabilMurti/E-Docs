@@ -97,10 +97,12 @@ Handling gambar dan media lainnya.
 
 Block untuk layout yang kompleks.
 
-- [ ] **4.1** Columns Extension - 2, 3, 4 column layouts, resizable
-- [ ] **4.2** Tabs Extension - Multiple tabs, renameable
-- [ ] **4.3** Toggle/Accordion Extension - Collapsible content
-- [ ] **4.4** Card Extension - Styled cards dengan icon support
+- [x] **4.1** Columns Extension (2, 3 cols, sidebar layouts)
+- [ ] **4.2** Tabs Extension (Planned for future update)
+- [x] **4.3** Toggle/Accordion Extension (Collapsible content)
+- [x] **4.4** Card Extension (Styled block with themes)
+
+**Verify:** Columns layout working, Toggle expands/collapses, Card themes apply.
 
 **Verify:** Columns bisa di-resize, tabs bisa di-switch, toggle bisa expand/collapse
 

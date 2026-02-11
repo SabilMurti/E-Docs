@@ -15,7 +15,9 @@ import {
   List, ListOrdered, CheckSquare, Minus,
   Quote, Code2, Info, AlertTriangle, CheckCircle2, XCircle,
   Table as TableIcon, Image as ImageIcon,
-  Youtube, FileUp, ChevronRight
+  Youtube, FileUp, ChevronRight,
+  Columns as ColumnsIcon, LayoutGrid, PanelLeft, PanelRight,
+  Square, Network
 } from 'lucide-react';
 
 // Block definitions with categories
@@ -55,6 +57,10 @@ const BLOCKS = [
         action: (editor) => editor.chain().focus().setHorizontalRule().run() },
       { id: 'table', name: 'Table', icon: TableIcon, description: 'Data table',
         action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+      { id: 'toggle', name: 'Toggle', icon: ChevronRight, description: 'Collapsible content',
+        action: (editor) => editor.chain().focus().setToggle().run() },
+      { id: 'card', name: 'Card', icon: Square, description: 'Styled container',
+        action: (editor) => editor.chain().focus().setCard().run() },
     ]
   },
   {
@@ -91,6 +97,19 @@ const BLOCKS = [
             editor.chain().focus().insertContent(`<p><a href="${url}" target="_blank">📎 ${name}</a></p>`).run();
           }
         }},
+    ]
+  },
+  {
+    category: 'Layout',
+    items: [
+      { id: '2col', name: '2 Columns', icon: ColumnsIcon, description: 'Two equal columns',
+        action: (editor) => editor.chain().focus().setColumns({ layout: 'two-columns' }).run() },
+      { id: '3col', name: '3 Columns', icon: LayoutGrid, description: 'Three equal columns',
+        action: (editor) => editor.chain().focus().setColumns({ layout: 'three-columns' }).run() },
+      { id: 'left-sidebar', name: 'Sidebar Left', icon: PanelLeft, description: 'Small left, large right',
+        action: (editor) => editor.chain().focus().setColumns({ layout: 'sidebar-left' }).run() },
+      { id: 'right-sidebar', name: 'Sidebar Right', icon: PanelRight, description: 'Large left, small right',
+        action: (editor) => editor.chain().focus().setColumns({ layout: 'sidebar-right' }).run() },
     ]
   },
 ];

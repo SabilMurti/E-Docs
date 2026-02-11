@@ -52,6 +52,9 @@ export const DragHandle = Extension.create({
               
               const block = target.closest('.ProseMirror > *');
               if (!block) return false;
+
+              // Prevent table dragging to avoid layout shifts
+              if (block.tagName === 'TABLE' || block.classList.contains('tableWrapper')) return false;
               
               const blockRect = block.getBoundingClientRect();
               const clickX = event.clientX;
@@ -268,7 +271,7 @@ export const DragHandle = Extension.create({
   addGlobalAttributes() {
     return [
       {
-        types: ['paragraph', 'heading', 'bulletList', 'orderedList', 'taskList', 'blockquote', 'codeBlock', 'callout', 'table', 'horizontalRule'],
+        types: ['paragraph', 'heading', 'bulletList', 'orderedList', 'taskList', 'blockquote', 'codeBlock', 'callout', 'horizontalRule'],
         attributes: {
           dataDraggable: {
             default: 'true',

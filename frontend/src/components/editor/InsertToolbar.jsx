@@ -25,7 +25,13 @@ import {
   AlertTriangle,
   XCircle,
   ChevronDown,
+  ChevronRight,
   Youtube,
+  Square,
+  Columns as ColumnsIcon,
+  LayoutGrid,
+  PanelLeft,
+  PanelRight,
   Undo2,
   Redo2,
   ArrowRightLeft,
@@ -57,6 +63,8 @@ const BLOCK_CATEGORIES = [
       { id: 'quote', label: 'Quote', icon: Quote },
       { id: 'code', label: 'Code Block', icon: Code },
       { id: 'divider', label: 'Divider', icon: Minus },
+      { id: 'toggle', label: 'Toggle', icon: ChevronRight },
+      { id: 'card', label: 'Card', icon: Square },
     ]
   },
   {
@@ -74,6 +82,15 @@ const BLOCK_CATEGORIES = [
       { id: 'image', label: 'Image', icon: ImageIcon },
       { id: 'youtube', label: 'YouTube', icon: Youtube },
       { id: 'table', label: 'Table', icon: Table },
+    ]
+  },
+  {
+    name: 'Layout',
+    blocks: [
+        { id: '2col', label: '2 Columns', icon: ColumnsIcon },
+        { id: '3col', label: '3 Columns', icon: LayoutGrid },
+        { id: 'left-sidebar', label: 'Sidebar Left', icon: PanelLeft },
+        { id: 'right-sidebar', label: 'Sidebar Right', icon: PanelRight },
     ]
   },
 ];
@@ -141,6 +158,12 @@ function InsertToolbar({ editor }) {
       case 'divider':
         editor.chain().focus().setHorizontalRule().run();
         break;
+      case 'toggle':
+        editor.chain().focus().setToggle().run();
+        break;
+      case 'card':
+        editor.chain().focus().setCard().run();
+        break;
 
       // Callouts
       case 'callout-info':
@@ -171,6 +194,18 @@ function InsertToolbar({ editor }) {
         }
         break;
       }
+      case '2col':
+        editor.chain().focus().setColumns({ layout: 'two-columns' }).run();
+        break;
+      case '3col':
+        editor.chain().focus().setColumns({ layout: 'three-columns' }).run();
+        break;
+      case 'left-sidebar':
+        editor.chain().focus().setColumns({ layout: 'sidebar-left' }).run();
+        break;
+      case 'right-sidebar':
+        editor.chain().focus().setColumns({ layout: 'sidebar-right' }).run();
+        break;
       case 'table':
         setShowTableModal(true);
         break;

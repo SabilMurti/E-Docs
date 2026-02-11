@@ -27,6 +27,7 @@ import {
   X,
   Check,
   Grid3X3,
+  PaintBucket,
 } from 'lucide-react';
 
 // Table styles configuration
@@ -239,6 +240,21 @@ export function TableCreationModal({ isOpen, onClose, onInsert }) {
  */
 export function TableToolbar({ editor }) {
   if (!editor || !editor.isActive('table')) return null;
+
+  const [showColors, setShowColors] = useState(false);
+  const [showStyles, setShowStyles] = useState(false);
+  const colorRef = useRef(null);
+  const styleRef = useRef(null);
+
+  // Close popovers on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (colorRef.current && !colorRef.current.contains(event.target)) setShowColors(false);
+      if (styleRef.current && !styleRef.current.contains(event.target)) setShowStyles(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   const buttonClass = `
     flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium
@@ -250,112 +266,127 @@ export function TableToolbar({ editor }) {
   const iconButtonClass = `
     p-2 rounded-md text-[var(--color-text-secondary)] 
     hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]
-    transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+    transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative
   `;
   
   const dividerClass = "w-px h-6 bg-[var(--color-border-secondary)] mx-1";
+
+  const COLORS = [
+    { label: 'None', value: null },
+    { label: 'Gray', value: 'var(--color-bg-secondary)' },
+    { label: 'Red', value: '#fee2e2' },
+    { label: 'Green', value: '#dcfce7' },
+    { label: 'Blue', value: '#dbeafe' },
+    { label: 'Yellow', value: '#fef3c7' },
+    { label: 'Purple', value: '#f3e8ff' },
+  ];
   
   return (
-    <div className="table-toolbar flex items-center gap-1 p-1.5 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-lg">
+    <div className="table-toolbar flex items-center gap-1 p-1.5 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-lg animate-in fade-in slide-in-from-top-1 duration-200">
       {/* Row Operations */}
-      <button
-        onClick={() => editor.chain().focus().addRowBefore().run()}
-        className={buttonClass}
-        title="Add row above"
-      >
-        <Plus size={14} />
-        <span>Row ↑</span>
+      <button onClick={() => editor.chain().focus().addRowBefore().run()} className={buttonClass} title="Add row above">
+        <Plus size={14} /><span>Row ↑</span>
       </button>
-      
-      <button
-        onClick={() => editor.chain().focus().addRowAfter().run()}
-        className={buttonClass}
-        title="Add row below"
-      >
-        <Plus size={14} />
-        <span>Row ↓</span>
+      <button onClick={() => editor.chain().focus().addRowAfter().run()} className={buttonClass} title="Add row below">
+        <Plus size={14} /><span>Row ↓</span>
       </button>
-      
-      <button
-        onClick={() => editor.chain().focus().deleteRow().run()}
-        className={`${buttonClass} hover:text-red-500`}
-        title="Delete row"
-      >
+      <button onClick={() => editor.chain().focus().deleteRow().run()} className={`${buttonClass} hover:text-red-500`} title="Delete row">
         <Trash2 size={14} />
-        <span>Row</span>
       </button>
       
       <div className={dividerClass} />
       
       {/* Column Operations */}
-      <button
-        onClick={() => editor.chain().focus().addColumnBefore().run()}
-        className={buttonClass}
-        title="Add column left"
-      >
-        <Plus size={14} />
-        <span>Col ←</span>
+      <button onClick={() => editor.chain().focus().addColumnBefore().run()} className={buttonClass} title="Add column left">
+        <Plus size={14} /><span>Col ←</span>
       </button>
-      
-      <button
-        onClick={() => editor.chain().focus().addColumnAfter().run()}
-        className={buttonClass}
-        title="Add column right"
-      >
-        <Plus size={14} />
-        <span>Col →</span>
+      <button onClick={() => editor.chain().focus().addColumnAfter().run()} className={buttonClass} title="Add column right">
+        <Plus size={14} /><span>Col →</span>
       </button>
-      
-      <button
-        onClick={() => editor.chain().focus().deleteColumn().run()}
-        className={`${buttonClass} hover:text-red-500`}
-        title="Delete column"
-      >
+      <button onClick={() => editor.chain().focus().deleteColumn().run()} className={`${buttonClass} hover:text-red-500`} title="Delete column">
         <Trash2 size={14} />
-        <span>Col</span>
       </button>
       
       <div className={dividerClass} />
       
       {/* Cell Operations */}
-      <button
-        onClick={() => editor.chain().focus().mergeCells().run()}
-        disabled={!editor.can().mergeCells()}
-        className={iconButtonClass}
-        title="Merge cells"
-      >
+      <button onClick={() => editor.chain().focus().mergeCells().run()} disabled={!editor.can().mergeCells()} className={iconButtonClass} title="Merge cells">
         <Merge size={16} />
       </button>
-      
-      <button
-        onClick={() => editor.chain().focus().splitCell().run()}
-        disabled={!editor.can().splitCell()}
-        className={iconButtonClass}
-        title="Split cell"
-      >
+      <button onClick={() => editor.chain().focus().splitCell().run()} disabled={!editor.can().splitCell()} className={iconButtonClass} title="Split cell">
         <Split size={16} />
       </button>
+
+      {/* Background Color Picker */}
+      <div className="relative" ref={colorRef}>
+        <button 
+          onClick={() => { setShowColors(!showColors); setShowStyles(false); }} 
+          className={iconButtonClass} 
+          title="Cell Background"
+        >
+          <PaintBucket size={16} />
+        </button>
+        {showColors && (
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-lg shadow-xl grid grid-cols-4 gap-1 min-w-[120px] z-50">
+            {COLORS.map((c) => (
+              <button
+                key={c.label}
+                onClick={() => {
+                  editor.chain().focus().setCellAttribute('backgroundColor', c.value).run();
+                  setShowColors(false);
+                }}
+                className="w-6 h-6 rounded border border-[var(--color-border-secondary)] hover:scale-110 transition-transform"
+                style={{ backgroundColor: c.value || 'transparent' }}
+                title={c.label}
+              >
+                {!c.value && <X size={12} className="mx-auto text-[var(--color-text-muted)]" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       
       <div className={dividerClass} />
       
-      {/* Header Toggles */}
-      <button
-        onClick={() => editor.chain().focus().toggleHeaderRow().run()}
-        className={buttonClass}
-        title="Toggle header row"
-      >
-        <Rows3 size={14} />
-        <span>Header</span>
+      {/* Headers */}
+      <button onClick={() => editor.chain().focus().toggleHeaderRow().run()} className={iconButtonClass} title="Toggle Header Row">
+        <Rows3 size={16} className={editor.getError ? '' : 'text-[var(--color-accent)]'} />
       </button>
+      <button onClick={() => editor.chain().focus().toggleHeaderColumn().run()} className={iconButtonClass} title="Toggle Header Column">
+        <Columns3 size={16} />
+      </button>
+
+      {/* Style Picker */}
+      <div className="relative" ref={styleRef}>
+         <button 
+            onClick={() => { setShowStyles(!showStyles); setShowColors(false); }} 
+            className={iconButtonClass}
+            title="Table Style"
+         >
+            <Palette size={16} />
+         </button>
+         {showStyles && (
+            <div className="absolute top-full right-0 mt-2 p-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-lg shadow-xl min-w-[140px] z-50 flex flex-col gap-1">
+              {Object.entries(TABLE_STYLES).map(([key, cfg]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    editor.chain().focus().updateAttributes('table', { style: key }).run();
+                    setShowStyles(false);
+                  }}
+                  className="px-3 py-1.5 text-left text-xs hover:bg-[var(--color-bg-hover)] rounded"
+                >
+                  {cfg.name}
+                </button>
+              ))}
+            </div>
+         )}
+      </div>
       
       <div className={dividerClass} />
       
       {/* Delete Table */}
-      <button
-        onClick={() => editor.chain().focus().deleteTable().run()}
-        className={`${iconButtonClass} hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-950/30`}
-        title="Delete table"
-      >
+      <button onClick={() => editor.chain().focus().deleteTable().run()} className={`${iconButtonClass} hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20`} title="Delete table">
         <Trash2 size={16} />
       </button>
     </div>
@@ -383,10 +414,7 @@ export function useTableCreation(editor) {
       rows: options.rows,
       cols: options.cols,
       withHeaderRow: options.withHeaderRow,
-    }).run();
-    
-    // Apply style (would require custom table node attributes in future)
-    // For now, styles are handled via CSS classes
+    }).updateAttributes('table', { style: options.style }).run();
   }, [editor]);
   
   return {

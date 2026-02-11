@@ -1289,14 +1289,15 @@ body {
 }
 
 /* All direct children are draggable with visible handle */
-.ProseMirror > * {
+/* All direct children are draggable with visible handle, EXCEPT tables */
+.ProseMirror > *:not(table):not(.tableWrapper) {
   position: relative;
   padding-left: 2rem;
   margin-left: -2rem;
 }
 
-/* Always visible drag handle for each block */
-.ProseMirror > *::before {
+/* Always visible drag handle for each block (except tables) */
+.ProseMirror > *:not(table):not(.tableWrapper)::before {
   content: '⋮⋮';
   position: absolute;
   left: 0;
@@ -1329,12 +1330,14 @@ body {
 
 /* Hide pseudo handle for certain elements that shouldn't show it */
 .ProseMirror > hr::before,
-.ProseMirror > .tableWrapper::before {
+.ProseMirror > .tableWrapper::before,
+.ProseMirror > table::before {
   display: none;
 }
 
 /* Table wrapper needs special handling */
-.ProseMirror > .tableWrapper {
+.ProseMirror > .tableWrapper,
+.ProseMirror > table {
   padding-left: 0;
   margin-left: 0;
 }
@@ -1658,3 +1661,61 @@ body {
   color: #569CD6 !important;
 }
 
+
+/* =============================================
+   Advanced Table Styles (Phase 5 - Consolidated)
+   ============================================= */
+
+/* Base Table Stability */
+.ProseMirror table {
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  width: 100%;
+  table-layout: fixed; /* Necessary for resizing */
+  overflow: hidden;
+  position: relative;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+  min-width: 1em;
+  border: 1px solid var(--color-border-primary);
+  padding: 8px 10px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  white-space: normal; /* Allow wrap */
+  word-wrap: break-word; /* distinct from word-break */
+}
+
+/* Cell content stability */
+.ProseMirror td > p,
+.ProseMirror th > p {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Striped Style */
+.ProseMirror table[data-style="striped"] tr:nth-child(even) td {
+  background-color: var(--color-bg-secondary);
+}
+
+/* Bordered Style */
+.ProseMirror table[data-style="bordered"] td,
+.ProseMirror table[data-style="bordered"] th {
+  border-width: 2px;
+}
+
+/* Minimal Style */
+.ProseMirror table[data-style="minimal"] {
+  border: none;
+}
+.ProseMirror table[data-style="minimal"] th {
+  border: none;
+  border-bottom: 2px solid var(--color-border-primary);
+  background: transparent;
+}
+.ProseMirror table[data-style="minimal"] td {
+  border: none;
+  border-bottom: 1px solid var(--color-border-secondary);
+}

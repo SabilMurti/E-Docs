@@ -14,8 +14,6 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import { getExtensions } from './extensions';
 
 // UI Components
-
-// UI Components
 import SlashMenu from './menus/SlashMenu';
 import BubbleToolbar from './BubbleToolbar';
 import InsertToolbar from './InsertToolbar';
@@ -33,22 +31,18 @@ export default function RichEditor({
   content, 
   onChange, 
   editable = true,
-  placeholder = null // Removed default text
+  placeholder = null 
 }) {
   const wrapperRef = useRef(null);
   
-  // Slash menu state
   const [slashMenu, setSlashMenu] = useState({
     visible: false,
     query: '',
     position: { top: 0, left: 0 }
   });
   
-  // Configure extensions
-  // Configure extensions
   const extensions = useMemo(() => getExtensions(placeholder), [placeholder]);
   
-  // Initialize editor
   const editor = useEditor({
     extensions,
     content: content || '',
@@ -63,7 +57,7 @@ export default function RichEditor({
     },
   });
   
-  // Slash command detection
+  // Slash command detection - Standard Logic
   useEffect(() => {
     if (!editor) return;
     
@@ -71,7 +65,6 @@ export default function RichEditor({
       const { selection } = editor.state;
       const { $from } = selection;
       
-      // Only trigger on collapsed selection
       if (!selection.empty) {
         if (slashMenu.visible) {
           setSlashMenu(prev => ({ ...prev, visible: false }));
@@ -79,16 +72,11 @@ export default function RichEditor({
         return;
       }
       
-      // Get text before cursor
       const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
-      
-      // Match slash command pattern: / at start or after space
       const match = textBefore.match(/(?:^|\s)\/([a-zA-Z0-9]*)$/);
       
       if (match) {
         const query = match[1];
-        
-        // Get position for menu
         const matchIndex = textBefore.lastIndexOf(match[0]);
         const slashOffset = match[0].indexOf('/');
         const startPos = $from.pos - (textBefore.length - matchIndex - slashOffset);
@@ -114,7 +102,6 @@ export default function RichEditor({
     return () => editor.off('transaction', handleTransaction);
   }, [editor, slashMenu.visible]);
   
-  // Close slash menu on click outside
   useEffect(() => {
     if (!slashMenu.visible) return;
     
@@ -128,11 +115,9 @@ export default function RichEditor({
     return () => document.removeEventListener('click', handleClick);
   }, [slashMenu.visible]);
   
-  // Sync content when prop changes (for async data loading)
   useEffect(() => {
     if (editor && content) {
       const currentContent = editor.getJSON();
-      // Deep comparison to prevent loops
       if (JSON.stringify(currentContent) !== JSON.stringify(content)) {
         editor.commands.setContent(content);
       }
@@ -148,35 +133,35 @@ export default function RichEditor({
   }
   
   return (
-    <div 
-      ref={wrapperRef} 
-      className="rich-editor relative group"
-    >
-      {/* Insert Toolbar (fixed at top) */}
+    <div ref={wrapperRef} className="rich-editor relative group">
+      {/* Toolbar */}
       {editable && (
         <div className="editor-toolbar sticky top-0 z-20 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-secondary)] px-4 py-2 flex items-center gap-2">
           <InsertToolbar editor={editor} />
           <div className="ml-auto flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
             <span>Type <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono">/</kbd> for commands</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="hidden sm:flex items-center gap-1">
-              <kbd className="px-1 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono">Ctrl+Z</kbd> undo
-            </span>
           </div>
         </div>
       )}
       
-      {/* Bubble Menu (text selection toolbar) */}
+      {/* Bubble Menu */}
       {editable && <BubbleToolbar editor={editor} />}
       
-      {/* Table Toolbar (appears when table is active) */}
+      {/* Table Toolbar */}
       {editable && editor?.isActive('table') && (
         <div className="table-toolbar-container sticky top-12 z-10 flex justify-center py-2">
           <TableToolbar editor={editor} />
         </div>
       )}
+
+      {/* Main Content Area - Single Column, Centered */}
+      <div className="max-w-4xl mx-auto w-full px-4 md:px-6">
+         <div className="prose prose-invert max-w-none w-full pb-32">
+            <EditorContent editor={editor} />
+         </div>
+      </div>
       
-      {/* Slash Command Menu */}
+      {/* Slash Menu */}
       {editable && slashMenu.visible && (
         <SlashMenu
           editor={editor}
@@ -185,9 +170,6 @@ export default function RichEditor({
           onClose={() => setSlashMenu(prev => ({ ...prev, visible: false }))}
         />
       )}
-      
-      {/* Editor Content */}
-      <EditorContent editor={editor} />
     </div>
   );
 }
