@@ -30,6 +30,7 @@ import { FontSize } from './extensions/FontSize';
 import { Columns, Column } from './extensions/Columns';
 import { Toggle } from './extensions/Toggle';
 import { Card } from './extensions/Card';
+import { ExcalidrawNode } from './extensions/Excalidraw';
 
 export const getExtensions = (placeholderText = 'Start typing...') => [
   StarterKit.configure({
@@ -147,4 +148,5 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   Column,
   Toggle,
   Card,
+  ExcalidrawNode,
 ];

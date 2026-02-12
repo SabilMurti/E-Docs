@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FileText, ChevronRight, Menu, X, ExternalLink, Sparkles } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import PageViewer from '../components/pages/PageViewer';
+import TableOfContents from '../components/pages/TableOfContents';
 import client from '../api/client';
 
 // Recursive Tree Item
@@ -175,6 +176,11 @@ export default function PublicSitePage() {
     );
   }
 
+  // Navigation Logic
+  const currentIndex = pages.findIndex(p => p.id === currentPage?.id);
+  const prevPage = currentIndex > 0 ? pages[currentIndex - 1] : null;
+  const nextPage = currentIndex < pages.length - 1 ? pages[currentIndex + 1] : null;
+
   // Root pages for sidebar
   const rootPages = pages
     .filter(p => !p.parent_id)
@@ -258,33 +264,80 @@ export default function PublicSitePage() {
 
         {/* Content */}
         <main className="flex-1 min-w-0">
-          <div className="max-w-3xl mx-auto px-6 py-10">
-            {currentPage ? (
-              <article className="animate-in fade-in duration-300">
-                <header className="mb-8 pb-8 border-b border-gray-800">
-                  <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">
-                    {currentPage.title || 'Untitled Page'}
-                  </h1>
-                  {currentPage.updated_at && (
-                    <time className="text-xs text-gray-500 uppercase tracking-wider font-medium">
-                      Last updated {new Date(currentPage.updated_at).toLocaleDateString()}
-                    </time>
-                  )}
-                </header>
+          <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-10">
+            <div className="flex-1 max-w-3xl mx-auto px-6 py-10">
+              {currentPage ? (
+                <article className="animate-in fade-in duration-300">
+                  <header className="mb-8 pb-8 border-b border-gray-800">
+                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">
+                      {currentPage.title || 'Untitled Page'}
+                    </h1>
+                    {currentPage.updated_at && (
+                      <time className="text-xs text-gray-500 uppercase tracking-wider font-medium">
+                        Last updated {new Date(currentPage.updated_at).toLocaleDateString()}
+                      </time>
+                    )}
+                  </header>
 
-                <div className="prose prose-invert prose-emerald max-w-none">
-                  <PageViewer content={currentPage.content} />
+                  <div className="prose prose-invert prose-emerald max-w-none">
+                    <PageViewer content={currentPage.content} />
+                  </div>
+
+                  {/* Next/Prev Navigation */}
+                  <div className="mt-16 pt-8 border-t border-gray-800 flex flex-col sm:flex-row gap-4">
+                    {prevPage && (
+                      <button 
+                        onClick={() => handlePageSelect(prevPage)}
+                        className="flex-1 flex flex-col p-4 rounded-xl border border-gray-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group"
+                      >
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Previous</span>
+                        <span className="text-sm font-semibold text-gray-300 group-hover:text-emerald-400 flex items-center gap-1">
+                          <ChevronRight size={14} className="rotate-180" />
+                          {prevPage.title}
+                        </span>
+                      </button>
+                    )}
+                    {nextPage && (
+                      <button 
+                        onClick={() => handlePageSelect(nextPage)}
+                        className="flex-1 flex flex-col p-4 rounded-xl border border-gray-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-right group ml-auto"
+                      >
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Next</span>
+                        <span className="text-sm font-semibold text-gray-300 group-hover:text-emerald-400 flex items-center justify-end gap-1">
+                          {nextPage.title}
+                          <ChevronRight size={14} />
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
+                    <FileText size={24} className="text-gray-500" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-300">Select a page</h3>
+                  <p className="text-gray-500 text-sm mt-1">Navigate using the sidebar to view content.</p>
                 </div>
-              </article>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mb-4">
-                   <FileText size={24} className="text-gray-500" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-300">Select a page</h3>
-                <p className="text-gray-500 text-sm mt-1">Navigate using the sidebar to view content.</p>
+              )}
+            </div>
+
+            {/* Right Sidebar - Info/ToC */}
+            <aside className="hidden xl:block w-64 pt-10 pr-6">
+              <div className="sticky top-24">
+                 <TableOfContents content={currentPage?.content} />
+                 
+                 <div className="mt-10 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                    <h4 className="text-xs font-bold text-emerald-400 mb-2 uppercase tracking-tight">Need Help?</h4>
+                    <p className="text-[10px] text-gray-400 leading-relaxed mb-3">
+                      This documentation is built with E-Docs. Contact the author for more info.
+                    </p>
+                    <button className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg transition-colors">
+                      Contact Support
+                    </button>
+                 </div>
               </div>
-            )}
+            </aside>
           </div>
         </main>
       </div>

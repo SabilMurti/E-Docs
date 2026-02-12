@@ -44,20 +44,24 @@ class PageChangeRequestController extends Controller
             ->where('status', 'draft')
             ->first();
 
-        if ($existingDraft && $data['status'] === 'draft') {
+        if ($existingDraft) {
             $existingDraft->update([
                 'content' => $data['content'] ?? $existingDraft->content,
                 'title' => $data['title'] ?? $existingDraft->title,
                 'description' => $data['description'] ?? $existingDraft->description,
+                'status' => $data['status'], // Bisa berubah dari draft ke open
             ]);
             return response()->json($existingDraft);
         }
 
         // Create new request (Draft or Open PR)
+        // If creating new, we must have initial state
         $changeRequest = $page->changeRequests()->create([
             'user_id' => auth()->id(),
             'title' => $data['title'] ?? $page->title,
             'content' => $data['content'] ?? $page->content,
+            'base_title' => $page->title,
+            'base_content' => $page->content,
             'description' => $data['description'],
             'status' => $data['status'],
         ]);
@@ -76,30 +80,61 @@ class PageChangeRequestController extends Controller
     /**
      * Merge a change request into the main page
      */
-    public function merge(PageChangeRequest $changeRequest)
+    public function merge(Request $request, PageChangeRequest $changeRequest)
     {
-        // TODO: Add Authorization check here (Owner/Admin only)
-        
         if ($changeRequest->status !== 'open') {
             return response()->json(['message' => 'Only open requests can be merged'], 400);
         }
 
-        DB::transaction(function () use ($changeRequest) {
+        $data = $request->validate([
+            'content' => 'nullable|array',
+            'title' => 'nullable|string',
+        ]);
+
+        DB::transaction(function () use ($changeRequest, $data) {
             $page = $changeRequest->page;
 
-            // Apply changes to Page (This triggers Page Observer to create revision)
+            $mergedTitle = $data['title'] ?? $changeRequest->title;
+            $mergedContent = $data['content'] ?? $changeRequest->content;
+
             $page->update([
-                'title' => $changeRequest->title,
-                'content' => $changeRequest->content,
+                'title' => $mergedTitle,
+                'content' => $mergedContent,
                 'updated_by' => auth()->id(),
             ]);
 
-            // Mark request as merged
             $changeRequest->update(['status' => 'merged']);
-            
-            // Close other drafts?? Maybe keep them.
         });
 
-        return response()->json(['message' => 'Changes merged successfully', 'page' => $changeRequest->page]);
+        return response()->json([
+            'message' => 'Changes merged successfully', 
+            'page' => $changeRequest->page->load('updater')
+        ]);
+    }
+
+    /**
+     * Git Pull: Sync draft with latest live version (Rebase)
+     */
+    public function sync(PageChangeRequest $changeRequest)
+    {
+        if ($changeRequest->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($changeRequest->status !== 'draft') {
+            return response()->json(['message' => 'Only drafts can be synced'], 400);
+        }
+
+        $page = $changeRequest->page;
+
+        $changeRequest->update([
+            'base_title' => $page->title,
+            'base_content' => $page->content,
+        ]);
+
+        return response()->json([
+            'message' => 'Draft synced with live version successfully',
+            'request' => $changeRequest
+        ]);
     }
 }

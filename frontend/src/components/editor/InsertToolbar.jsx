@@ -35,6 +35,7 @@ import {
   Undo2,
   Redo2,
   ArrowRightLeft,
+  PenTool,
 } from 'lucide-react';
 import { TableCreationModal } from './TablePlus';
 
@@ -82,6 +83,7 @@ const BLOCK_CATEGORIES = [
       { id: 'image', label: 'Image', icon: ImageIcon },
       { id: 'youtube', label: 'YouTube', icon: Youtube },
       { id: 'table', label: 'Table', icon: Table },
+      { id: 'flowchart', label: 'Flowchart', icon: PenTool },
     ]
   },
   {
@@ -180,13 +182,9 @@ function InsertToolbar({ editor }) {
         break;
 
       // Media
-      case 'image': {
-        const url = window.prompt('Enter image URL:');
-        if (url) {
-          editor.chain().focus().setImage({ src: url }).run();
-        }
+      case 'image':
+        editor.chain().focus().triggerImageUpload().run();
         break;
-      }
       case 'youtube': {
         const url = window.prompt('Enter YouTube URL:');
         if (url) {
@@ -194,6 +192,9 @@ function InsertToolbar({ editor }) {
         }
         break;
       }
+      case 'flowchart':
+        editor.chain().focus().setExcalidraw().run();
+        break;
       case '2col':
         editor.chain().focus().setColumns({ layout: 'two-columns' }).run();
         break;

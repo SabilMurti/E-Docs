@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Check, History, Settings, Eye, Edit3, Save,
-  Image as ImageIcon, ChevronRight, MoreHorizontal, Menu, GitPullRequest
+  Image as ImageIcon, ChevronRight, MoreHorizontal, Menu, GitPullRequest,
+  ArrowUpCircle, ArrowDownCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import usePageStore from '../../stores/pageStore';
@@ -10,7 +11,7 @@ import useSiteStore from '../../stores/siteStore';
 import RichEditor from '../editor/RichEditor';
 import LoadingSpinner from '../common/LoadingSpinner';
 import PageViewer from './PageViewer';
-import { createChangeRequest } from '../../api/pages';
+import { createChangeRequest, syncChangeRequest } from '../../api/pages';
 
 export default function PageContent() {
   const { pageId, siteId } = useParams();
@@ -46,54 +47,95 @@ export default function PageContent() {
     setHasUnsavedChanges(true);
   }, []);
 
-  // NEW: Handle Request Review (Save Button)
-  const handleRequestReview = useCallback(async () => {
-    if (!currentPage || !localContent) return;
+  // Manual Commit (Save to Self)
+  const [commitMessage, setCommitMessage] = useState('');
+  const [showCommitInput, setShowCommitInput] = useState(false);
+
+  const handleCommit = useCallback(async () => {
+    // Crucial: Use the most up-to-date content from the store/local state
+    if (!currentPage || !localContent) {
+      toast.error('No changes to commit');
+      return;
+    }
     
+    setDraftSaving(true);
     try {
-      // Status 'open' means Submit for Review
-      const result = await createChangeRequest(currentPage.id, {
+      const result = await usePageStore.getState().commitChange(siteId, currentPage.id, {
         content: localContent,
-        title: currentPage.title,
+        title: currentPage.title, // Title might be editable in future
+        message: commitMessage || 'Update content'
+      });
+      
+      if (result.success) {
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+        setShowCommitInput(false);
+        setCommitMessage('');
+        toast.success('Changes committed to your draft!');
+      } else {
+        toast.error(result.error || 'Failed to commit changes');
+      }
+    } catch (error) {
+      console.error('Commit error:', error);
+      toast.error('Failed to commit changes');
+    } finally {
+      setDraftSaving(false);
+    }
+  }, [currentPage, localContent, siteId, commitMessage]);
+
+  const { currentRequest, fetchRequestDetails } = usePageStore();
+
+  useEffect(() => {
+    if (pageId) fetchRequestDetails(pageId);
+  }, [pageId, fetchRequestDetails]);
+
+  const isOutOfSync = useMemo(() => {
+    if (!currentRequest || !currentPage) return false;
+    return JSON.stringify(currentRequest.base_content) !== JSON.stringify(currentPage.content);
+  }, [currentRequest, currentPage]);
+
+  const handlePull = async () => {
+    if (!currentRequest) return;
+    setDraftSaving(true);
+    try {
+      await syncChangeRequest(currentRequest.id);
+      await fetchRequestDetails(pageId);
+      toast.success('Synced with latest live version (Git Pull)');
+    } catch (error) {
+       toast.error('Failed to sync changes');
+    } finally {
+      setDraftSaving(false);
+    }
+  };
+
+  // Handle Request Review (Submit PR / Git Push)
+  const handleRequestReview = useCallback(async () => {
+    if (!currentPage) return;
+    
+    setDraftSaving(true);
+    try {
+      // Promote draft to 'open' and include latest content
+      const result = await createChangeRequest(currentPage.id, {
         status: 'open',
-        description: 'Update content'
+        title: currentPage.title,
+        content: localContent,
+        description: 'Ready for review'
       });
       
       if (result) {
         setHasUnsavedChanges(false);
-        setLastSaved(new Date());
-        toast.success('Changes submitted for review!');
+        toast.success('Changes pushed for review!');
+        navigate(`/sites/${siteId}/pages/${pageId}/requests/${result.id}`);
       }
     } catch (error) {
-      console.error('Failed to request review:', error);
-      toast.error('Failed to submit review');
+      console.error('Failed to push changes:', error);
+      toast.error('Failed to push changes');
+    } finally {
+      setDraftSaving(false);
     }
-  }, [currentPage, localContent]);
+  }, [currentPage, localContent, siteId, pageId, navigate]);
 
-  // NEW: Auto-Draft (Git-style auto-save)
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-    
-    const timer = setTimeout(async () => {
-       setDraftSaving(true);
-       try {
-         // Status 'draft' means saving progress without publishing
-         await createChangeRequest(currentPage.id, {
-            content: localContent,
-            title: currentPage.title,
-            status: 'draft'
-         });
-         setLastSaved(new Date());
-         // We consider draft saved, but changes are not "Merged" yet.
-       } catch (e) {
-         console.error('Auto-draft failed', e);
-       } finally {
-         setDraftSaving(false);
-       }
-    }, 5000);
-    
-    return () => clearTimeout(timer);
-  }, [localContent, hasUnsavedChanges, currentPage]);
+  // Removed auto-save useEffect as per user request
 
   // Keyboard shortcut for save
   useEffect(() => {
@@ -181,40 +223,72 @@ export default function PageContent() {
               </span>
             )}
 
-            {/* Mode Toggle */}
-            <div className="flex items-center bg-[color:var(--color-bg-secondary)] rounded-lg p-0.5">
-              <button
-                onClick={() => setMode('edit')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-                  mode === 'edit'
-                    ? 'bg-[color:var(--color-bg-primary)] text-[color:var(--color-text-primary)] shadow-sm'
-                    : 'text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]'
-                }`}
-              >
-                <Edit3 size={12} />
-                Edit
-              </button>
-              <button
-                onClick={() => setMode('preview')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-                  mode === 'preview'
-                    ? 'bg-[color:var(--color-bg-primary)] text-[color:var(--color-text-primary)] shadow-sm'
-                    : 'text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]'
-                }`}
-              >
-                <Eye size={12} />
-                Preview
-              </button>
+            {/* Commit / Save progress */}
+            <div className="flex items-center gap-2">
+              {showCommitInput ? (
+                <div className="flex items-center gap-2 animate-in slide-in-from-right-4 duration-300">
+                  <input
+                    type="text"
+                    value={commitMessage}
+                    onChange={(e) => setCommitMessage(e.target.value)}
+                    placeholder="Commit message..."
+                    className="w-48 px-2 py-1.5 text-xs bg-[color:var(--color-bg-secondary)] border border-[color:var(--color-border-primary)] rounded-lg focus:outline-none focus:ring-1 focus:ring-[color:var(--color-accent)]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCommit();
+                      if (e.key === 'Escape') setShowCommitInput(false);
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleCommit}
+                    disabled={draftSaving}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[color:var(--color-accent)] text-white hover:bg-[color:var(--color-accent-hover)] transition-colors flex items-center gap-1"
+                  >
+                    {draftSaving ? <LoadingSpinner size="xs" /> : <Save size={12} />}
+                    Commit
+                  </button>
+                  <button
+                    onClick={() => setShowCommitInput(false)}
+                    className="p-1.5 text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowCommitInput(true)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+                    hasUnsavedChanges 
+                      ? 'bg-[color:var(--color-accent)] text-white hover:bg-[color:var(--color-accent-hover)] shadow-sm' 
+                      : 'bg-[color:var(--color-bg-secondary)] text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]'
+                  }`}
+                >
+                  <Save size={12} />
+                  Commit
+                </button>
+              )}
             </div>
 
-            {/* Request Review Button (Formerly Save) */}
+            {/* Git Pull (Sync) */}
+            {isOutOfSync && (
+              <button
+                onClick={handlePull}
+                disabled={draftSaving}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center gap-1.5 shadow-sm"
+                title="Your draft is out of sync with the live version. Pull changes."
+              >
+                <ArrowDownCircle size={14} />
+                Pull
+              </button>
+            )}
+
+            {/* Request Review Button */}
             <button
               onClick={handleRequestReview}
-              disabled={isSaving} // isSaving from store might not be true here, but whatever
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[color:var(--color-accent)] text-white hover:bg-[color:var(--color-accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-              title="Submit Pull Request (Review)"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[color:var(--color-border-primary)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-bg-hover)] hover:text-[color:var(--color-text-primary)] transition-colors flex items-center gap-1.5"
+              title="Push changes and request review"
             >
-              <GitPullRequest size={12} />
+              <GitPullRequest size={14} />
               Request Review
             </button>
 
@@ -222,7 +296,7 @@ export default function PageContent() {
             <button
               onClick={() => navigate(`/sites/${siteId}/pages/${pageId}/requests`)}
               className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
-              title="View Open Requests"
+              title="View Requests & Drafts"
             >
               <GitPullRequest size={16} />
             </button>

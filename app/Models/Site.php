@@ -74,6 +74,7 @@ class Site extends Model
     public function members()
     {
         return $this->belongsToMany(User::class, 'site_members')
+            ->using(SiteMember::class)
             ->withPivot('role', 'id')
             ->withTimestamps();
     }

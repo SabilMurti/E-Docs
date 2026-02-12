@@ -18,7 +18,8 @@ import {
   Trash2,
   Settings,
   Book,
-  Share2
+  Share2,
+  Search
 } from 'lucide-react';
 import useAuthStore from '../../stores/authStore';
 import useSiteStore from '../../stores/siteStore';
@@ -160,6 +161,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
   
   // Site creation modal state
   const [showCreateSiteModal, setShowCreateSiteModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchSites();
@@ -256,7 +258,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
       `}>
         {/* Header - User Section */}
         <div className="p-3 border-b border-[var(--color-border-primary)]">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 mb-3">
             {user?.avatar_url ? (
               <img 
                 src={user.avatar_url} 
@@ -270,16 +272,34 @@ function UnifiedSidebar({ isOpen, onClose }) {
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{user?.name}</p>
-              <p className="text-[10px] text-[var(--color-text-muted)] truncate">{user?.email}</p>
             </div>
             
-            {/* Mobile Close */}
             <button
               onClick={onClose}
               className="lg:hidden p-1.5 rounded-lg hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
             >
               <X size={16} />
             </button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative group">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-accent)] transition-colors" />
+            <input 
+              type="text"
+              placeholder="Search pages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-all"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -356,7 +376,9 @@ function UnifiedSidebar({ isOpen, onClose }) {
                 </div>
               ) : (
                 <div className="space-y-0.5">
-                  {pages.map((page) => (
+                  {pages
+                    .filter(p => !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((page) => (
                     <PageTreeItem 
                       key={page.id} 
                       page={page} 
@@ -365,6 +387,9 @@ function UnifiedSidebar({ isOpen, onClose }) {
                       onAddSubpageRequest={handleAddSubpage}
                     />
                   ))}
+                  {searchQuery && pages.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                    <p className="text-[10px] text-center text-[var(--color-text-muted)] py-4">No pages match "{searchQuery}"</p>
+                  )}
                 </div>
               )}
 

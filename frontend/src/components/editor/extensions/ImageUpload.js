@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 /**
  * Handle file upload logic for both images and other files
  */
-const performUpload = (view, file, pos) => {
+export const performUpload = (view, file, pos) => {
   const toastId = toast.loading(`Uploading ${file.name}...`);
 
   uploadFile(file).then(data => {
@@ -24,19 +24,14 @@ const performUpload = (view, file, pos) => {
       if (schema.nodes.fileAttachment) {
         node = schema.nodes.fileAttachment.create({
           src: data.url,
-          title: data.filename, // Using filename from server which is usually original name
+          title: data.filename,
           size: data.size,
           type: data.type,
         });
       } else {
-        // Fallback: Link to file in paragraph
-        // This is tricky if inside block, but valid schema wise usually
         const text = schema.text(data.filename);
-        // Link mark might need href
-        // schema.marks.link is standard
         if (schema.marks.link) {
            const mark = schema.marks.link.create({ href: data.url });
-           // Wrap in paragraph for block insertion
            node = schema.nodes.paragraph.create(null, text.mark([mark]));
         } else {
            node = schema.nodes.paragraph.create(null, text);
@@ -46,10 +41,8 @@ const performUpload = (view, file, pos) => {
 
     let tr = view.state.tr;
     if (pos) {
-       // Insert at specific dropped position
        tr = tr.insert(pos, node);
     } else {
-       // Replace selection (paste)
        tr = tr.replaceSelectionWith(node);
     }
     view.dispatch(tr);
@@ -65,6 +58,36 @@ const performUpload = (view, file, pos) => {
 export const ImageUpload = Extension.create({
   name: 'imageUpload',
 
+  addCommands() {
+    return {
+      triggerImageUpload: () => ({ view }) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            performUpload(view, file);
+          }
+        };
+        input.click();
+        return true;
+      },
+      triggerFileUpload: () => ({ view }) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            performUpload(view, file);
+          }
+        };
+        input.click();
+        return true;
+      }
+    };
+  },
+
   addProseMirrorPlugins() {
     return [
       new Plugin({
@@ -72,7 +95,6 @@ export const ImageUpload = Extension.create({
         props: {
           handlePaste(view, event) {
             const items = Array.from(event.clipboardData?.items || []);
-            // Paste handles primarily images
             const images = items.filter(item => item.type.indexOf('image') === 0);
 
             if (images.length === 0) return false;

@@ -71,7 +71,9 @@ export default function ChangeRequestsList() {
                   {request.title || 'Untitled Update'}
                 </h3>
                 <span className={`px-2 py-1 rounded text-xs uppercase font-medium ${
-                  request.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-gray-700 text-gray-300'
+                  request.status === 'open' ? 'bg-green-500/20 text-green-400' : 
+                  request.status === 'draft' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-gray-700 text-gray-300'
                 }`}>
                   {request.status}
                 </span>
@@ -88,7 +90,10 @@ export default function ChangeRequestsList() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Clock size={14} />
-                  <span>{new Date(request.created_at).toLocaleDateString()}</span>
+                  <span>{new Date(request.created_at).toLocaleString(undefined, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                  })}</span>
                 </div>
               </div>
             </div>

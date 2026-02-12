@@ -66,8 +66,26 @@ export const getChangeRequests = async (pageId) => {
   return response.data;
 };
 
-export const mergeChangeRequest = async (requestId) => {
-  const response = await client.post(`/requests/${requestId}/merge`);
+export const mergeChangeRequest = async (requestId, data) => {
+  const response = await client.post(`/requests/${requestId}/merge`, data);
+  return response.data;
+};
+
+export const syncChangeRequest = async (requestId) => {
+  const response = await client.post(`/requests/${requestId}/sync`);
+  return response.data;
+};
+
+/**
+ * Git-style commit (Save to self)
+ */
+export const commitChange = async (siteId, pageId, data) => {
+  const response = await client.post(`/sites/${siteId}/pages/${pageId}/commits`, data);
+  return response.data;
+};
+
+export const getCommits = async (requestId) => {
+  const response = await client.get(`/requests/${requestId}/commits`);
   return response.data;
 };
 
@@ -81,4 +99,7 @@ export default {
   createChangeRequest,
   getChangeRequests,
   mergeChangeRequest,
+  syncChangeRequest,
+  commitChange,
+  getCommits,
 };

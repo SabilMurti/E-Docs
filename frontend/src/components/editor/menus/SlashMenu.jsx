@@ -79,24 +79,17 @@ const BLOCKS = [
   {
     category: 'Media',
     items: [
-      { id: 'image', name: 'Image', icon: ImageIcon, description: 'Upload or embed image',
-        action: (editor) => {
-          const url = window.prompt('Enter image URL:');
-          if (url) editor.chain().focus().setImage({ src: url }).run();
-        }},
+      { id: 'image', name: 'Image', icon: ImageIcon, description: 'Upload image',
+        action: (editor) => editor.chain().focus().triggerImageUpload().run() },
       { id: 'youtube', name: 'YouTube', icon: Youtube, description: 'Embed video',
         action: (editor) => {
           const url = window.prompt('Enter YouTube URL:');
           if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
         }},
       { id: 'file', name: 'File', icon: FileUp, description: 'Attach file',
-        action: (editor) => {
-          const url = window.prompt('Enter file URL:');
-          if (url) {
-            const name = url.split('/').pop() || 'File';
-            editor.chain().focus().insertContent(`<p><a href="${url}" target="_blank">📎 ${name}</a></p>`).run();
-          }
-        }},
+        action: (editor) => editor.chain().focus().triggerFileUpload().run() },
+      { id: 'flowchart', name: 'Flowchart', icon: Network, description: 'Visual diagram with toolbar',
+        action: (editor) => editor.chain().focus().setExcalidraw().run() },
     ]
   },
   {

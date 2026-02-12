@@ -58,6 +58,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('pages/{page}/requests', [\App\Http\Controllers\PageChangeRequestController::class, 'store']);
     Route::get('requests/{changeRequest}', [\App\Http\Controllers\PageChangeRequestController::class, 'show']);
     Route::post('requests/{changeRequest}/merge', [\App\Http\Controllers\PageChangeRequestController::class, 'merge']);
+    Route::post('requests/{changeRequest}/sync', [\App\Http\Controllers\PageChangeRequestController::class, 'sync']);
+
+    // Page Commits (History)
+    Route::post('sites/{site}/pages/{page}/commits', [\App\Http\Controllers\Api\PageCommitController::class, 'store']);
+    Route::get('sites/{site}/pages/{page}/commits', [\App\Http\Controllers\Api\PageCommitController::class, 'index']); // Changed from requests/{changeRequest}/commits
+    Route::get('requests/{changeRequest}/commits', [\App\Http\Controllers\Api\PageCommitController::class, 'indexByRequest']); // Add specific request lookup if needed
+
+    // Notifications
+    Route::get('notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+    Route::get('notifications/count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+    Route::post('notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
 
     // Search
     Route::get('sites/{site}/search', [SearchController::class, 'search']);

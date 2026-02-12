@@ -1,5 +1,11 @@
-import { FileText, ExternalLink, CheckSquare, Square, Download, FileAudio, FileVideo, FileImage, File } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import {
+  FileText, ExternalLink, CheckSquare, Square, Download,
+  FileAudio, FileVideo, FileImage, File,
+  Info, CheckCircle2, AlertTriangle, XCircle,
+  ChevronRight, ChevronDown, List
+} from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 function PageViewer({ content }) {
   if (!content) {
@@ -196,38 +202,131 @@ function PageViewer({ content }) {
         case 'hardBreak':
            return <br key={i} />;
 
-        case 'table':
+         case 'table': {
+            const tableStyle = node.attrs?.style || 'default';
+            return (
+              <div key={i} className={`
+                mb-8 overflow-x-auto rounded-lg border border-[var(--color-border-primary)] shadow-sm
+                ${tableStyle === 'bordered' ? 'ring-1 ring-[var(--color-border-primary)]' : ''}
+              `}>
+                <table className="w-full text-left border-collapse text-sm">
+                  <tbody>
+                    {node.content?.map((row, j) => (
+                      <tr 
+                        key={j} 
+                        className={`
+                          border-b border-[var(--color-border-primary)] last:border-0 transition-colors
+                          ${tableStyle === 'striped' && j % 2 === 1 ? 'bg-[var(--color-bg-secondary)]/30' : ''}
+                          hover:bg-[var(--color-bg-secondary)]/50
+                        `}
+                      >
+                        {row.content?.map((cell, k) => {
+                          const isHeader = cell.type === 'tableHeader';
+                          const Tag = isHeader ? 'th' : 'td';
+                          const bgColor = cell.attrs?.backgroundColor;
+                          
+                          let cellClass = 'p-3 border-r border-[var(--color-border-primary)] last:border-0 align-top';
+                          if (isHeader) {
+                            cellClass += ' bg-[var(--color-bg-tertiary)] font-semibold text-[var(--color-text-primary)]';
+                            if (tableStyle === 'minimal') cellClass = 'p-3 border-b-2 border-[var(--color-border-primary)] font-semibold text-[var(--color-text-primary)]';
+                          } else {
+                            cellClass += ' text-[var(--color-text-secondary)]';
+                            if (tableStyle === 'minimal') cellClass = 'p-3 border-b border-[var(--color-border-secondary)] text-[var(--color-text-secondary)] last:border-b-0';
+                          }
+
+                          return (
+                            <Tag 
+                              key={k} 
+                              className={cellClass}
+                              style={bgColor ? { backgroundColor: bgColor } : {}}
+                              colSpan={cell.attrs?.colspan || 1}
+                              rowSpan={cell.attrs?.rowspan || 1}
+                            >
+                               {cell.content?.map((p, l) => (
+                                 <p key={l} className="mb-0">
+                                   {p.content?.map((c, m) => renderText(c, m)) || ''}
+                                 </p>
+                               ))}
+                            </Tag>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+         }
+
+         case 'callout': {
+           const type = node.attrs?.type || 'info';
+           const icons = { info: Info, success: CheckCircle2, warning: AlertTriangle, danger: XCircle };
+           const Icon = icons[type];
+           const styles = {
+             info: 'bg-blue-500/10 border-blue-500/50 text-blue-400',
+             success: 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400',
+             warning: 'bg-amber-500/10 border-amber-500/50 text-amber-400',
+             danger: 'bg-red-500/10 border-red-500/50 text-red-400',
+           };
            return (
-             <div key={i} className="mb-8 overflow-x-auto rounded-lg border border-[var(--color-border-primary)] shadow-sm">
-               <table className="w-full text-left border-collapse text-sm">
-                 <tbody>
-                   {node.content?.map((row, j) => (
-                     <tr key={j} className="border-b border-[var(--color-border-primary)] last:border-0 hover:bg-[var(--color-bg-secondary)]/50 transition-colors">
-                       {row.content?.map((cell, k) => {
-                         const isHeader = cell.type === 'tableHeader';
-                         const Tag = isHeader ? 'th' : 'td';
-                         return (
-                           <Tag 
-                             key={k} 
-                             className={`
-                               p-3 border-r border-[var(--color-border-primary)] last:border-0 align-top
-                               ${isHeader ? 'bg-[var(--color-bg-tertiary)] font-semibold text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}
-                             `}
-                             colSpan={cell.attrs?.colspan || 1}
-                             rowSpan={cell.attrs?.rowspan || 1}
-                           >
-                              {cell.content?.map((p, l) => (
-                                <p key={l} className="mb-0">
-                                  {p.content?.map((c, m) => renderText(c, m)) || ''}
-                                </p>
-                              ))}
-                           </Tag>
-                         );
-                       })}
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
+             <div key={i} className={`flex gap-3 p-4 my-6 rounded-xl border-l-4 ${styles[type]}`}>
+               <Icon size={20} className="flex-shrink-0" />
+               <div className="flex-1 min-w-0 prose-p:my-0 prose-p:leading-relaxed">
+                 {renderContent(node)}
+               </div>
+             </div>
+           );
+         }
+
+         case 'card':
+           return (
+             <div key={i} className="bg-[var(--color-bg-primary)] p-6 rounded-xl border border-[var(--color-border-primary)] shadow-sm my-6">
+                {renderContent(node)}
+             </div>
+           );
+
+         case 'columns': {
+           const layout = node.attrs?.layout || 'two-columns';
+           const gridClass = layout === 'three-columns' ? 'grid-cols-1 md:grid-cols-3' : 
+                            layout === 'sidebar-left' ? 'grid-cols-1 md:grid-cols-[1fr_2fr]' :
+                            layout === 'sidebar-right' ? 'grid-cols-1 md:grid-cols-[2fr_1fr]' :
+                            'grid-cols-1 md:grid-cols-2';
+           return (
+             <div key={i} className={`grid ${gridClass} gap-6 my-8`}>
+               {renderContent(node)}
+             </div>
+           );
+         }
+
+         case 'column':
+           return <div key={i} className="min-w-0">{renderContent(node)}</div>;
+
+         case 'toggle':
+           return (
+             <details key={i} className="group border border-[var(--color-border-primary)] rounded-xl overflow-hidden my-6">
+               <summary className="p-4 bg-[var(--color-bg-secondary)] cursor-pointer hover:bg-[var(--color-bg-hover)] transition-colors font-semibold flex items-center gap-2">
+                 <ChevronRight size={16} className="group-open:rotate-90 transition-transform" />
+                 {node.attrs?.summary || 'Expand to view'}
+               </summary>
+               <div className="p-4 border-t border-[var(--color-border-primary)] bg-[var(--color-bg-primary)]">
+                 {renderContent(node)}
+               </div>
+             </details>
+           );
+
+         case 'excalidraw':
+           return (
+             <div key={i} className="excalidraw-node my-8 border border-[var(--color-border-primary)] rounded-xl overflow-hidden bg-white dark:bg-[#121212]">
+                {node.attrs?.svgData ? (
+                  <div 
+                    className="p-4 flex justify-center items-center"
+                    dangerouslySetInnerHTML={{ __html: node.attrs.svgData }}
+                  />
+                ) : (
+                  <div className="p-12 text-center text-[var(--color-text-muted)] italic">
+                    Flowchart placeholder
+                  </div>
+                )}
              </div>
            );
 

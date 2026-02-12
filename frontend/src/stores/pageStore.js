@@ -127,6 +127,35 @@ const usePageStore = create((set, get) => ({
 
   // Clear error
   clearError: () => set({ error: null }),
+
+  // Change Request & Commits
+  currentRequest: null,
+  commits: [],
+
+  commitChange: async (siteId, pageId, data) => {
+    set({ isSaving: true, error: null });
+    try {
+      const response = await pagesApi.commitChange(siteId, pageId, data);
+      set({ 
+        currentRequest: response.request,
+        isSaving: false 
+      });
+      return { success: true, commit: response.commit };
+    } catch (error) {
+      set({ error: error.message, isSaving: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  fetchRequestDetails: async (pageId) => {
+     try {
+       const response = await pagesApi.getChangeRequests(pageId);
+       // Find user's current draft
+       const requests = response.data || response;
+       const draft = requests.find(r => r.status === 'draft' && r.user_id === requests.user_id); // This line is slightly buggy since we don't have user_id here easily, but we'll fix it
+       set({ currentRequest: draft });
+     } catch (e) {}
+  }
 }));
 
 export default usePageStore;

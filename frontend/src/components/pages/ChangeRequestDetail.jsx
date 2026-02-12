@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GitPullRequest, ArrowLeft, Check, GitMerge, XCircle } from 'lucide-react';
+import { GitPullRequest, ArrowLeft, Check, GitMerge, XCircle, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { getChangeRequests, mergeChangeRequest } from '../../api/pages';
 import { getPage } from '../../api/pages';
 import DiffViewer from '../editor/DiffViewer';
+import BlockReviewer from '../editor/BlockReviewer';
+import CommitHistory from './CommitHistory';
 import RichEditor from '../editor/RichEditor';
 import client from '../../api/client';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -23,8 +25,9 @@ export default function ChangeRequestDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMerging, setIsMerging] = useState(false);
   const [error, setError] = useState(null);
-  const [viewMode, setViewMode] = useState('preview'); // 'preview' | 'diff'
+  const [viewMode, setViewMode] = useState('preview'); // 'preview' | 'diff' | 'pick'
   const [showMergeConfirm, setShowMergeConfirm] = useState(false);
+  const [pendingContent, setPendingContent] = useState(null);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -35,7 +38,6 @@ export default function ChangeRequestDetail() {
         // Fetch current page content for diff comparison
         if (siteId && pageId) {
             const pageRes = await getPage(siteId, pageId);
-            // Handle Laravel API Resource wrapper or direct object
             const pageData = pageRes.data || pageRes;
             setCurrentPage(pageData);
         }
@@ -49,24 +51,60 @@ export default function ChangeRequestDetail() {
     if (requestId) fetchDetail();
   }, [requestId, siteId, pageId]);
 
-  const handleMergeClick = () => {
+  const handleMergeClick = (content = null) => {
+    // Crucial fix: React passes an event object by default if called from onClick.
+    // We only want to set pendingContent if it's a legitimate Prosemirror-style doc object.
+    if (content && typeof content === 'object' && content.type === 'doc') {
+      setPendingContent(content);
+    } else {
+      setPendingContent(request.content);
+    }
     setShowMergeConfirm(true);
   };
 
   const handleConfirmMerge = async () => {
     setIsMerging(true);
-    setShowMergeConfirm(false); // Close modal explicitly or wait
+    setShowMergeConfirm(false); 
     
     try {
-      await mergeChangeRequest(requestId);
+      await mergeChangeRequest(requestId, {
+        content: pendingContent || request.content,
+        title: request.title
+      });
       toast.success('Changes merged successfully!');
-      // Navigate back to page view
       navigate(`/sites/${siteId}/pages/${pageId}`);
     } catch (err) {
       console.error(err);
       toast.error('Failed to merge changes: ' + err.message);
       setIsMerging(false);
     }
+  };
+
+  const handlePush = async () => {
+    setIsMerging(true);
+    try {
+      await createChangeRequest(pageId, {
+        status: 'open',
+        title: request.title,
+        content: request.content,
+        description: request.description || 'Pushed from draft'
+      });
+      toast.success('Changes pushed for review!');
+      // Refresh data
+      const data = await getChangeRequestDetail(requestId);
+      setRequest(data);
+    } catch (err) {
+      toast.error('Failed to push changes');
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
+  const statusColors = {
+    open: 'bg-green-900 text-green-300',
+    merged: 'bg-purple-900 text-purple-300',
+    draft: 'bg-blue-900 text-blue-300',
+    rejected: 'bg-red-900 text-red-300'
   };
 
   if (isLoading) return <LoadingSpinner />;
@@ -98,20 +136,29 @@ export default function ChangeRequestDetail() {
           </h1>
           
           <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-            <span className={`px-2 py-0.5 rounded text-xs uppercase font-bold tracking-wider ${
-              request.status === 'open' ? 'bg-green-900 text-green-300' : 
-              request.status === 'merged' ? 'bg-purple-900 text-purple-300' : 'bg-gray-800'
-            }`}>
+            <span className={`px-2 py-0.5 rounded text-xs uppercase font-bold tracking-wider ${statusColors[request.status] || 'bg-gray-800'}`}>
               {request.status}
             </span>
             <span>Requested by <strong className="text-white">{request.user?.name || 'Unknown'}</strong></span>
-            <span>on {new Date(request.created_at).toLocaleString()}</span>
+            <span>on {new Date(request.created_at).toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'short'
+            })}</span>
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex gap-4">
-          {request.status === 'open' && (
+          {request.status === 'draft' ? (
+            <button
+              onClick={handlePush}
+              disabled={isMerging}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform active:scale-95 disabled:opacity-50"
+            >
+              {isMerging ? <LoadingSpinner size="sm" /> : <GitPullRequest size={20} />}
+              Push to Review
+            </button>
+          ) : request.status === 'open' && (
             <button
               onClick={handleMergeClick}
               disabled={isMerging}
@@ -126,54 +173,65 @@ export default function ChangeRequestDetail() {
       
       {/* View Toggle */}
       <div className="flex gap-1 bg-[#161b22] p-1 rounded-lg w-fit mb-4 border border-gray-700">
-        <button
-          onClick={() => setViewMode('preview')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            viewMode === 'preview' 
-              ? 'bg-blue-600 text-white shadow-sm' 
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
-          }`}
-        >
-          Preview (Rendered)
-        </button>
-        <button
-          onClick={() => setViewMode('diff')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            viewMode === 'diff' 
-              ? 'bg-blue-600 text-white shadow-sm' 
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
-          }`}
-        >
-          Diff (Source Changes)
-        </button>
+        {[
+          { id: 'preview', label: 'Preview' },
+          { id: 'diff', label: 'Diff' },
+          { id: 'commits', label: 'Commits' },
+          { id: 'pick', label: 'Resolve & Pick', icon: Layers, color: 'text-emerald-400' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setViewMode(tab.id)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+              viewMode === tab.id 
+                ? 'bg-blue-600 text-white shadow-sm' 
+                : `${tab.color || 'text-gray-400'} hover:text-white hover:bg-white/5`
+            }`}
+          >
+            {tab.icon && <tab.icon size={14} />}
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Content Area */}
-      <div className="bg-[#0d1117] rounded-xl border border-gray-700 overflow-hidden shadow-2xl">
-        <div className="bg-[#161b22] px-6 py-3 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="font-semibold text-gray-300 flex items-center gap-2">
-            {viewMode === 'preview' ? <Check size={16} className="text-emerald-400" /> : <GitPullRequest size={16} className="text-blue-400" />}
-            {viewMode === 'preview' ? 'Proposed Content' : 'Comparison with Live Version'}
-          </h2>
-          <span className="text-xs text-gray-500">Read-only view</span>
-        </div>
-        
-        <div className="p-0 min-h-[500px]">
-           {viewMode === 'preview' ? (
-             <div className="p-8">
-               <RichEditor 
-                 content={request.content} 
-                 editable={false} 
-                 onChange={() => {}} 
-               />
-             </div>
-           ) : (
-             <DiffViewer 
-               oldContent={currentPage?.content} 
-               newContent={request.content} 
-             />
-           )}
-        </div>
+      <div className="bg-[#0d1117] rounded-xl border border-gray-700 overflow-hidden shadow-2xl min-h-[600px]">
+        {viewMode === 'pick' ? (
+          <BlockReviewer 
+            oldContent={currentPage} 
+            newContent={request} 
+            onMerge={(finalContent) => handleMergeClick(finalContent)}
+          />
+        ) : viewMode === 'commits' ? (
+          <CommitHistory requestId={requestId} />
+        ) : (
+          <>
+            <div className="bg-[#161b22] px-6 py-3 border-b border-gray-700 flex justify-between items-center">
+              <h2 className="font-semibold text-gray-300 flex items-center gap-2">
+                {viewMode === 'preview' ? <Check size={16} className="text-emerald-400" /> : <GitPullRequest size={16} className="text-blue-400" />}
+                {viewMode === 'preview' ? 'Proposed Content' : 'Comparison with Live Version'}
+              </h2>
+              <span className="text-xs text-gray-500">Read-only view</span>
+            </div>
+            
+            <div className="p-0">
+               {viewMode === 'preview' ? (
+                 <div className="p-8 max-w-4xl mx-auto">
+                   <RichEditor 
+                     content={request.content} 
+                     editable={false} 
+                     onChange={() => {}} 
+                   />
+                 </div>
+               ) : (
+                 <DiffViewer 
+                   oldContent={currentPage?.content} 
+                   newContent={request.content} 
+                 />
+               )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Description / Comment */}

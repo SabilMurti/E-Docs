@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Site;
+use App\Models\SiteMember;
 use App\Models\User;
+use App\Notifications\SiteInvitationNotification;
 use Illuminate\Http\Request;
 
 class SiteMemberController extends Controller
@@ -81,7 +83,14 @@ class SiteMemberController extends Controller
         }
 
         // Add member
-        $site->members()->attach($targetUser->id, ['role' => $request->role]);
+        SiteMember::create([
+            'site_id' => $site->id,
+            'user_id' => $targetUser->id,
+            'role' => $request->role,
+        ]);
+
+        // Send notification to target user
+        $targetUser->notify(new SiteInvitationNotification($site, $currentUser));
 
         return response()->json([
             'message' => 'Member added successfully.',

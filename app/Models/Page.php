@@ -103,6 +103,11 @@ class Page extends Model
         return $this->hasMany(PageChangeRequest::class)->orderByDesc('created_at');
     }
 
+    public function commits(): HasMany
+    {
+        return $this->hasMany(PageCommit::class)->orderByDesc('created_at');
+    }
+
     /**
      * User who created this page
      */
