@@ -20,6 +20,8 @@ class PageResource extends JsonResource
             'is_hidden' => $this->is_hidden,
             'content' => $this->content, // Tiptap JSON
             'order' => $this->order,
+            'logical_id' => $this->logical_id,
+            'branch_id' => $this->branch_id,
             'is_published' => $this->is_published,
             'created_by' => new UserResource($this->whenLoaded('creator')),
             'updated_by' => new UserResource($this->whenLoaded('updater')),

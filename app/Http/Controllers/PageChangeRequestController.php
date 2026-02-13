@@ -82,8 +82,35 @@ class PageChangeRequestController extends Controller
      */
     public function merge(Request $request, PageChangeRequest $changeRequest)
     {
+        $page = $changeRequest->page;
+
+        if (!$page->site->canMerge(auth()->user())) {
+            abort(403, 'You do not have permission to merge or approve changes on this site. Owner/Admin approval required.');
+        }
+
         if ($changeRequest->status !== 'open') {
             return response()->json(['message' => 'Only open requests can be merged'], 400);
+        }
+
+        $page = $changeRequest->page;
+
+        // Conflict Detection: 
+        // If current page content is different from the base_content this PR was started with,
+        // it means someone else merged something in between.
+        $currentContentJson = json_encode($page->content);
+        $baseContentJson = json_encode($changeRequest->base_content);
+        $prContentJson = json_encode($changeRequest->content);
+
+        // If page has changed AND it doesn't match our proposed change (already merged)
+        if ($currentContentJson !== $baseContentJson && $currentContentJson !== $prContentJson) {
+            return response()->json([
+                'error' => 'conflict',
+                'message' => 'This request has conflicts that must be resolved before merging.',
+                'live_content' => $page->content,
+                'live_title' => $page->title,
+                'current_user_name' => auth()->user()->name,
+                'contributor_name' => $changeRequest->user->name ?? 'Contributor',
+            ], 409);
         }
 
         $data = $request->validate([

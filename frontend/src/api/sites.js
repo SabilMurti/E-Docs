@@ -112,6 +112,40 @@ export const reorderSpacesInSite = async (siteId, spaces) => {
   return response.data;
 };
 
+/**
+ * Get branches for site
+ */
+export const getBranches = async (siteId) => {
+  const response = await client.get(`/sites/${siteId}/branches`);
+  return response.data;
+};
+
+/**
+ * Create branch in site
+ */
+export const createBranch = async (siteId, data) => {
+  const response = await client.post(`/sites/${siteId}/branches`, data);
+  return response.data;
+};
+
+/**
+ * Delete branch from site
+ */
+export const deleteBranch = async (siteId, branchId) => {
+  const response = await client.delete(`/sites/${siteId}/branches/${branchId}`);
+  return response.data;
+};
+
+/**
+ * Compare branches
+ */
+export const compareBranches = async (siteId, sourceId, targetId) => {
+  const response = await client.get(`/sites/${siteId}/compare`, {
+    params: { source: sourceId, target: targetId }
+  });
+  return response.data;
+};
+
 export default {
   getSites,
   getSite,

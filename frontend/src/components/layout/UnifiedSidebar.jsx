@@ -19,7 +19,8 @@ import {
   Settings,
   Book,
   Share2,
-  Search
+  Search,
+  GitPullRequest
 } from 'lucide-react';
 import useAuthStore from '../../stores/authStore';
 import useSiteStore from '../../stores/siteStore';
@@ -29,55 +30,110 @@ import Dropdown from '../common/Dropdown';
 import ConfirmModal from '../common/ConfirmModal';
 import InputModal from '../common/InputModal';
 import PublishModal from '../sites/PublishModal';
+import Button from '../common/Button';
+import { toast } from 'sonner';
 
 // Page Tree Item Component
 function PageTreeItem({ page, siteId, level = 0, onDeleteRequest, onAddSubpageRequest }) {
-  const [isExpanded, setIsExpanded] = useState(true);
   const { pageId } = useParams();
   const navigate = useNavigate();
-  const hasChildren = page.children && page.children.length > 0;
   const isActive = pageId === page.id;
-  const paddingLeft = level * 12 + 8;
+  const hasChildren = page.children && page.children.length > 0;
+  
+  // Keep expanded if it has children and one of them is active, otherwise default to false
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (!hasChildren) return false;
+    const checkActive = (children) => {
+      return children.some(child => child.id === pageId || (child.children && checkActive(child.children)));
+    };
+    return checkActive(page.children);
+  });
+  
+  // Padding based on level
+  const paddingLeft = level === 0 ? 8 : (level * 16) + 12;
+
+  useEffect(() => {
+    if (hasChildren) {
+      const checkActive = (children) => {
+        return children.some(child => child.id === pageId || (child.children && checkActive(child.children)));
+      };
+      if (checkActive(page.children)) {
+        setIsExpanded(true);
+      }
+    }
+  }, [pageId, page.children, hasChildren]);
 
   return (
-    <div>
+    <div className="relative">
+      {/* Vertical line for hierarchy (only for subpages) */}
+      {level > 0 && (
+        <div 
+          className="absolute left-[18px] top-0 bottom-0 w-[1px] bg-[var(--color-border-secondary)] opacity-50"
+          style={{ left: `${(level - 1) * 16 + 18}px` }}
+        />
+      )}
+
       <div 
         className={`
-          group flex items-center gap-1.5 py-1 pr-1.5 rounded-md
-          cursor-pointer transition-colors text-[13px] select-none
+          group flex items-center gap-1.5 py-1.5 pr-1.5 rounded-md
+          cursor-pointer transition-all text-[13px] select-none relative
           ${isActive 
-            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' 
+            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-medium' 
             : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
           }
         `}
         style={{ paddingLeft: `${paddingLeft}px` }}
         onClick={() => navigate(`/sites/${siteId}/pages/${page.id}`)}
       >
-        {hasChildren ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-            className="p-0.5 rounded hover:bg-[var(--color-bg-hover)]"
-          >
-            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          </button>
-        ) : (
-          <span className="w-4" />
-        )}
+        {/* Toggle Expander Area */}
+        <div className="w-5 h-5 flex items-center justify-center shrink-0">
+          {hasChildren && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
+              className={`
+                p-0.5 rounded-md transition-all
+                hover:bg-[var(--color-bg-hover)] 
+                ${isExpanded ? 'text-[var(--color-text-primary)] rotate-0' : 'text-[var(--color-text-muted)] rotate-0'}
+              `}
+            >
+              {isExpanded ? <ChevronDown size={14} strokeWidth={2.5} /> : <ChevronRight size={14} strokeWidth={2.5} />}
+            </button>
+          )}
+        </div>
 
-        {page.icon && <span className="text-sm shrink-0">{page.icon}</span>}
-        <span className="truncate flex-1">{page.title || 'Untitled'}</span>
+        {/* Page Icon/Indicator */}
+        <div className="shrink-0 flex items-center justify-center">
+          {page.icon ? (
+            <span className="text-sm">{page.icon}</span>
+          ) : (
+            <FileText size={14} className={isActive ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'} />
+          )}
+        </div>
 
+        {/* Page Title */}
+        <span className="truncate flex-1 ml-0.5">{page.title || 'Untitled'}</span>
+
+        {/* Action Buttons (Visible on Hover) */}
         <div 
-          className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center"
+          className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Direct + button for subpages as requested */}
+          <button 
+            onClick={() => onAddSubpageRequest(page.id)}
+            className="p-1 rounded hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-text-muted)] transition-colors"
+            title="Add subpage"
+          >
+            <Plus size={14} />
+          </button>
+
           <Dropdown
             trigger={
               <button className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]">
-                <MoreHorizontal size={12} />
+                <MoreHorizontal size={14} />
               </button>
             }
             align="right"
@@ -93,8 +149,9 @@ function PageTreeItem({ page, siteId, level = 0, onDeleteRequest, onAddSubpageRe
         </div>
       </div>
 
+      {/* Recursive Children Display */}
       {hasChildren && isExpanded && (
-        <div>
+        <div className="mt-0.5">
           {page.children.map((child) => (
             <PageTreeItem 
               key={child.id} 
@@ -107,6 +164,8 @@ function PageTreeItem({ page, siteId, level = 0, onDeleteRequest, onAddSubpageRe
           ))}
         </div>
       )}
+      {/* Create Branch Modal Removed */}
+
     </div>
   );
 }
@@ -144,7 +203,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const { siteId } = useParams();
   const { user, logout } = useAuthStore();
-  const { sites, fetchSites, createSite, currentSite } = useSiteStore();
+  const { sites, fetchSites, createSite, currentSite, branches, currentBranch, fetchBranches, createBranch, switchBranch, isLoading: siteLoading } = useSiteStore();
   const { pages, fetchPages, createPage, deletePage, isLoading: pagesLoading } = usePageStore();
   const { theme, toggleTheme } = useTheme();
   
@@ -155,13 +214,23 @@ function UnifiedSidebar({ isOpen, onClose }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showCreateBranchModal, setShowCreateBranchModal] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
   const [parentIdForNewPage, setParentIdForNewPage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newBranchName, setNewBranchName] = useState('');
   
   // Site creation modal state
   const [showCreateSiteModal, setShowCreateSiteModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch branches when siteId changes
+  useEffect(() => {
+    if (siteId) {
+      switchBranch('main'); // Reset to main when switching sites
+      fetchBranches(siteId);
+    }
+  }, [siteId, fetchBranches, switchBranch]);
 
   useEffect(() => {
     fetchSites();
@@ -169,9 +238,88 @@ function UnifiedSidebar({ isOpen, onClose }) {
 
   useEffect(() => {
     if (siteId) {
-      fetchPages(siteId);
+      fetchPages(siteId, currentBranch);
     }
-  }, [siteId, fetchPages]);
+  }, [siteId, fetchPages, currentBranch]);
+
+  // Helper to find page in tree
+  const findPageInTree = (nodes, predicate) => {
+    for (const node of nodes) {
+      if (predicate(node)) return node;
+      if (node.children) {
+        const found = findPageInTree(node.children, predicate);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const handleSwitchBranch = async (branchName) => {
+    if (branchName === currentBranch) return;
+
+    // 1. Switch the store state first for UI responsiveness (optimistic)
+    switchBranch(branchName);
+
+    // 2. Determine current location context
+    let currentLogicalId = null;
+    
+    // We try to find the logical ID of the *currently viewing* page
+    // We must use the 'pages' from store which are presumably the *old* branch's pages 
+    // (since we just switched branch name but haven't fetched new pages yet)
+    
+    // Use the URL to get the ID, as it is the most reliable source of truth for "where am I"
+    const pathParts = location.pathname.split('/pages/');
+    const currentPageId = pathParts.length > 1 ? pathParts[1] : null;
+
+    if (currentPageId) {
+        const currentPage = findPageInTree(pages, p => p.id === currentPageId);
+        if (currentPage) {
+            currentLogicalId = currentPage.logical_id;
+        }
+    }
+
+    // 3. Fetch pages for the NEW branch
+    const newPages = await fetchPages(siteId, branchName);
+    
+    // 4. Navigate to the equivalent page or root
+    if (currentPageId && currentLogicalId && newPages) {
+       const targetPage = findPageInTree(newPages, p => p.logical_id === currentLogicalId);
+       
+       if (targetPage) {
+           navigate(`/sites/${siteId}/pages/${targetPage.id}`);
+           toast.success(`Switched to branch '${branchName}'`);
+       } else {
+           // Page deleted or doesn't exist in new branch
+           navigate(`/sites/${siteId}`);
+           toast.success(`Switched to '${branchName}' (Page not found in this branch)`);
+       }
+    } else {
+       // Was on root or unknown page
+       navigate(`/sites/${siteId}`);
+       toast.success(`Switched to branch '${branchName}'`);
+    }
+  };
+
+  const handleCreateBranch = async (e) => {
+    e.preventDefault();
+    if (!newBranchName.trim()) return;
+    
+    setIsSubmitting(true);
+    const result = await createBranch(siteId, {
+      name: newBranchName.trim(),
+      source_branch: currentBranch
+    });
+    setIsSubmitting(false);
+    
+    if (result.success) {
+      setNewBranchName('');
+      setShowCreateBranchModal(false);
+      handleSwitchBranch(result.data.name); // Switch to new branch using our smart handler
+      toast.success(`Switched to branch: ${result.data.name}`);
+    } else {
+      toast.error('Failed to create branch: ' + result.error);
+    }
+  };
 
   const activeSiteId = location.pathname.startsWith('/sites/') 
     ? location.pathname.split('/')[2] 
@@ -199,7 +347,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
         title, 
         content: {},
         parent_id: parentIdForNewPage 
-      });
+      }, currentBranch);
       setShowAddModal(false);
     } finally {
       setIsSubmitting(false);
@@ -341,6 +489,49 @@ function UnifiedSidebar({ isOpen, onClose }) {
                     <Settings size={14} />
                   </button>
                 </div>
+              </div>
+
+              {/* Branch Switcher */}
+              <div className="mx-2 mb-2">
+                 <Dropdown
+                    trigger={
+                      <button className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded hover:border-[var(--color-border-hover)] transition-colors">
+                        <div className="flex items-center gap-1.5 truncate">
+                           <Layers size={12} className="text-[var(--color-accent)]" />
+                           <span className="truncate max-w-[120px]">{currentBranch}</span>
+                        </div>
+                        <ChevronRight size={12} className="rotate-90 text-[var(--color-text-muted)]" />
+                      </button>
+                    }
+                    align="start"
+                    className="w-48"
+                 >
+                    <div className="px-2 py-1.5 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border-secondary)] mb-1">
+                      Switch Branch
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {branches.map(branch => (
+                        <Dropdown.Item 
+                          key={branch.id} 
+                          onClick={() => handleSwitchBranch(branch.name)}
+                          isActive={currentBranch === branch.name}
+                          icon={branch.name === 'main' ? Globe : Layers}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="truncate">{branch.name}</span>
+                            {branch.is_default && <span className="text-[9px] bg-[var(--color-bg-tertiary)] px-1 rounded ml-1">Default</span>}
+                          </div>
+                        </Dropdown.Item>
+                      ))}
+                    </div>
+                    <Dropdown.Divider />
+                    <Dropdown.Item icon={Plus} onClick={() => setShowCreateBranchModal(true)}>
+                      New Branch...
+                    </Dropdown.Item>
+                    <Dropdown.Item icon={GitPullRequest} onClick={() => navigate(`/sites/${siteId}/merge-requests`)}>
+                      Merge Requests
+                    </Dropdown.Item>
+                 </Dropdown>
               </div>
 
               {/* Pages Section */}
@@ -550,6 +741,43 @@ function UnifiedSidebar({ isOpen, onClose }) {
         onClose={() => setShowPublishModal(false)}
         site={currentSite}
       />
+      
+      {/* Create Branch Modal */}
+      {showCreateBranchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl p-4 m-4">
+             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Create New Branch</h3>
+             <form onSubmit={handleCreateBranch}>
+               <div className="mb-4">
+                 <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">Branch Name</label>
+                 <input 
+                   type="text" 
+                   value={newBranchName}
+                   onChange={e => setNewBranchName(e.target.value)}
+                   placeholder="e.g. feature-xyz"
+                   className="w-full px-3 py-2 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg focus:outline-none focus:border-[var(--color-accent)]"
+                   autoFocus
+                 />
+                 <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
+                   Create branch from <strong>{currentBranch}</strong>
+                 </p>
+               </div>
+               <div className="flex justify-end gap-2">
+                 <button 
+                   type="button" 
+                   onClick={() => setShowCreateBranchModal(false)}
+                   className="px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
+                 >
+                   Cancel
+                 </button>
+                 <Button type="submit" loading={isSubmitting} size="sm">
+                   Create Branch
+                 </Button>
+               </div>
+             </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

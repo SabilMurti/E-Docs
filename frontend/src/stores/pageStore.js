@@ -9,19 +9,23 @@ const usePageStore = create((set, get) => ({
   error: null,
 
   // Fetch page tree for a site
-  fetchPages: async (siteId) => {
+  fetchPages: async (siteId, branchName = 'main') => {
     set({ isLoading: true, error: null });
     try {
-      const response = await pagesApi.getPages(siteId);
+      // Pass branch as query param
+      const response = await pagesApi.getPages(siteId, { branch: branchName });
+      const data = response.data || response;
       set({ 
-        pages: response.data || response,
+        pages: data,
         isLoading: false 
       });
+      return data;
     } catch (error) {
       set({ 
         error: error.message, 
         isLoading: false 
       });
+      return null;
     }
   },
 
@@ -46,13 +50,14 @@ const usePageStore = create((set, get) => ({
   },
 
   // Create page
-  createPage: async (siteId, data) => {
+  createPage: async (siteId, data, branchName = 'main') => {
     set({ isLoading: true, error: null });
     try {
-      const response = await pagesApi.createPage(siteId, data);
+      const payload = { ...data, branch: branchName };
+      const response = await pagesApi.createPage(siteId, payload);
       const page = response.data || response;
       // Refetch the tree to get updated structure
-      await get().fetchPages(siteId);
+      await get().fetchPages(siteId, branchName);
       return { success: true, page };
     } catch (error) {
       set({ 

@@ -40,6 +40,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('sites/{site}/members', [SiteMemberController::class, 'store']);
     Route::delete('sites/{site}/members/{userId}', [SiteMemberController::class, 'destroy']);
 
+    // Branches
+    Route::get('sites/{site}/branches', [\App\Http\Controllers\Api\BranchController::class, 'index']);
+    Route::post('sites/{site}/branches', [\App\Http\Controllers\Api\BranchController::class, 'store']);
+    Route::delete('sites/{site}/branches/{branch}', [\App\Http\Controllers\Api\BranchController::class, 'destroy']);
+
+    // Merge Requests (Site Level)
+    Route::get('sites/{site}/merge-requests', [\App\Http\Controllers\Api\MergeRequestController::class, 'index']);
+    Route::post('sites/{site}/merge-requests', [\App\Http\Controllers\Api\MergeRequestController::class, 'store']);
+    Route::get('sites/{site}/compare', [\App\Http\Controllers\Api\MergeRequestController::class, 'compare']); // New compare route
+    Route::get('sites/{site}/merge-requests/{mergeRequest}', [\App\Http\Controllers\Api\MergeRequestController::class, 'show']);
+    Route::post('sites/{site}/merge-requests/{mergeRequest}/merge', [\App\Http\Controllers\Api\MergeRequestController::class, 'merge']);
+
     // Pages (Directly under Sites now)
     Route::post('sites/{site}/pages', [PageController::class, 'store']);
     Route::get('sites/{site}/pages', [PageController::class, 'index']);

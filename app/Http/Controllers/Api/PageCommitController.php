@@ -40,24 +40,34 @@ class PageCommitController extends Controller
                 ->where('status', 'draft')
                 ->first();
 
-            // Create new draft request if not exists (Like creating a new branch)
             $requestTitle = $validated['message'] ?: ($validated['title'] ?? $page->title);
 
+            // 1. Update the actual Page Content (Save to Branch)
+            // This ensures the branch moves forward and changes serve as the new "base"
+            $page->update([
+                'title' => $validated['title'] ?? $page->title,
+                'content' => $validated['content'],
+                'updated_by' => auth()->id(),
+            ]);
+
             if (!$changeRequest) {
+                // If no draft exists, create one with the NEW content as base (since we just updated the page)
                 $changeRequest = PageChangeRequest::create([
                     'page_id' => $page->id,
                     'user_id' => auth()->id(),
                     'base_title' => $page->title,
-                    'base_content' => $page->content,
+                    'base_content' => $page->content, // New content
                     'title' => $requestTitle,
                     'content' => $validated['content'],
                     'status' => 'draft',
                 ]);
             } else {
-                // Update current working state and title to match the latest commit message
+                // Update current draft to match the new HEAD of the branch
                 $changeRequest->update([
                     'title' => $requestTitle,
                     'content' => $validated['content'],
+                    'base_content' => $validated['content'], // Sync base to new Page content
+                    'base_title' => $validated['title'] ?? $page->title,
                 ]);
             }
 

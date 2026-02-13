@@ -11,6 +11,10 @@ import RichEditor from '../editor/RichEditor';
 import client from '../../api/client';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ConfirmModal from '../common/ConfirmModal';
+import ConflictResolver from './ConflictResolver';
+import { AlertCircle } from 'lucide-react';
+import useSiteStore from '../../stores/siteStore';
+import usePageStore from '../../stores/pageStore';
 
 async function getChangeRequestDetail(requestId) {
   const response = await client.get(`/requests/${requestId}`);
@@ -20,14 +24,23 @@ async function getChangeRequestDetail(requestId) {
 export default function ChangeRequestDetail() {
   const { siteId, pageId, requestId } = useParams();
   const navigate = useNavigate();
+  const { currentSite, fetchSite } = useSiteStore();
   const [request, setRequest] = useState(null);
   const [currentPage, setCurrentPage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMerging, setIsMerging] = useState(false);
   const [error, setError] = useState(null);
-  const [viewMode, setViewMode] = useState('preview'); // 'preview' | 'diff' | 'pick'
+  const [viewMode, setViewMode] = useState('preview'); // 'preview' | 'diff' | 'pick' | 'conflict'
   const [showMergeConfirm, setShowMergeConfirm] = useState(false);
   const [pendingContent, setPendingContent] = useState(null);
+  const [conflictData, setConflictData] = useState(null);
+
+  // Fetch Site Data if missing (e.g. on refresh)
+  useEffect(() => {
+    if (siteId && (!currentSite || currentSite.id !== siteId)) {
+      fetchSite(siteId);
+    }
+  }, [siteId, currentSite, fetchSite]);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -75,7 +88,29 @@ export default function ChangeRequestDetail() {
       navigate(`/sites/${siteId}/pages/${pageId}`);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to merge changes: ' + err.message);
+      if (err.response?.status === 409) {
+        setConflictData(err.response.data);
+        setViewMode('conflict');
+        toast.error('Conflict detected! Please resolve before merging.');
+      } else {
+        toast.error('Failed to merge changes: ' + (err.response?.data?.message || err.message));
+      }
+      setIsMerging(false);
+    }
+  };
+
+  const handleResolveConflict = async (finalContent) => {
+    setIsMerging(true);
+    try {
+      await mergeChangeRequest(requestId, {
+        content: finalContent,
+        title: request.title
+      });
+      toast.success('Conflict resolved and changes merged!');
+      navigate(`/sites/${siteId}/pages/${pageId}`);
+    } catch (err) {
+      toast.error('Failed to resolve conflict: ' + err.message);
+    } finally {
       setIsMerging(false);
     }
   };
@@ -159,14 +194,28 @@ export default function ChangeRequestDetail() {
               Push to Review
             </button>
           ) : request.status === 'open' && (
-            <button
-              onClick={handleMergeClick}
-              disabled={isMerging}
-              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isMerging ? <LoadingSpinner size="sm" /> : <GitMerge size={20} />}
-              Merge Request
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={handleMergeClick}
+                disabled={isMerging || !currentSite?.can_merge}
+                className={`
+                  px-6 py-3 rounded-lg font-bold flex items-center gap-2 shadow-lg transition-transform active:scale-95 
+                  disabled:opacity-40 disabled:cursor-not-allowed
+                  ${currentSite?.can_merge 
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
+                    : 'bg-gray-700 text-gray-400'}
+                `}
+              >
+                {isMerging ? <LoadingSpinner size="sm" /> : <GitMerge size={20} />}
+                Merge Request
+              </button>
+              {!currentSite?.can_merge && (
+                <span className="text-[10px] text-red-400 flex items-center gap-1">
+                  <AlertCircle size={10} />
+                  Owner/Admin approval required to merge
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -177,8 +226,9 @@ export default function ChangeRequestDetail() {
           { id: 'preview', label: 'Preview' },
           { id: 'diff', label: 'Diff' },
           { id: 'commits', label: 'Commits' },
-          { id: 'pick', label: 'Resolve & Pick', icon: Layers, color: 'text-emerald-400' }
-        ].map(tab => (
+          { id: 'pick', label: 'Resolve & Pick', icon: Layers, color: 'text-emerald-400' },
+          conflictData && { id: 'conflict', label: 'Resolve Conflict', icon: AlertCircle, color: 'text-red-400' }
+        ].filter(Boolean).map(tab => (
           <button
             key={tab.id}
             onClick={() => setViewMode(tab.id)}
@@ -196,7 +246,15 @@ export default function ChangeRequestDetail() {
 
       {/* Content Area */}
       <div className="bg-[#0d1117] rounded-xl border border-gray-700 overflow-hidden shadow-2xl min-h-[600px]">
-        {viewMode === 'pick' ? (
+        {viewMode === 'conflict' && conflictData ? (
+          <ConflictResolver 
+             liveContent={conflictData.live_content}
+             incomingContent={request.content}
+             currentUserName={conflictData.current_user_name}
+             contributorName={conflictData.contributor_name}
+             onResolve={handleResolveConflict}
+          />
+        ) : viewMode === 'pick' ? (
           <BlockReviewer 
             oldContent={currentPage} 
             newContent={request} 

@@ -13,6 +13,9 @@ import PublicSitePage from './pages/PublicSitePage';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ChangeRequestsList from './components/pages/ChangeRequestsList';
 import ChangeRequestDetail from './components/pages/ChangeRequestDetail';
+import MergeRequestsPage from './components/pages/MergeRequestsPage';
+import CreateMergeRequestPage from './components/pages/CreateMergeRequestPage';
+import MergeRequestDetailPage from './components/pages/MergeRequestDetail';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -104,6 +107,11 @@ function App() {
             {/* Change Requests Routes */}
             <Route path="/sites/:siteId/pages/:pageId/requests" element={<ChangeRequestsList />} />
             <Route path="/sites/:siteId/pages/:pageId/requests/:requestId" element={<ChangeRequestDetail />} />
+
+            {/* Merge Requests Routes */}
+            <Route path="/sites/:siteId/merge-requests" element={<MergeRequestsPage />} />
+            <Route path="/sites/:siteId/merge-requests/new" element={<CreateMergeRequestPage />} />
+            <Route path="/sites/:siteId/merge-requests/:requestId" element={<MergeRequestDetailPage />} />
             
           </Route>
 

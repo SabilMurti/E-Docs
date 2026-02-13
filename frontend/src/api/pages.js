@@ -3,8 +3,8 @@ import client from './client';
 /**
  * Get page tree for a site
  */
-export const getPages = async (siteId) => {
-  const response = await client.get(`/sites/${siteId}/pages`);
+export const getPages = async (siteId, params = {}) => {
+  const response = await client.get(`/sites/${siteId}/pages`, { params });
   return response.data;
 };
 

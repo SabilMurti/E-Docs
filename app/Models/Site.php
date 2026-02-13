@@ -24,6 +24,8 @@ class Site extends Model
         'is_published',
     ];
 
+    protected $appends = ['can_edit', 'can_merge'];
+
     protected $casts = [
         'settings' => 'array',
         'is_published' => 'boolean',
@@ -55,6 +57,14 @@ class Site extends Model
     public function pages(): HasMany
     {
         return $this->hasMany(Page::class)->orderBy('order');
+    }
+
+    /**
+     * Branches in this site
+     */
+    public function branches(): HasMany
+    {
+        return $this->hasMany(Branch::class);
     }
 
     /**
@@ -107,10 +117,39 @@ class Site extends Model
     }
 
     /**
-     * Get public URL
+     * Check if user can merge changes (Owner or Admin)
      */
+    public function canMerge(User $user): bool
+    {
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        return $this->members()
+            ->where('user_id', $user->id)
+            ->where('role', 'admin')
+            ->exists();
+    }
+
     public function getPublicUrlAttribute(): string
     {
         return url("/public/{$this->id}");
+    }
+
+    /**
+     * Helper for frontend
+     */
+    public function getCanEditAttribute(): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        return $this->canEdit($user);
+    }
+
+    public function getCanMergeAttribute(): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        return $this->canMerge($user);
     }
 }

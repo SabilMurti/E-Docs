@@ -16,6 +16,8 @@ class Page extends Model
 
     protected $fillable = [
         'site_id',
+        'branch_id',
+        'logical_id',
         'parent_id',
         'title',
         'slug',
@@ -69,6 +71,11 @@ class Page extends Model
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     /**
