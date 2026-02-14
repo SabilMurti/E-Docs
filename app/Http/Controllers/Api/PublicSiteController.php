@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PageResource;
 use App\Models\Page;
 use App\Models\Site;
-use App\Models\Space;
 use Illuminate\Http\Request;
 
 class PublicSiteController extends Controller
@@ -25,16 +24,23 @@ class PublicSiteController extends Controller
     }
 
     /**
-     * View published site details
+     * View published site details with page structure
      */
     public function show($identifier)
     {
         $site = $this->findSite($identifier);
 
-        $site->load(['spaces' => function ($query) {
-            $query->where('is_published', true)
-                ->withCount('pages');
-        }, 'owner:id,name,avatar_url']);
+        // Load root pages (pages without parent)
+        // We assume 'pages' relation exists on Site model
+        // To get full tree, we might need a recursive load or load all pages and build tree in frontend
+        // For now let's load all published pages for this site and let frontend build the tree
+        // This is more efficient than N+1 recursive queries for deep trees
+        
+        $pages = Page::where('site_id', $site->id)
+            ->where('is_published', true)
+            ->orderBy('order', 'asc')
+            ->select(['id', 'site_id', 'parent_id', 'slug', 'title', 'icon', 'order', 'is_published'])
+            ->get();
 
         return response()->json([
             'data' => [
@@ -45,121 +51,19 @@ class PublicSiteController extends Controller
                 'logo_url' => $site->logo_url,
                 'settings' => $site->settings,
                 'owner' => $site->owner,
-                'spaces' => $site->spaces->map(function ($space) {
-                    return [
-                        'id' => $space->id,
-                        'name' => $space->name,
-                        'slug' => $space->slug,
-                        'label' => $space->pivot->label ?? $space->name,
-                        'icon' => $space->pivot->icon,
-                        'order' => $space->pivot->order,
-                        'is_home' => $space->pivot->is_home,
-                        'pages_count' => $space->pages_count,
-                    ];
-                }),
+                'pages' => $pages // Return flat list of pages
             ]
         ]);
-    }
-
-    /**
-     * List spaces in a public site
-     */
-    public function spaces($identifier)
-    {
-        $site = $this->findSite($identifier);
-
-        $spaces = $site->spaces()
-            ->where('is_published', true)
-            ->withCount('pages')
-            ->get();
-
-        return response()->json([
-            'data' => $spaces->map(function ($space) {
-                return [
-                    'id' => $space->id,
-                    'name' => $space->name,
-                    'slug' => $space->slug,
-                    'description' => $space->description,
-                    'label' => $space->pivot->label ?? $space->name,
-                    'icon' => $space->pivot->icon,
-                    'order' => $space->pivot->order,
-                    'is_home' => $space->pivot->is_home,
-                    'pages_count' => $space->pages_count,
-                ];
-            })
-        ]);
-    }
-
-    /**
-     * View single space in a public site
-     */
-    public function space($identifier, $spaceId)
-    {
-        $site = $this->findSite($identifier);
-
-        $space = $site->spaces()
-            ->where(function ($query) use ($spaceId) {
-                $query->where('spaces.id', $spaceId)
-                    ->orWhere('spaces.slug', $spaceId);
-            })
-            ->where('is_published', true)
-            ->withCount('pages')
-            ->firstOrFail();
-
-        return response()->json([
-            'data' => [
-                'id' => $space->id,
-                'name' => $space->name,
-                'slug' => $space->slug,
-                'description' => $space->description,
-                'label' => $space->pivot->label ?? $space->name,
-                'icon' => $space->pivot->icon,
-                'order' => $space->pivot->order,
-                'is_home' => $space->pivot->is_home,
-                'pages_count' => $space->pages_count,
-            ]
-        ]);
-    }
-
-    /**
-     * View pages tree for a space in public site
-     */
-    public function pages($identifier, $spaceId)
-    {
-        $site = $this->findSite($identifier);
-
-        $space = $site->spaces()
-            ->where(function ($query) use ($spaceId) {
-                $query->where('spaces.id', $spaceId)
-                    ->orWhere('spaces.slug', $spaceId);
-            })
-            ->where('is_published', true)
-            ->firstOrFail();
-
-        $pages = $space->rootPages()
-            ->with('children')
-            ->where('is_published', true)
-            ->get();
-
-        return PageResource::collection($pages);
     }
 
     /**
      * View single page content
      */
-    public function page($identifier, $spaceId, $pageId)
+    public function page($identifier, $pageId)
     {
         $site = $this->findSite($identifier);
 
-        $space = $site->spaces()
-            ->where(function ($query) use ($spaceId) {
-                $query->where('spaces.id', $spaceId)
-                    ->orWhere('spaces.slug', $spaceId);
-            })
-            ->where('is_published', true)
-            ->firstOrFail();
-
-        $page = Page::where('space_id', $space->id)
+        $page = Page::where('site_id', $site->id)
             ->where(function ($query) use ($pageId) {
                 $query->where('id', $pageId)
                     ->orWhere('slug', $pageId);

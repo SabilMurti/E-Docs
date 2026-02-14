@@ -24,6 +24,8 @@ class Site extends Model
         'is_published',
     ];
 
+    protected $appends = ['can_edit', 'can_merge'];
+
     protected $casts = [
         'settings' => 'array',
         'is_published' => 'boolean',
@@ -58,6 +60,14 @@ class Site extends Model
     }
 
     /**
+     * Branches in this site
+     */
+    public function branches(): HasMany
+    {
+        return $this->hasMany(Branch::class);
+    }
+
+    /**
      * Get root pages (no parent)
      */
     public function rootPages(): HasMany
@@ -68,14 +78,27 @@ class Site extends Model
     /**
      * Check if user can view this site
      */
+    /**
+     * Members of this site
+     */
+    public function members()
+    {
+        return $this->belongsToMany(User::class, 'site_members')
+            ->using(SiteMember::class)
+            ->withPivot('role', 'id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if user can view this site (Dashboard access)
+     */
     public function canView(User $user): bool
     {
         if ($this->user_id === $user->id) {
             return true;
         }
 
-        // Add team/member logic here later if needed
-        return $this->is_published; // Or check collaborators
+        return $this->members()->where('user_id', $user->id)->exists();
     }
 
     /**
@@ -83,14 +106,50 @@ class Site extends Model
      */
     public function canEdit(User $user): bool
     {
-        return $this->user_id === $user->id;
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        return $this->members()
+            ->where('user_id', $user->id)
+            ->whereIn('role', ['admin', 'editor'])
+            ->exists();
     }
 
     /**
-     * Get public URL
+     * Check if user can merge changes (Owner or Admin)
      */
+    public function canMerge(User $user): bool
+    {
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        return $this->members()
+            ->where('user_id', $user->id)
+            ->where('role', 'admin')
+            ->exists();
+    }
+
     public function getPublicUrlAttribute(): string
     {
         return url("/public/{$this->id}");
+    }
+
+    /**
+     * Helper for frontend
+     */
+    public function getCanEditAttribute(): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        return $this->canEdit($user);
+    }
+
+    public function getCanMergeAttribute(): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        return $this->canMerge($user);
     }
 }

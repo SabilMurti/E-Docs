@@ -16,6 +16,8 @@ class Page extends Model
 
     protected $fillable = [
         'site_id',
+        'branch_id',
+        'logical_id',
         'parent_id',
         'title',
         'slug',
@@ -71,6 +73,11 @@ class Page extends Model
         return $this->belongsTo(Site::class);
     }
 
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     /**
      * Parent page (if nested)
      */
@@ -93,6 +100,19 @@ class Page extends Model
     public function revisions(): HasMany
     {
         return $this->hasMany(PageRevision::class)->orderByDesc('revision_number');
+    }
+
+    /**
+     * Change requests (Drafts & PRs)
+     */
+    public function changeRequests(): HasMany
+    {
+        return $this->hasMany(PageChangeRequest::class)->orderByDesc('created_at');
+    }
+
+    public function commits(): HasMany
+    {
+        return $this->hasMany(PageCommit::class)->orderByDesc('created_at');
     }
 
     /**

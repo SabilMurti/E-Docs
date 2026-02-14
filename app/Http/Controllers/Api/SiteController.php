@@ -15,7 +15,12 @@ class SiteController extends Controller
      */
     public function index(Request $request)
     {
-        $sites = Site::where('user_id', $request->user()->id)
+        $user = $request->user();
+        
+        $sites = Site::where('user_id', $user->id)
+            ->orWhereHas('members', function($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
             ->withCount('pages')
             ->latest()
             ->get();

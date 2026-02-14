@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import useAuthStore from './stores/authStore';
 import { ThemeProvider } from './stores/ThemeContext';
 import MainLayout from './components/layout/MainLayout';
@@ -10,6 +11,11 @@ import SiteSettingsPage from './pages/SiteSettingsPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import PublicSitePage from './pages/PublicSitePage';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import ChangeRequestsList from './components/pages/ChangeRequestsList';
+import ChangeRequestDetail from './components/pages/ChangeRequestDetail';
+import MergeRequestsPage from './components/pages/MergeRequestsPage';
+import CreateMergeRequestPage from './components/pages/CreateMergeRequestPage';
+import MergeRequestDetailPage from './components/pages/MergeRequestDetail';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -63,6 +69,7 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
+        <Toaster richColors position="bottom-right" theme="system" />
         <Routes>
           {/* Auth callback route - handles OAuth redirect */}
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
@@ -96,6 +103,15 @@ function App() {
             <Route path="/sites/:siteId" element={<SitePage />} />
             <Route path="/sites/:siteId/pages/:pageId" element={<SitePage />} />
             <Route path="/sites/:siteId/settings" element={<SiteSettingsPage />} />
+
+            {/* Change Requests Routes */}
+            <Route path="/sites/:siteId/pages/:pageId/requests" element={<ChangeRequestsList />} />
+            <Route path="/sites/:siteId/pages/:pageId/requests/:requestId" element={<ChangeRequestDetail />} />
+
+            {/* Merge Requests Routes */}
+            <Route path="/sites/:siteId/merge-requests" element={<MergeRequestsPage />} />
+            <Route path="/sites/:siteId/merge-requests/new" element={<CreateMergeRequestPage />} />
+            <Route path="/sites/:siteId/merge-requests/:requestId" element={<MergeRequestDetailPage />} />
             
           </Route>
 
@@ -108,4 +124,3 @@ function App() {
 }
 
 export default App;
-

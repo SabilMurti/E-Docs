@@ -20,11 +20,57 @@ class PageController extends Controller
             abort(403);
         }
 
-        $pages = $site->rootPages()
-            ->with(['children']) // Resource handles recursive structure
+        // Get active branch
+        $branchName = $request->query('branch', 'main');
+        $branch = $site->branches()->where('name', $branchName)->first();
+
+        if (!$branch) {
+            // Fallback to default if not found, or error?
+            // If explicit query param given and not found -> 404
+            // If default 'main' not found (shouldn't happen) -> 404
+            if ($branchName !== 'main') {
+                 return response()->json(['message' => "Branch '{$branchName}' not found."], 404);
+            }
+            // If main doesn't exist (legacy/error), try finding any default branch
+            $branch = $site->branches()->where('is_default', true)->first();
+            if (!$branch) {
+                 // Absolute fail-safe: any branch
+                 $branch = $site->branches()->first();
+            }
+        }
+
+        if (!$branch) {
+             return response()->json(['data' => []]); // No branches? Empty site.
+        }
+
+        // Get pages for this branch
+        $pages = $site->pages()
+            ->where('branch_id', $branch->id)
+            ->whereNull('parent_id')
+            ->with(['children' => function($query) use ($branch) {
+                // Ensure children are also from the same branch
+                // Note: The `children` relation in model is simplified. 
+                // We might need to adjust the relation or filter recursively.
+                // Standard Eloquent `with` doesn't easily filter recursive relations unless we use package.
+                // However, since `parent_id` points to a page ID, and that page ID is specific to a branch, 
+                // the children relationship `parent_id` foreign key should naturally point to pages in the same branch
+                // (assuming we handle copying correctly).
+                // So filtering shouldn't be strictly necessary if integrity is maintained, 
+                // but adding `where('branch_id', $branch->id)` is safer.
+                $query->where('branch_id', $branch->id)->orderBy('order');
+            }]) 
+            ->orderBy('order')
             ->get();
 
-        return PageResource::collection($pages);
+        return PageResource::collection($pages)->additional([
+            'meta' => [
+                'current_branch' => [
+                    'id' => $branch->id,
+                    'name' => $branch->name,
+                    'is_default' => $branch->is_default
+                ]
+            ]
+        ]);
     }
 
     /**
@@ -43,23 +89,36 @@ class PageController extends Controller
             'icon' => 'nullable|string|max:255',
             'cover_image' => 'nullable|string|max:1000',
             'is_hidden' => 'boolean',
+            'branch' => 'nullable|string', // Optional branch name, defaults to main
         ]);
 
-        // Verify parent belongs to same site
+        // Resolve branch
+        $branchName = $validated['branch'] ?? 'main';
+        $branch = $site->branches()->where('name', $branchName)->firstOrFail();
+        
+        // Verify user has permission on this branch?
+        // Current requirement: "sabil creates site, automatically becomes admin, and sabil makes branch 'sabil'".
+        // Assuming site editors can edit any branch for now unless we implement branch-level permissions.
+        // User asked for "role or privillege" later.
+
+        // Verify parent belongs to same site AND branch
         if (!empty($validated['parent_id'])) {
             $parent = Page::find($validated['parent_id']);
-            if ($parent->site_id !== $site->id) {
-                return response()->json(['message' => 'Parent page must belong to the same site.'], 422);
+            if ($parent->site_id !== $site->id || $parent->branch_id !== $branch->id) {
+                return response()->json(['message' => 'Parent page must belong to the same site and branch.'], 422);
             }
         }
 
         // Calculate order (append to end)
         $order = Page::where('site_id', $site->id)
+            ->where('branch_id', $branch->id)
             ->where('parent_id', $validated['parent_id'] ?? null)
             ->max('order') + 1;
 
         $page = $site->pages()->create([
             'title' => $validated['title'],
+            'branch_id' => $branch->id,
+            'logical_id' => \Illuminate\Support\Str::uuid(), // New page gets new logical ID
             'parent_id' => $validated['parent_id'] ?? null,
             'content' => $validated['content'] ?? null,
             'icon' => $validated['icon'] ?? null,

@@ -70,9 +70,9 @@ function Navbar({ onMenuClick }) {
         </div>
 
         {/* Center - Search */}
-        {isAuthenticated && spaceId && (
+        {isAuthenticated && siteId && (
           <div className="hidden md:block flex-1 max-w-md">
-            <SearchBar spaceId={spaceId} onResultClick={handleSearchResult} />
+            <SearchBar siteId={siteId} onResultClick={handleSearchResult} />
           </div>
         )}
 
@@ -130,9 +130,9 @@ function Navbar({ onMenuClick }) {
                 </p>
               </div>
               <Dropdown.Item icon={User}>Profile</Dropdown.Item>
-              {spaceId && (
-                <Dropdown.Item icon={Settings} onClick={() => navigate(`/spaces/${spaceId}/settings`)}>
-                  Space Settings
+              {siteId && (
+                <Dropdown.Item icon={Settings} onClick={() => navigate(`/sites/${siteId}/settings`)}>
+                  Site Settings
                 </Dropdown.Item>
               )}
               <Dropdown.Divider />

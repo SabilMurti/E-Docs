@@ -233,6 +233,15 @@ body {
   content: none !important;
 }
 
+/* Hide placeholder inside table cells */
+.ProseMirror table td .is-empty::before,
+.ProseMirror table th .is-empty::before,
+.ProseMirror table td p.is-empty::before,
+.ProseMirror table th p.is-empty::before {
+  content: none !important;
+  display: none !important;
+}
+
 /* Specific fix for Task List to ensure alignment */
 .ProseMirror ul[data-type="taskList"] li > div > p.is-empty::before {
   position: absolute;
@@ -421,7 +430,7 @@ body {
    Code Block - Premium
    ============================================= */
 .ProseMirror pre {
-  background: none; /* Handled by wrapper */
+  background: none; /* Code Block Styling */
   font-family: 'JetBrains Mono', 'Fira Code', var(--font-mono);
   font-size: 0.875rem;
   overflow-x: auto;
@@ -1161,6 +1170,223 @@ body {
 }
 
 /* =============================================
+   RichEditor - Callout Blocks
+   ============================================= */
+.callout-wrapper {
+  margin: 1.5em 0;
+}
+
+.callout-block {
+  position: relative;
+}
+
+.callout-content {
+  min-height: 1em;
+}
+
+.callout-content p {
+  margin: 0;
+}
+
+.callout-content p + p {
+  margin-top: 0.5em;
+}
+
+/* Callout type colors (used as fallback, main styling in component) */
+.callout-block[data-type="info"] {
+  background-color: var(--color-info-light);
+  border-left-color: var(--color-info);
+}
+
+.callout-block[data-type="success"] {
+  background-color: var(--color-success-light);
+  border-left-color: var(--color-success);
+}
+
+.callout-block[data-type="warning"] {
+  background-color: var(--color-warning-light);
+  border-left-color: var(--color-warning);
+}
+
+.callout-block[data-type="danger"] {
+  background-color: var(--color-error-light);
+  border-left-color: var(--color-error);
+}
+
+/* =============================================
+   RichEditor - Enhanced Code Block
+   ============================================= */
+.code-block-wrapper {
+  margin: 1.5em 0;
+  position: relative;
+}
+
+.code-block-wrapper pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.code-block-wrapper pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+}
+
+/* Syntax highlighting - Dracula-inspired theme */
+.code-block-wrapper .hljs-comment,
+.code-block-wrapper .hljs-quote {
+  color: #6272a4;
+  font-style: italic;
+}
+
+.code-block-wrapper .hljs-keyword,
+.code-block-wrapper .hljs-selector-tag {
+  color: #ff79c6;
+}
+
+.code-block-wrapper .hljs-string,
+.code-block-wrapper .hljs-attr {
+  color: #f1fa8c;
+}
+
+.code-block-wrapper .hljs-number,
+.code-block-wrapper .hljs-literal {
+  color: #bd93f9;
+}
+
+.code-block-wrapper .hljs-variable,
+.code-block-wrapper .hljs-template-variable {
+  color: #50fa7b;
+}
+
+.code-block-wrapper .hljs-title,
+.code-block-wrapper .hljs-function {
+  color: #8be9fd;
+}
+
+.code-block-wrapper .hljs-type,
+.code-block-wrapper .hljs-class {
+  color: #ffb86c;
+}
+
+/* =============================================
+   RichEditor - Drag & Drop States
+   ============================================= */
+.ProseMirror [data-draggable="true"] {
+  position: relative;
+}
+
+.ProseMirror [data-draggable="true"].is-dragging,
+.ProseMirror > *.is-dragging {
+  opacity: 0.5;
+  outline: 2px dashed var(--color-accent);
+  outline-offset: 2px;
+  background: var(--color-accent-light);
+}
+
+/* All direct children are draggable with visible handle */
+/* All direct children are draggable with visible handle, EXCEPT tables */
+.ProseMirror > *:not(table):not(.tableWrapper) {
+  position: relative;
+  padding-left: 2rem;
+  margin-left: -2rem;
+}
+
+/* Always visible drag handle for each block (except tables) */
+.ProseMirror > *:not(table):not(.tableWrapper)::before {
+  content: '⋮⋮';
+  position: absolute;
+  left: 0;
+  top: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  opacity: 0.3;
+  cursor: grab;
+  border-radius: 0.25rem;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.ProseMirror > *:hover::before {
+  opacity: 1;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-hover);
+}
+
+.ProseMirror > *:active::before {
+  cursor: grabbing;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+/* Hide pseudo handle for certain elements that shouldn't show it */
+.ProseMirror > hr::before,
+.ProseMirror > .tableWrapper::before,
+.ProseMirror > table::before {
+  display: none;
+}
+
+/* Table wrapper needs special handling */
+.ProseMirror > .tableWrapper,
+.ProseMirror > table {
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.ProseMirror .drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--color-accent);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* =============================================
+   RichEditor - Node Selection
+   ============================================= */
+.ProseMirror .ProseMirror-selectednode {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+/* =============================================
+   RichEditor - Slash Menu Styles
+   ============================================= */
+.slash-menu {
+  font-family: var(--font-sans);
+}
+
+/* =============================================
+   RichEditor - Rich Editor Container
+   ============================================= */
+.rich-editor {
+  position: relative;
+}
+
+.rich-editor-content {
+  position: relative;
+}
+
+/* Ensure node views work correctly */
+.rich-editor .node-callout,
+.rich-editor .node-codeBlock {
+  width: 100%;
+}
+
+/* =============================================
    Print Styles
    ============================================= */
 @media print {
@@ -1187,4 +1413,309 @@ body {
     min-height: auto !important;
     padding-bottom: 0 !important;
   }
+}
+
+/* =============================================
+   Enhanced Code Block Styling (Bloom Dark Theme)
+   ============================================= */
+.code-block-plus {
+  position: relative;
+  z-index: 10;
+}
+
+/* Base styles for code content */
+.code-block-plus pre {
+  margin: 0;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+/* Syntax Highlighting Colors (One Dark Pro / Bloom Style) */
+.code-block-plus .hljs-comment,
+.code-block-plus .hljs-quote {
+  color: #7f848e !important;
+  font-style: italic;
+}
+
+.code-block-plus .hljs-doctag,
+.code-block-plus .hljs-keyword,
+.code-block-plus .hljs-formula {
+  color: #c678dd !important;
+}
+
+.code-block-plus .hljs-section,
+.code-block-plus .hljs-name,
+.code-block-plus .hljs-selector-tag,
+.code-block-plus .hljs-deletion,
+.code-block-plus .hljs-subst {
+  color: #e06c75 !important;
+}
+
+.code-block-plus .hljs-literal {
+  color: #56b6c2 !important;
+}
+
+.code-block-plus .hljs-string,
+.code-block-plus .hljs-regexp,
+.code-block-plus .hljs-addition,
+.code-block-plus .hljs-attribute,
+.code-block-plus .hljs-meta .hljs-string {
+  color: #98c379 !important;
+}
+
+.code-block-plus .hljs-attr,
+.code-block-plus .hljs-variable,
+.code-block-plus .hljs-template-variable,
+.code-block-plus .hljs-type,
+.code-block-plus .hljs-selector-class,
+.code-block-plus .hljs-selector-attr,
+.code-block-plus .hljs-selector-pseudo,
+.code-block-plus .hljs-number {
+  color: #d19a66 !important;
+}
+
+.code-block-plus .hljs-symbol,
+.code-block-plus .hljs-bullet,
+.code-block-plus .hljs-link,
+.code-block-plus .hljs-meta,
+.code-block-plus .hljs-selector-id,
+.code-block-plus .hljs-title {
+  color: #61aeee !important;
+}
+
+.code-block-plus .hljs-built_in,
+.code-block-plus .hljs-title.class_,
+.code-block-plus .hljs-class .hljs-title {
+  color: #e5c07b !important;
+}
+
+.code-block-plus .hljs-emphasis {
+  font-style: italic;
+}
+
+.code-block-plus .hljs-strong {
+  font-weight: bold;
+}
+
+/* Ensure text color is bright enough */
+.code-block-plus code {
+  color: #abb2bf !important;
+  text-shadow: 0 0 1px rgba(0,0,0,0.3);
+}
+
+/* =============================================
+   FIX & ENHANCE: VIBRANT SYNTAX + PLACEHOLDER
+   ============================================= */
+
+/* 1. Hide Placeholder Behind Blocks */
+/* Memastikan placeholder tidak muncul menembus code block */
+.code-block-wrapper {
+  position: relative;
+  z-index: 5; /* Higher than placeholder */
+  background: transparent; /* Wrapper transparent, inner has color */
+}
+
+/* 2. SUPER VIBRANT TOKYO NIGHT THEME */
+.code-block-plus .hljs-keyword,
+.code-block-plus .hljs-selector-tag,
+.code-block-plus .hljs-literal,
+.code-block-plus .hljs-section,
+.code-block-plus .hljs-link {
+  color: #bb9af7 !important; /* Neon Purple */
+  font-weight: bold;
+}
+
+.code-block-plus .hljs-function, 
+.code-block-plus .hljs-title {
+  color: #7aa2f7 !important; /* Neon Blue */
+}
+
+.code-block-plus .hljs-string,
+.code-block-plus .hljs-doctag,
+.code-block-plus .hljs-regexp {
+  color: #9ece6a !important; /* Neon Green */
+}
+
+.code-block-plus .hljs-type,
+.code-block-plus .hljs-class .hljs-title,
+.code-block-plus .hljs-attr,
+.code-block-plus .hljs-attribute,
+.code-block-plus .hljs-symbol,
+.code-block-plus .hljs-bullet,
+.code-block-plus .hljs-addition,
+.code-block-plus .hljs-variable,
+.code-block-plus .hljs-template-variable {
+  color: #2ac3de !important; /* Neon Cyan */
+}
+
+.code-block-plus .hljs-number, 
+.code-block-plus .hljs-meta, 
+.code-block-plus .hljs-built_in, 
+.code-block-plus .hljs-builtin-name, 
+.code-block-plus .hljs-params {
+  color: #ff9e64 !important; /* Neon Orange */
+}
+
+.code-block-plus .hljs-comment,
+.code-block-plus .hljs-quote {
+  color: #a9b1d6 !important; /* Bright Gray */
+  background: rgba(169, 177, 214, 0.1);
+  padding: 0 4px;
+  border-radius: 4px;
+  font-style: italic;
+}
+
+.code-block-plus .hljs-deletion {
+  color: #f7768e !important; /* Neon Red */
+}
+
+/* Ensure code text contrast */
+.code-block-plus code {
+  color: #c0caf5 !important; /* Bright White-ish Blue */
+  font-weight: 500;
+  text-shadow: 0 0 2px rgba(0,0,0,0.5); /* Pop out text */
+}
+
+
+/* =============================================
+   VS CODE DARK+ THEME (ACCURATE)
+   ============================================= */
+
+/* Base Text */
+.code-block-plus code {
+  color: #D4D4D4 !important; /* VSCode Default Text */
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* Keywords (import, export, return, if, else -> Pink/Purple) */
+.code-block-plus .hljs-keyword,
+.code-block-plus .hljs-selector-tag,
+.code-block-plus .hljs-built_in,
+.code-block-plus .hljs-name,
+.code-block-plus .hljs-tag {
+  color: #C586C0 !important;
+}
+
+/* Storage types (const, let, var, function -> Blue) */
+/* highlight.js kadang menyatukan keyword, jadi kita override umum dulu */
+.code-block-plus .hljs-type {
+  color: #4EC9B0 !important; /* Class types -> Teal */
+}
+
+/* Functions (Yellow) */
+.code-block-plus .hljs-function,
+.code-block-plus .hljs-title,
+.code-block-plus .hljs-section,
+.code-block-plus .hljs-title.function_ {
+  color: #DCDCAA !important;
+}
+
+/* Variables & Properties (Light Blue) */
+.code-block-plus .hljs-variable,
+.code-block-plus .hljs-template-variable,
+.code-block-plus .hljs-attr,
+.code-block-plus .hljs-attribute,
+.code-block-plus .hljs-property {
+  color: #9CDCFE !important;
+}
+
+/* Strings (Orange/Brown) */
+.code-block-plus .hljs-string,
+.code-block-plus .hljs-meta .hljs-string {
+  color: #CE9178 !important;
+}
+
+/* Comments (Green) */
+.code-block-plus .hljs-comment,
+.code-block-plus .hljs-quote {
+  color: #6A9955 !important;
+  font-style: italic;
+}
+
+/* Numbers & Booleans (Light Green) */
+.code-block-plus .hljs-number,
+.code-block-plus .hljs-boolean,
+.code-block-plus .hljs-literal {
+  color: #B5CEA8 !important;
+}
+
+/* HTML Tags (Blue) */
+.code-block-plus .hljs-tag .hljs-name {
+  color: #569CD6 !important;
+}
+
+/* JSX/TSX Component Tags (Green/Teal) */
+.code-block-plus .hljs-tag .hljs-title, 
+.code-block-plus .hljs-class .hljs-title {
+  color: #4EC9B0 !important;
+}
+
+/* Punctuation (Default/White-ish) */
+.code-block-plus .hljs-punctuation {
+  color: #D4D4D4 !important;
+}
+
+/* Special fix for 'function' keyword which nicely is blue in VSCode but sometimes pink in others */
+.code-block-plus .hljs-keyword.function {
+  color: #569CD6 !important;
+}
+
+
+/* =============================================
+   Advanced Table Styles (Phase 5 - Consolidated)
+   ============================================= */
+
+/* Base Table Stability */
+.ProseMirror table {
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  width: 100%;
+  table-layout: fixed; /* Necessary for resizing */
+  overflow: hidden;
+  position: relative;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+  min-width: 1em;
+  border: 1px solid var(--color-border-primary);
+  padding: 8px 10px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  white-space: normal; /* Allow wrap */
+  word-wrap: break-word; /* distinct from word-break */
+}
+
+/* Cell content stability */
+.ProseMirror td > p,
+.ProseMirror th > p {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Striped Style */
+.ProseMirror table[data-style="striped"] tr:nth-child(even) td {
+  background-color: var(--color-bg-secondary);
+}
+
+/* Bordered Style */
+.ProseMirror table[data-style="bordered"] td,
+.ProseMirror table[data-style="bordered"] th {
+  border-width: 2px;
+}
+
+/* Minimal Style */
+.ProseMirror table[data-style="minimal"] {
+  border: none;
+}
+.ProseMirror table[data-style="minimal"] th {
+  border: none;
+  border-bottom: 2px solid var(--color-border-primary);
+  background: transparent;
+}
+.ProseMirror table[data-style="minimal"] td {
+  border: none;
+  border-bottom: 1px solid var(--color-border-secondary);
 }

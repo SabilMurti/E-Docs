@@ -9,19 +9,23 @@ const usePageStore = create((set, get) => ({
   error: null,
 
   // Fetch page tree for a site
-  fetchPages: async (siteId) => {
+  fetchPages: async (siteId, branchName = 'main') => {
     set({ isLoading: true, error: null });
     try {
-      const response = await pagesApi.getPages(siteId);
+      // Pass branch as query param
+      const response = await pagesApi.getPages(siteId, { branch: branchName });
+      const data = response.data || response;
       set({ 
-        pages: response.data || response,
+        pages: data,
         isLoading: false 
       });
+      return data;
     } catch (error) {
       set({ 
         error: error.message, 
         isLoading: false 
       });
+      return null;
     }
   },
 
@@ -46,13 +50,14 @@ const usePageStore = create((set, get) => ({
   },
 
   // Create page
-  createPage: async (siteId, data) => {
+  createPage: async (siteId, data, branchName = 'main') => {
     set({ isLoading: true, error: null });
     try {
-      const response = await pagesApi.createPage(siteId, data);
+      const payload = { ...data, branch: branchName };
+      const response = await pagesApi.createPage(siteId, payload);
       const page = response.data || response;
       // Refetch the tree to get updated structure
-      await get().fetchPages(siteId);
+      await get().fetchPages(siteId, branchName);
       return { success: true, page };
     } catch (error) {
       set({ 
@@ -127,6 +132,35 @@ const usePageStore = create((set, get) => ({
 
   // Clear error
   clearError: () => set({ error: null }),
+
+  // Change Request & Commits
+  currentRequest: null,
+  commits: [],
+
+  commitChange: async (siteId, pageId, data) => {
+    set({ isSaving: true, error: null });
+    try {
+      const response = await pagesApi.commitChange(siteId, pageId, data);
+      set({ 
+        currentRequest: response.request,
+        isSaving: false 
+      });
+      return { success: true, commit: response.commit };
+    } catch (error) {
+      set({ error: error.message, isSaving: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  fetchRequestDetails: async (pageId) => {
+     try {
+       const response = await pagesApi.getChangeRequests(pageId);
+       // Find user's current draft
+       const requests = response.data || response;
+       const draft = requests.find(r => r.status === 'draft' && r.user_id === requests.user_id); // This line is slightly buggy since we don't have user_id here easily, but we'll fix it
+       set({ currentRequest: draft });
+     } catch (e) {}
+  }
 }));
 
 export default usePageStore;

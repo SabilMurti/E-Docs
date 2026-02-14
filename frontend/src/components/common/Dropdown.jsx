@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
+
+const DropdownContext = createContext({});
 
 function Dropdown({ 
   trigger, 
@@ -77,9 +79,7 @@ function Dropdown({
   );
 }
 
-// Context for passing click handler
-import { createContext, useContext } from 'react';
-const DropdownContext = createContext({});
+// Context was here
 
 function DropdownItem({ 
   children, 

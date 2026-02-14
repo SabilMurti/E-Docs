@@ -33,14 +33,35 @@ class AuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
 
-            $user = User::updateOrCreate(
-                ['google_id' => $googleUser->getId()],
-                [
-                    'name' => $googleUser->getName(),
-                    'email' => $googleUser->getEmail(),
-                    'avatar_url' => $googleUser->getAvatar(),
-                ]
-            );
+            // Find user by Google ID or Email
+            $user = User::where('google_id', $googleUser->getId())->first();
+
+            if (!$user) {
+                $user = User::where('email', $googleUser->getEmail())->first();
+                
+                if ($user) {
+                    // Link existing account
+                    $user->update([
+                        'google_id' => $googleUser->getId(),
+                        'avatar_url' => $user->avatar_url ?? $googleUser->getAvatar(),
+                    ]);
+                } else {
+                    // Create new user
+                    $user = User::create([
+                        'name' => $googleUser->getName(),
+                        'email' => $googleUser->getEmail(),
+                        'google_id' => $googleUser->getId(),
+                        'avatar_url' => $googleUser->getAvatar(),
+                    ]);
+                }
+            } else {
+                // Update avatar if changed (and not null from provider)
+                if ($googleUser->getAvatar()) {
+                    $user->update([
+                        'avatar_url' => $googleUser->getAvatar(),
+                    ]);
+                }
+            }
 
             // Create token
             $token = $user->createToken('auth-token')->plainTextToken;

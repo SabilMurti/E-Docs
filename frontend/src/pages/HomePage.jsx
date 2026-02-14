@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { 
   Plus, 
   FileText, 
@@ -169,11 +170,17 @@ function CreateSiteModal({ isOpen, onClose, onSubmit }) {
     if (!name.trim()) return;
     
     setIsLoading(true);
-    await onSubmit({ name: name.trim(), description: description.trim() });
-    setIsLoading(false);
-    setName('');
-    setDescription('');
-    onClose();
+    try {
+      await onSubmit({ name: name.trim(), description: description.trim() });
+      setName('');
+      setDescription('');
+      onClose();
+    } catch (error) {
+      console.error('Modal submit error:', error);
+      // Don't close on error
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -245,9 +252,19 @@ function HomePage() {
   }, [fetchSites]);
 
   const handleCreateSite = async (data) => {
-    const result = await createSite(data);
-    if (result.success) {
-      navigate(`/sites/${result.data.id}`);
+    console.log('Creating site with data:', data);
+    try {
+      const result = await createSite(data);
+      console.log('Create site result:', result);
+      if (result.success && result.data?.id) {
+        navigate(`/sites/${result.data.id}`);
+      } else {
+        console.error('Create site failed:', result.error);
+        toast.error('Failed to create site: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Create site exception:', error);
+      toast.error('Error creating site: ' + error.message);
     }
   };
 

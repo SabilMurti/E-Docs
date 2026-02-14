@@ -4,6 +4,8 @@ import * as sitesApi from '../api/sites';
 const useSiteStore = create((set, get) => ({
   sites: [],
   currentSite: null,
+  branches: [],
+  currentBranch: 'main',
   isLoading: false,
   error: null,
 
@@ -182,7 +184,51 @@ const useSiteStore = create((set, get) => ({
   },
 
   // Clear current site
-  clearCurrentSite: () => set({ currentSite: null }),
+  clearCurrentSite: () => set({ currentSite: null, branches: [], currentBranch: 'main' }),
+
+  // --- BRANCHES ---
+
+  // Fetch branches
+  fetchBranches: async (siteId) => {
+    try {
+      const response = await sitesApi.getBranches(siteId);
+      set({ branches: response.data || [] });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Create branch
+  createBranch: async (siteId, data) => {
+    try {
+      const response = await sitesApi.createBranch(siteId, data);
+      set(state => ({
+        branches: [...state.branches, response.data]
+      }));
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || error.message };
+    }
+  },
+
+  // Delete branch
+  deleteBranch: async (siteId, branchId) => {
+    try {
+      await sitesApi.deleteBranch(siteId, branchId);
+      set(state => ({
+        branches: state.branches.filter(b => b.id !== branchId)
+      }));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || error.message };
+    }
+  },
+
+  // Switch Branch (UI state only, pages fetch depends on this)
+  switchBranch: (branchName) => {
+    set({ currentBranch: branchName });
+  }
 }));
 
 export default useSiteStore;

@@ -5,7 +5,10 @@ import useSiteStore from '../stores/siteStore';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
+import SiteMembers from '../components/sites/SiteMembers';
+
 function SiteSettingsPage() {
+
   const { siteId } = useParams();
   const navigate = useNavigate();
   const { currentSite, fetchSite, updateSite, deleteSite, publishSite, unpublishSite, isLoading } = useSiteStore();
@@ -227,6 +230,9 @@ function SiteSettingsPage() {
               </div>
             )}
           </div>
+
+          {/* Collaboration */}
+          <SiteMembers siteId={siteId} />
 
           {/* Danger Zone */}
           <div className="bg-[#1c1c1c] rounded-2xl border border-red-500/30 p-6">
