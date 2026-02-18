@@ -107,44 +107,44 @@ export const BLOCK_DEFINITIONS = [
         name: 'Info',
         icon: Info,
         description: 'Informational callout',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="hint-block hint-info">
-            <p>💡 <strong>Info:</strong> Add your informational note here...</p>
-          </div>
-        `).run()
+        action: (editor) => editor.chain().focus().insertContent({
+          type: 'callout',
+          attrs: { type: 'info' },
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Informational note goes here...' }] }]
+        }).run()
       },
       {
         id: 'hintSuccess',
         name: 'Success',
         icon: CheckCircle2,
         description: 'Success callout',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="hint-block hint-success">
-            <p>✅ <strong>Success:</strong> Add your success message here...</p>
-          </div>
-        `).run()
+        action: (editor) => editor.chain().focus().insertContent({
+          type: 'callout',
+          attrs: { type: 'success' },
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Success message goes here...' }] }]
+        }).run()
       },
       {
         id: 'hintWarning',
         name: 'Warning',
         icon: AlertTriangle,
         description: 'Warning callout',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="hint-block hint-warning">
-            <p>⚠️ <strong>Warning:</strong> Add your warning message here...</p>
-          </div>
-        `).run()
+        action: (editor) => editor.chain().focus().insertContent({
+          type: 'callout',
+          attrs: { type: 'warning' },
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Warning message goes here...' }] }]
+        }).run()
       },
       {
         id: 'hintDanger',
         name: 'Danger',
         icon: XCircle,
         description: 'Danger callout',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="hint-block hint-danger">
-            <p>🚨 <strong>Danger:</strong> Add your danger message here...</p>
-          </div>
-        `).run()
+        action: (editor) => editor.chain().focus().insertContent({
+          type: 'callout',
+          attrs: { type: 'danger' },
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Danger message goes here...' }] }]
+        }).run()
       }
     ]
   },
@@ -163,18 +163,7 @@ export const BLOCK_DEFINITIONS = [
         name: 'Cards',
         icon: CreditCard,
         description: 'Side-by-side card layout',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="cards-container">
-            <div class="card">
-              <h4>Card Title</h4>
-              <p>Card description goes here. Click to edit.</p>
-            </div>
-            <div class="card">
-              <h4>Card Title</h4>
-              <p>Card description goes here. Click to edit.</p>
-            </div>
-          </div>
-        `).run()
+        action: (editor) => editor.chain().focus().setCard().run()
       },
       {
         id: 'tabs',
@@ -199,14 +188,7 @@ export const BLOCK_DEFINITIONS = [
         name: 'Toggle / Expandable',
         icon: Maximize2,
         description: 'Collapsible section',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <details class="expandable">
-            <summary>Click to expand</summary>
-            <div>
-              <p>Hidden content goes here. Add any content you want to be collapsible.</p>
-            </div>
-          </details>
-        `).run()
+        action: (editor) => editor.chain().focus().setToggle({ summary: 'Click to expand' }).run()
       },
       {
         id: 'stepper',
@@ -244,16 +226,7 @@ export const BLOCK_DEFINITIONS = [
         name: 'Columns',
         icon: LayoutGrid,
         description: 'Multi-column layout',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="columns-container">
-            <div class="column">
-              <p>Left column content...</p>
-            </div>
-            <div class="column">
-              <p>Right column content...</p>
-            </div>
-          </div>
-        `).run()
+        action: (editor) => editor.chain().focus().setColumns({ layout: 'two-columns' }).run()
       }
     ]
   },
@@ -265,12 +238,7 @@ export const BLOCK_DEFINITIONS = [
         name: 'Image',
         icon: ImageIcon,
         description: 'Add image from URL',
-        action: (editor, extra) => {
-          const url = extra?.url || window.prompt('Enter image URL:');
-          if (url) {
-            editor.chain().focus().setImage({ src: url }).run();
-          }
-        }
+        action: (editor) => editor.chain().focus().triggerImageUpload().run()
       },
       {
         id: 'youtube',
@@ -310,15 +278,7 @@ export const BLOCK_DEFINITIONS = [
         name: 'File Attachment',
         icon: FileUp,
         description: 'Link to a file',
-        action: (editor, extra) => {
-          const url = extra?.url || window.prompt('Enter file URL:');
-          if (url) {
-            const fileName = url.split('/').pop() || 'Download File';
-            editor.chain().focus().insertContent(`
-              <p><a href="${url}" target="_blank" rel="noopener noreferrer" class="file-attachment">📎 ${fileName}</a></p>
-            `).run();
-          }
-        }
+        action: (editor) => editor.chain().focus().triggerFileUpload().run()
       }
     ]
   },
@@ -371,16 +331,11 @@ export const BLOCK_DEFINITIONS = [
         `).run()
       },
       {
-        id: 'drawing',
-        name: 'Drawing',
+        id: 'flowchart',
+        name: 'Flowchart',
         icon: PenTool,
-        description: 'Freehand drawing canvas',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="drawing-placeholder">
-            <p>🎨 Drawing canvas</p>
-            <p style="font-size: 0.875rem; opacity: 0.6;">Drawing feature coming soon...</p>
-          </div>
-        `).run()
+        description: 'Visual diagram with toolbar',
+        action: (editor) => editor.chain().focus().setExcalidraw().run()
       }
     ]
   }

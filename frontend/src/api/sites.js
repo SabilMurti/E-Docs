@@ -51,10 +51,34 @@ export const publishSite = async (id) => {
 /**
  * Unpublish site
  */
-export const unpublishSite = async (id) => {
-  const response = await client.post(`/sites/${id}/unpublish`);
-  return response.data;
-};
+export async function unpublishSite(id) {
+  const { data } = await client.post(`/sites/${id}/unpublish`);
+  return data;
+}
+
+/**
+ * Get site members
+ */
+export async function getSiteMembers(id) {
+  const { data } = await client.get(`/sites/${id}/members`);
+  return data;
+}
+
+/**
+ * Add site member
+ */
+export async function addSiteMember(id, email, role) {
+  const { data } = await client.post(`/sites/${id}/members`, { email, role });
+  return data;
+}
+
+/**
+ * Remove site member
+ */
+export async function removeSiteMember(id, userId) {
+  const { data } = await client.delete(`/sites/${id}/members/${userId}`);
+  return data;
+}
 
 /**
  * Add space to site
@@ -85,6 +109,40 @@ export const removeSpaceFromSite = async (siteId, spaceId) => {
  */
 export const reorderSpacesInSite = async (siteId, spaces) => {
   const response = await client.post(`/sites/${siteId}/spaces/reorder`, { spaces });
+  return response.data;
+};
+
+/**
+ * Get branches for site
+ */
+export const getBranches = async (siteId) => {
+  const response = await client.get(`/sites/${siteId}/branches`);
+  return response.data;
+};
+
+/**
+ * Create branch in site
+ */
+export const createBranch = async (siteId, data) => {
+  const response = await client.post(`/sites/${siteId}/branches`, data);
+  return response.data;
+};
+
+/**
+ * Delete branch from site
+ */
+export const deleteBranch = async (siteId, branchId) => {
+  const response = await client.delete(`/sites/${siteId}/branches/${branchId}`);
+  return response.data;
+};
+
+/**
+ * Compare branches
+ */
+export const compareBranches = async (siteId, sourceId, targetId) => {
+  const response = await client.get(`/sites/${siteId}/compare`, {
+    params: { source: sourceId, target: targetId }
+  });
   return response.data;
 };
 

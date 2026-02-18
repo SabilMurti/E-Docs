@@ -113,7 +113,10 @@ export default function BlockHandle({
         {/* Plus Button */}
         <div className="relative">
           <button
-            onClick={() => setActiveDropdown(activeDropdown === 'add' ? null : 'add')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveDropdown(activeDropdown === 'add' ? null : 'add');
+            }}
             className={`block-handle-btn ${activeDropdown === 'add' ? 'bg-[color:var(--color-bg-hover)]' : ''}`}
             title="Add block"
           >
@@ -123,7 +126,7 @@ export default function BlockHandle({
           {activeDropdown === 'add' && (
             <BlockMenuDropdown 
               onClose={() => setActiveDropdown(null)} 
-              onSelect={handleInsertBlock} 
+              onSelect={(action) => handleInsertBlock(action)} 
             />
           )}
         </div>
@@ -131,9 +134,16 @@ export default function BlockHandle({
         {/* Grip Button */}
         <div className="relative">
           <button
-            onClick={() => setActiveDropdown(activeDropdown === 'options' ? null : 'options')}
+            onClick={(e) => {
+               e.stopPropagation();
+               setActiveDropdown(activeDropdown === 'options' ? null : 'options');
+            }}
             className={`block-handle-btn cursor-grab ${activeDropdown === 'options' ? 'bg-[color:var(--color-bg-hover)]' : ''}`}
             title="Block options"
+            onMouseDown={(e) => {
+               // Prevent drag interference for now if needed, or allow drag
+               // e.stopPropagation(); 
+            }}
           >
             <GripVertical size={14} />
           </button>
@@ -141,7 +151,7 @@ export default function BlockHandle({
           {activeDropdown === 'options' && (
             <BlockOptionsDropdown 
               onClose={() => setActiveDropdown(null)} 
-              onSelect={handleBlockAction}
+              onSelect={(action) => handleBlockAction(action)}
               editor={editor}
             />
           )}

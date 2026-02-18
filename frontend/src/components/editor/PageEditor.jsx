@@ -222,9 +222,28 @@ export default function PageEditor({
         const absoluteIndex = matchIndex + slashOffset;
         const startPos = $from.pos - (textBefore.length - absoluteIndex);
         
-        const coords = editor.view.coordsAtPos(startPos);
+        // Use Native Browser Selection for accurate coordinates
+        // This prevents menu from appearing at 0,0 (left sidebar) if Tiptap fails
+        let top = 0;
+        let left = 0;
+        
         const container = wrapperRef.current || editor.view.dom;
         const containerRect = container.getBoundingClientRect();
+        
+        const domSelection = window.getSelection();
+        if (domSelection && domSelection.rangeCount > 0) {
+          const range = domSelection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          
+          // Calculate relative position to container
+          top = rect.bottom - containerRect.top + container.scrollTop + 4;
+          left = rect.left - containerRect.left;
+        } else {
+           // Fallback
+           const coords = editor.view.coordsAtPos(startPos);
+           top = coords.bottom - containerRect.top + container.scrollTop + 4;
+           left = coords.left - containerRect.left;
+        }
 
         setSlashMenuState(prev => {
            // Reset index if query changed significantly or opened new
@@ -232,8 +251,8 @@ export default function PageEditor({
              return {
                visible: true,
                query,
-               top: coords.bottom - containerRect.top + container.scrollTop + 4,
-               left: coords.left - containerRect.left,
+               top,
+               left,
                selectedIndex: 0,
                enterPressed: null,
                navigationEvent: null 
@@ -243,8 +262,8 @@ export default function PageEditor({
              ...prev,
              visible: true,
              query,
-             top: coords.bottom - containerRect.top + container.scrollTop + 4,
-             left: coords.left - containerRect.left,
+             top,
+             left,
            };
         });
       } else {

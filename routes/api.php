@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\PageRevisionController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\PublicSiteController;
+use App\Http\Controllers\Api\SiteMemberController;
+use App\Http\Controllers\Api\UploadController;
 use Illuminate\Support\Facades\Route;
 
 // Auth Routes
@@ -30,9 +32,52 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sites
     Route::apiResource('sites', SiteController::class);
     Route::post('sites/{site}/publish', [SiteController::class, 'publish']);
+
     Route::post('sites/{site}/unpublish', [SiteController::class, 'unpublish']);
 
-    // Pages (Directly under Sites now)
+    // Site Members (Collaboration)
+    Route::get('sites/{site}/members', [SiteMemberController::class, 'index']);
+    Route::post('sites/{site}/members', [SiteMemberController::class, 'store']);
+    Route::put('sites/{site}/members/{userId}', [SiteMemberController::class, 'updateRole']);
+    Route::delete('sites/{site}/members/{userId}', [SiteMemberController::class, 'destroy']);
+
+    // Branches
+    Route::get('sites/{site}/branches', [\App\Http\Controllers\Api\BranchController::class, 'index']);
+    Route::post('sites/{site}/branches', [\App\Http\Controllers\Api\BranchController::class, 'store']);
+    Route::delete('sites/{site}/branches/{branch}', [\App\Http\Controllers\Api\BranchController::class, 'destroy']);
+
+    // Pull Requests (GitHub-like)
+    Route::get('sites/{site}/pulls', [\App\Http\Controllers\Api\PullRequestController::class, 'index']);
+    Route::post('sites/{site}/pulls', [\App\Http\Controllers\Api\PullRequestController::class, 'store']);
+    Route::get('sites/{site}/pulls/compare', [\App\Http\Controllers\Api\PullRequestController::class, 'compare']);
+    Route::get('sites/{site}/pulls/{pullRequest}', [\App\Http\Controllers\Api\PullRequestController::class, 'show']);
+    Route::put('sites/{site}/pulls/{pullRequest}', [\App\Http\Controllers\Api\PullRequestController::class, 'update']);
+    Route::post('sites/{site}/pulls/{pullRequest}/merge', [\App\Http\Controllers\Api\PullRequestController::class, 'merge']);
+    Route::post('sites/{site}/pulls/{pullRequest}/resolve', [\App\Http\Controllers\Api\PullRequestController::class, 'resolve']);
+    Route::post('sites/{site}/pulls/{pullRequest}/close', [\App\Http\Controllers\Api\PullRequestController::class, 'close']);
+    Route::delete('sites/{site}/pulls/{pullRequest}', [\App\Http\Controllers\Api\PullRequestController::class, 'destroy']);
+
+    // Pull Request Reviews
+    Route::get('sites/{site}/pulls/{pullRequest}/reviews', [\App\Http\Controllers\Api\PullRequestReviewController::class, 'index']);
+    Route::post('sites/{site}/pulls/{pullRequest}/reviews', [\App\Http\Controllers\Api\PullRequestReviewController::class, 'store']);
+
+    // Page-specific Requests (for editor integration)
+    Route::get('pages/{page}/requests', [\App\Http\Controllers\Api\PullRequestController::class, 'indexByPage']);
+    Route::post('pages/{page}/requests', [\App\Http\Controllers\Api\PullRequestController::class, 'storePageRequest']);
+
+    // Global Request Routes (for components that only have requestId)
+    Route::get('requests/{pullRequest}', [\App\Http\Controllers\Api\PullRequestController::class, 'showFull']);
+    Route::post('requests/{pullRequest}/merge', [\App\Http\Controllers\Api\PullRequestController::class, 'mergeFull']);
+    Route::get('requests/{pullRequest}/commits', [\App\Http\Controllers\Api\PullRequestController::class, 'commits']);
+    Route::post('requests/{pullRequest}/sync', [\App\Http\Controllers\Api\PullRequestController::class, 'sync']);
+
+    // Commits (Site-level)
+    Route::get('sites/{site}/commits', [\App\Http\Controllers\Api\CommitController::class, 'index']);
+    Route::post('sites/{site}/commits', [\App\Http\Controllers\Api\CommitController::class, 'store']);
+    Route::post('sites/{site}/pages/{page}/commits', [\App\Http\Controllers\Api\CommitController::class, 'storePage']);
+    Route::get('sites/{site}/commits/{commit}', [\App\Http\Controllers\Api\CommitController::class, 'show']);
+
+    // Pages
     Route::post('sites/{site}/pages', [PageController::class, 'store']);
     Route::get('sites/{site}/pages', [PageController::class, 'index']);
     Route::get('sites/{site}/pages/{page}', [PageController::class, 'show']);
@@ -40,21 +85,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('sites/{site}/pages/{page}', [PageController::class, 'destroy']);
     Route::post('sites/{site}/pages/reorder', [PageController::class, 'reorder']);
 
-    // Page Revisions
-    Route::get('sites/{site}/pages/{page}/revisions', [PageRevisionController::class, 'index']);
-    Route::get('sites/{site}/pages/{page}/revisions/{revision}', [PageRevisionController::class, 'show']);
-    Route::post('sites/{site}/pages/{page}/revisions/{revision}/restore', [PageRevisionController::class, 'restore']);
+    // Notifications
+    Route::get('notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+    Route::get('notifications/count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+    Route::post('notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
 
     // Search
     Route::get('sites/{site}/search', [SearchController::class, 'search']);
+
+    // Uploads
+    Route::post('upload', [UploadController::class, 'store']);
 });
 
 // Public Routes (supports both slug and UUID)
 Route::prefix('public')->group(function () {
     // Public Site routes
     Route::get('sites/{identifier}', [PublicSiteController::class, 'show']);
-
-    // Updated public routes structure... (TODO: Update PublicSiteController)
-    // Route::get('sites/{identifier}/pages', [PublicSiteController::class, 'pages']);
-    // Route::get('sites/{identifier}/pages/{pageId}', [PublicSiteController::class, 'page']);
+    Route::get('sites/{identifier}/pages/{pageId}', [PublicSiteController::class, 'page']);
 });
