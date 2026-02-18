@@ -9,7 +9,7 @@ import {
   Quote, Code2, Info, AlertTriangle, CheckCircle2, XCircle,
   Table as TableIcon, CreditCard, AppWindow, Maximize2,
   Footprints, LayoutGrid, FileUp, Image as ImageIcon,
-  Globe, Youtube as YoutubeIcon, Link2, Calculator, Braces, PenTool
+  Globe, Youtube as YoutubeIcon, Link2, Calculator, Braces, PenTool, Layers
 } from 'lucide-react';
 
 // Block type definitions with categories
@@ -227,6 +227,32 @@ export const BLOCK_DEFINITIONS = [
         icon: LayoutGrid,
         description: 'Multi-column layout',
         action: (editor) => editor.chain().focus().setColumns({ layout: 'two-columns' }).run()
+      },
+      {
+        id: 'tabs',
+        name: 'Tabs',
+        icon: Layers,
+        description: 'Interactive tabbed content',
+        action: (editor) => editor.chain().focus().insertContent({
+          type: 'tabs',
+          attrs: { activeTab: 0 },
+          content: [
+            { 
+              type: 'tabItem', 
+              attrs: { title: 'First Tab' }, 
+              content: [
+                { type: 'paragraph', content: [{ type: 'text', text: 'Content for the first tab...' }] }
+              ] 
+            },
+            { 
+              type: 'tabItem', 
+              attrs: { title: 'Second Tab' }, 
+              content: [
+                { type: 'paragraph', content: [{ type: 'text', text: 'Content for the second tab...' }] }
+              ] 
+            }
+          ]
+        }).run()
       }
     ]
   },

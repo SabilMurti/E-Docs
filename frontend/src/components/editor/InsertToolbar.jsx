@@ -36,6 +36,7 @@ import {
   Redo2,
   ArrowRightLeft,
   PenTool,
+  Layers,
 } from 'lucide-react';
 import { TableCreationModal } from './TablePlus';
 
@@ -93,6 +94,7 @@ const BLOCK_CATEGORIES = [
         { id: '3col', label: '3 Columns', icon: LayoutGrid },
         { id: 'left-sidebar', label: 'Sidebar Left', icon: PanelLeft },
         { id: 'right-sidebar', label: 'Sidebar Right', icon: PanelRight },
+        { id: 'tabs', label: 'Tabs', icon: Layers },
     ]
   },
 ];
@@ -206,6 +208,16 @@ function InsertToolbar({ editor }) {
         break;
       case 'right-sidebar':
         editor.chain().focus().setColumns({ layout: 'sidebar-right' }).run();
+        break;
+      case 'tabs':
+        editor.chain().focus().insertContent({
+          type: 'tabs',
+          attrs: { activeTab: 0 },
+          content: [
+            { type: 'tabItem', attrs: { title: 'First Tab' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Content for the first tab...' }] }] },
+            { type: 'tabItem', attrs: { title: 'Second Tab' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Content for the second tab...' }] }] }
+          ]
+        }).run();
         break;
       case 'table':
         setShowTableModal(true);

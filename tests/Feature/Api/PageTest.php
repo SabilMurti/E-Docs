@@ -110,7 +110,8 @@ class PageTest extends TestCase
         $response = $this->deleteJson("/api/sites/{$site->id}/pages/{$page->id}");
 
         $response->assertStatus(200);
-        $this->assertDatabaseMissing('pages', ['id' => $page->id]);
+        // Page uses SoftDeletes, so record still exists but with deleted_at set
+        $this->assertSoftDeleted('pages', ['id' => $page->id]);
     }
 
     public function test_can_reorder_pages(): void

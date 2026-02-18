@@ -31,6 +31,7 @@ import { Columns, Column } from './extensions/Columns';
 import { Toggle } from './extensions/Toggle';
 import { Card } from './extensions/Card';
 import { ExcalidrawNode } from './extensions/Excalidraw';
+import { Tabs, TabItem } from './extensions/Tabs';
 
 export const getExtensions = (placeholderText = 'Start typing...') => [
   StarterKit.configure({
@@ -149,4 +150,6 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   Toggle,
   Card,
   ExcalidrawNode,
+  Tabs,
+  TabItem,
 ];

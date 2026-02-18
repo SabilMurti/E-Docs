@@ -6,6 +6,44 @@ import {
   ChevronRight, ChevronDown, List
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { Plus, X, Layers } from 'lucide-react';
+
+function ViewerTabs({ node, renderContent }) {
+  const [activeTab, setActiveTab] = useState(node.attrs?.activeTab || 0);
+  const tabs = node.content || [];
+
+  return (
+    <div className="tabs-workspace my-8 relative rounded-xl border border-[var(--color-border-primary)] shadow-md overflow-hidden bg-[var(--color-bg-primary)]">
+      {/* Tab Bar */}
+      <div className="flex items-center gap-0.5 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] px-2 pt-2 overflow-x-auto no-scrollbar">
+        {tabs.map((tab, index) => (
+          <button
+            key={index}
+            onClick={() => setActiveTab(index)}
+            className={`
+              flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-all duration-150 border-t border-l border-r outline-none select-none whitespace-nowrap
+              ${index === activeTab 
+                ? 'bg-[var(--color-bg-primary)] border-[var(--color-border-primary)] text-[var(--color-text-primary)] -mb-[1px] z-10 shadow-[0_-2px_0_0_var(--color-accent)]' 
+                : 'bg-transparent border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
+              }
+            `}
+          >
+            {tab.attrs?.title || `Tab ${index + 1}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Content Area */}
+      <div className="bg-[var(--color-bg-primary)] p-6">
+        {tabs[activeTab] && (
+          <div className="animate-in fade-in slide-in-from-bottom-1 duration-200">
+            {renderContent(tabs[activeTab])}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function PageViewer({ content }) {
   if (!content) {
@@ -329,6 +367,12 @@ function PageViewer({ content }) {
                 )}
              </div>
            );
+
+        case 'tabs':
+          return <ViewerTabs key={i} node={node} renderContent={renderContent} />;
+
+        case 'tabItem':
+          return <div key={i}>{renderContent(node)}</div>;
 
         default:
           return null;

@@ -26,6 +26,8 @@ import Typography from '@tiptap/extension-typography';
 // Custom Extensions
 import { SmartNestedList } from './extensions/SmartNestedList';
 import { CustomCodeBlock } from './extensions/CustomCodeBlock';
+import { Callout } from './extensions/Callout/index.jsx';
+import { Tabs, TabItem } from './extensions/Tabs';
 
 // Components
 import SlashCommandMenu from './SlashCommandMenu';
@@ -83,6 +85,9 @@ export default function PageEditor({
       }),
       SmartNestedList,
       CustomCodeBlock,
+      Callout,
+      Tabs,
+      TabItem,
       Placeholder.configure({
         placeholder: ({ node }) => {
           if (node.type.name === 'heading') {
@@ -327,7 +332,9 @@ export default function PageEditor({
       )}
 
       {/* Editor Content */}
-      <EditorContent editor={editor} />
+      <div className="rich-editor-prose">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }
