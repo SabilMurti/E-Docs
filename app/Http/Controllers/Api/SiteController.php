@@ -55,6 +55,13 @@ class SiteController extends Controller
             'is_published' => false,
         ]);
 
+        // Auto-create 'main' branch for the site
+        $site->branches()->create([
+            'name' => 'main',
+            'is_default' => true,
+            'created_by' => $request->user()->id,
+        ]);
+
         return response()->json([
             'data' => $site,
             'message' => 'Site created successfully.'

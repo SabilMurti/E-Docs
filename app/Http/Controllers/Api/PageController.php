@@ -47,7 +47,7 @@ class PageController extends Controller
         $pages = $site->pages()
             ->where('branch_id', $branch->id)
             ->whereNull('parent_id')
-            ->with(['children' => function($query) use ($branch) {
+            ->with(['branch', 'children' => function($query) use ($branch) {
                 // Ensure children are also from the same branch
                 // Note: The `children` relation in model is simplified. 
                 // We might need to adjust the relation or filter recursively.
@@ -86,9 +86,6 @@ class PageController extends Controller
             'title' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:pages,id',
             'content' => 'nullable|array', // Tiptap JSON
-            'icon' => 'nullable|string|max:255',
-            'cover_image' => 'nullable|string|max:1000',
-            'is_hidden' => 'boolean',
             'branch' => 'nullable|string', // Optional branch name, defaults to main
         ]);
 
@@ -96,11 +93,6 @@ class PageController extends Controller
         $branchName = $validated['branch'] ?? 'main';
         $branch = $site->branches()->where('name', $branchName)->firstOrFail();
         
-        // Verify user has permission on this branch?
-        // Current requirement: "sabil creates site, automatically becomes admin, and sabil makes branch 'sabil'".
-        // Assuming site editors can edit any branch for now unless we implement branch-level permissions.
-        // User asked for "role or privillege" later.
-
         // Verify parent belongs to same site AND branch
         if (!empty($validated['parent_id'])) {
             $parent = Page::find($validated['parent_id']);
@@ -121,14 +113,10 @@ class PageController extends Controller
             'logical_id' => \Illuminate\Support\Str::uuid(), // New page gets new logical ID
             'parent_id' => $validated['parent_id'] ?? null,
             'content' => $validated['content'] ?? null,
-            'icon' => $validated['icon'] ?? null,
-            'cover_image' => $validated['cover_image'] ?? null,
-            'is_hidden' => $validated['is_hidden'] ?? false,
             'order' => $order,
-            'created_by' => $request->user()->id,
-            'updated_by' => $request->user()->id,
         ]);
 
+        $page->load('branch');
         return new PageResource($page);
     }
 
@@ -145,7 +133,7 @@ class PageController extends Controller
             abort(404);
         }
 
-        $page->load(['creator:id,name', 'updater:id,name']);
+        $page->load(['branch', 'parent']);
 
         return new PageResource($page);
     }
@@ -166,17 +154,10 @@ class PageController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'content' => 'nullable|array',
-            'is_published' => 'boolean',
-            'icon' => 'nullable|string|max:255',
-            'cover_image' => 'nullable|string|max:1000',
-            'is_hidden' => 'boolean',
         ]);
 
-        $validated['updated_by'] = $request->user()->id;
-
         $page->update($validated);
-
-        $page->load('updater');
+        $page->load('branch');
 
         return new PageResource($page);
     }

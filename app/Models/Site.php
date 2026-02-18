@@ -24,7 +24,7 @@ class Site extends Model
         'is_published',
     ];
 
-    protected $appends = ['can_edit', 'can_merge'];
+    protected $appends = ['can_edit', 'can_merge', 'can_admin', 'user_role'];
 
     protected $casts = [
         'settings' => 'array',
@@ -76,8 +76,21 @@ class Site extends Model
     }
 
     /**
-     * Check if user can view this site
+     * Pull requests in this site
      */
+    public function pullRequests(): HasMany
+    {
+        return $this->hasMany(PullRequest::class);
+    }
+
+    /**
+     * Commits in this site
+     */
+    public function commits(): HasMany
+    {
+        return $this->hasMany(Commit::class);
+    }
+
     /**
      * Members of this site
      */
@@ -85,12 +98,30 @@ class Site extends Model
     {
         return $this->belongsToMany(User::class, 'site_members')
             ->using(SiteMember::class)
-            ->withPivot('role', 'id')
+            ->withPivot('role')
             ->withTimestamps();
     }
 
+    public function getPublicUrlAttribute(): string
+    {
+        return url("/public/{$this->slug}");
+    }
+
     /**
-     * Check if user can view this site (Dashboard access)
+     * Get user's role in this site
+     */
+    public function getUserRole(User $user): ?string
+    {
+        if ($this->user_id === $user->id) {
+            return 'owner';
+        }
+
+        $member = $this->members()->where('user_id', $user->id)->first();
+        return $member?->pivot?->role;
+    }
+
+    /**
+     * Check if user can view this site (all roles)
      */
     public function canView(User $user): bool
     {
@@ -102,9 +133,10 @@ class Site extends Model
     }
 
     /**
-     * Check if user can edit this site
+     * Check if user can write (edit pages, create branches/PRs)
+     * Roles: owner, admin, maintain, write
      */
-    public function canEdit(User $user): bool
+    public function canWrite(User $user): bool
     {
         if ($this->user_id === $user->id) {
             return true;
@@ -112,14 +144,39 @@ class Site extends Model
 
         return $this->members()
             ->where('user_id', $user->id)
-            ->whereIn('role', ['admin', 'editor'])
+            ->whereIn('role', ['admin', 'maintain', 'write'])
             ->exists();
     }
 
     /**
-     * Check if user can merge changes (Owner or Admin)
+     * Check if user can edit this site (alias for canWrite)
      */
-    public function canMerge(User $user): bool
+    public function canEdit(User $user): bool
+    {
+        return $this->canWrite($user);
+    }
+
+    /**
+     * Check if user can maintain (merge PRs)
+     * Roles: owner, admin, maintain
+     */
+    public function canMaintain(User $user): bool
+    {
+        if ($this->user_id === $user->id) {
+            return true;
+        }
+
+        return $this->members()
+            ->where('user_id', $user->id)
+            ->whereIn('role', ['admin', 'maintain'])
+            ->exists();
+    }
+
+    /**
+     * Check if user can admin (manage members, settings)
+     * Roles: owner, admin
+     */
+    public function canAdmin(User $user): bool
     {
         if ($this->user_id === $user->id) {
             return true;
@@ -131,25 +188,34 @@ class Site extends Model
             ->exists();
     }
 
-    public function getPublicUrlAttribute(): string
-    {
-        return url("/public/{$this->id}");
-    }
-
     /**
-     * Helper for frontend
+     * Frontend helpers
      */
     public function getCanEditAttribute(): bool
     {
         $user = auth()->user();
         if (!$user) return false;
-        return $this->canEdit($user);
+        return $this->canWrite($user);
     }
 
     public function getCanMergeAttribute(): bool
     {
         $user = auth()->user();
         if (!$user) return false;
-        return $this->canMerge($user);
+        return $this->canMaintain($user);
+    }
+
+    public function getCanAdminAttribute(): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        return $this->canAdmin($user);
+    }
+
+    public function getUserRoleAttribute(): ?string
+    {
+        $user = auth()->user();
+        if (!$user) return null;
+        return $this->getUserRole($user);
     }
 }

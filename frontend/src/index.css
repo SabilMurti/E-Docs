@@ -1719,3 +1719,35 @@ body {
   border: none;
   border-bottom: 1px solid var(--color-border-secondary);
 }
+
+/* =============================================
+   Auto-Save Toggle & Save Status
+   ============================================= */
+.autosave-toggle {
+  position: relative;
+  overflow: hidden;
+}
+
+.autosave-toggle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.autosave-toggle:hover::after {
+  transform: translateX(100%);
+}
+
+@keyframes saveFlash {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+@keyframes savePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}

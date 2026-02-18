@@ -26,7 +26,7 @@ class SiteMemberController extends Controller
 
         // Also include owner in the list for display purposes?
         // Let's keep owner separate in frontend logic usually, but here we can just return members.
-        
+
         return response()->json([
             'data' => $site->members->map(function ($user) {
                 return [
@@ -50,7 +50,7 @@ class SiteMemberController extends Controller
         // Typically owner or admin role
         $currentUser = auth()->user();
         $isOwner = $site->user_id === $currentUser->id;
-        
+
         // Members check for admin role
         $isAdmin = $site->members()
             ->where('user_id', $currentUser->id)
@@ -58,12 +58,12 @@ class SiteMemberController extends Controller
             ->exists();
 
         if (!$isOwner && !$isAdmin) {
-             abort(403, 'You do not have permission to invite members.');
+            abort(403, 'You do not have permission to invite members.');
         }
 
         $request->validate([
             'email' => 'required|email',
-            'role' => 'required|in:admin,editor,viewer',
+            'role' => 'required|in:admin,maintain,write,read',
         ]);
 
         $targetUser = User::where('email', $request->email)->first();
@@ -75,7 +75,7 @@ class SiteMemberController extends Controller
         }
 
         if ($site->user_id === $targetUser->id) {
-            return response()->json(['message' => 'User is the owner of this site.'], 400); 
+            return response()->json(['message' => 'User is the owner of this site.'], 400);
         }
 
         if ($site->members()->where('user_id', $targetUser->id)->exists()) {
@@ -104,6 +104,35 @@ class SiteMemberController extends Controller
     }
 
     /**
+     * Update a member's role
+     */
+    public function updateRole(Request $request, Site $site, string $userId)
+    {
+        if (!$site->canAdmin(auth()->user())) {
+            abort(403, 'You do not have permission to manage roles.');
+        }
+
+        if ($site->user_id === $userId) {
+            abort(400, 'Cannot change the owner\'s role.');
+        }
+
+        $request->validate([
+            'role' => 'required|in:admin,maintain,write,read',
+        ]);
+
+        $member = SiteMember::where('site_id', $site->id)
+            ->where('user_id', $userId)
+            ->firstOrFail();
+
+        $member->update(['role' => $request->role]);
+
+        return response()->json([
+            'message' => 'Role updated successfully.',
+            'data' => ['role' => $request->role],
+        ]);
+    }
+
+    /**
      * Remove a member from the site
      */
     public function destroy(Site $site, string $userId)
@@ -113,19 +142,15 @@ class SiteMemberController extends Controller
         $isAdmin = $site->members()->where('user_id', $currentUser->id)->where('role', 'admin')->exists();
 
         if (!$isOwner && !$isAdmin) {
-             abort(403, 'You do not have permission to remove members.');
+            abort(403, 'You do not have permission to remove members.');
         }
 
-        // Prevent removing self if not owner (leaving site logic should be different endpoint usually, but ok for now)
-        if ($userId === $currentUser->id && !$isOwner) {
-            // User leaving logic? 
-            // Allow user to remove themselves (Leaf)
-        } elseif ($userId === $currentUser->id && $isOwner) {
-             abort(400, 'Owner cannot leave the site. Transfer ownership first.');
+        if ($userId === $currentUser->id && $isOwner) {
+            abort(400, 'Owner cannot leave the site. Transfer ownership first.');
         }
 
         if ($site->user_id === $userId) {
-             abort(400, 'Cannot remove site owner.');
+            abort(400, 'Cannot remove site owner.');
         }
 
         $site->members()->detach($userId);

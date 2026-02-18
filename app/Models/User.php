@@ -36,36 +36,28 @@ class User extends Authenticatable
     }
 
     /**
-     * Spaces owned by this user
+     * Sites owned by this user
      */
-    public function ownedSpaces(): HasMany
+    public function ownedSites(): HasMany
     {
-        return $this->hasMany(Space::class);
+        return $this->hasMany(Site::class);
     }
 
     /**
-     * Spaces the user is a member of (including owned)
+     * Sites the user is a member of (including owned if added as member)
      */
-    public function spaces(): BelongsToMany
+    public function sites(): BelongsToMany
     {
-        return $this->belongsToMany(Space::class, 'space_members')
-            ->withPivot(['role', 'status'])
+        return $this->belongsToMany(Site::class, 'site_members')
+            ->withPivot(['role'])
             ->withTimestamps();
     }
 
     /**
-     * Space memberships
+     * Commits authored by this user
      */
-    public function spaceMemberships(): HasMany
+    public function commits(): HasMany
     {
-        return $this->hasMany(SpaceMember::class);
-    }
-
-    /**
-     * Page revisions authored by this user
-     */
-    public function pageRevisions(): HasMany
-    {
-        return $this->hasMany(PageRevision::class);
+        return $this->hasMany(Commit::class);
     }
 }
