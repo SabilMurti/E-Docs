@@ -45,7 +45,7 @@ export default function RichEditor({
   
   const editor = useEditor({
     extensions,
-    content: content || '',
+    content: (Array.isArray(content) && content.length === 0) ? '' : (content || ''),
     editable,
     onUpdate: ({ editor }) => {
       onChange?.(editor.getJSON());

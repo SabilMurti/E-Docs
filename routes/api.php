@@ -38,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Site Members (Collaboration)
     Route::get('sites/{site}/members', [SiteMemberController::class, 'index']);
     Route::post('sites/{site}/members', [SiteMemberController::class, 'store']);
+    Route::put('sites/{site}/members/{userId}', [SiteMemberController::class, 'updateRole']);
     Route::delete('sites/{site}/members/{userId}', [SiteMemberController::class, 'destroy']);
 
     // Branches
@@ -45,37 +46,44 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('sites/{site}/branches', [\App\Http\Controllers\Api\BranchController::class, 'store']);
     Route::delete('sites/{site}/branches/{branch}', [\App\Http\Controllers\Api\BranchController::class, 'destroy']);
 
-    // Merge Requests (Site Level)
-    Route::get('sites/{site}/merge-requests', [\App\Http\Controllers\Api\MergeRequestController::class, 'index']);
-    Route::post('sites/{site}/merge-requests', [\App\Http\Controllers\Api\MergeRequestController::class, 'store']);
-    Route::get('sites/{site}/compare', [\App\Http\Controllers\Api\MergeRequestController::class, 'compare']); // New compare route
-    Route::get('sites/{site}/merge-requests/{mergeRequest}', [\App\Http\Controllers\Api\MergeRequestController::class, 'show']);
-    Route::post('sites/{site}/merge-requests/{mergeRequest}/merge', [\App\Http\Controllers\Api\MergeRequestController::class, 'merge']);
+    // Pull Requests (GitHub-like)
+    Route::get('sites/{site}/pulls', [\App\Http\Controllers\Api\PullRequestController::class, 'index']);
+    Route::post('sites/{site}/pulls', [\App\Http\Controllers\Api\PullRequestController::class, 'store']);
+    Route::get('sites/{site}/pulls/compare', [\App\Http\Controllers\Api\PullRequestController::class, 'compare']);
+    Route::get('sites/{site}/pulls/{pullRequest}', [\App\Http\Controllers\Api\PullRequestController::class, 'show']);
+    Route::put('sites/{site}/pulls/{pullRequest}', [\App\Http\Controllers\Api\PullRequestController::class, 'update']);
+    Route::post('sites/{site}/pulls/{pullRequest}/merge', [\App\Http\Controllers\Api\PullRequestController::class, 'merge']);
+    Route::post('sites/{site}/pulls/{pullRequest}/resolve', [\App\Http\Controllers\Api\PullRequestController::class, 'resolve']);
+    Route::post('sites/{site}/pulls/{pullRequest}/close', [\App\Http\Controllers\Api\PullRequestController::class, 'close']);
+    Route::delete('sites/{site}/pulls/{pullRequest}', [\App\Http\Controllers\Api\PullRequestController::class, 'destroy']);
 
-    // Pages (Directly under Sites now)
+    // Pull Request Reviews
+    Route::get('sites/{site}/pulls/{pullRequest}/reviews', [\App\Http\Controllers\Api\PullRequestReviewController::class, 'index']);
+    Route::post('sites/{site}/pulls/{pullRequest}/reviews', [\App\Http\Controllers\Api\PullRequestReviewController::class, 'store']);
+
+    // Page-specific Requests (for editor integration)
+    Route::get('pages/{page}/requests', [\App\Http\Controllers\Api\PullRequestController::class, 'indexByPage']);
+    Route::post('pages/{page}/requests', [\App\Http\Controllers\Api\PullRequestController::class, 'storePageRequest']);
+
+    // Global Request Routes (for components that only have requestId)
+    Route::get('requests/{pullRequest}', [\App\Http\Controllers\Api\PullRequestController::class, 'showFull']);
+    Route::post('requests/{pullRequest}/merge', [\App\Http\Controllers\Api\PullRequestController::class, 'mergeFull']);
+    Route::get('requests/{pullRequest}/commits', [\App\Http\Controllers\Api\PullRequestController::class, 'commits']);
+    Route::post('requests/{pullRequest}/sync', [\App\Http\Controllers\Api\PullRequestController::class, 'sync']);
+
+    // Commits (Site-level)
+    Route::get('sites/{site}/commits', [\App\Http\Controllers\Api\CommitController::class, 'index']);
+    Route::post('sites/{site}/commits', [\App\Http\Controllers\Api\CommitController::class, 'store']);
+    Route::post('sites/{site}/pages/{page}/commits', [\App\Http\Controllers\Api\CommitController::class, 'storePage']);
+    Route::get('sites/{site}/commits/{commit}', [\App\Http\Controllers\Api\CommitController::class, 'show']);
+
+    // Pages
     Route::post('sites/{site}/pages', [PageController::class, 'store']);
     Route::get('sites/{site}/pages', [PageController::class, 'index']);
     Route::get('sites/{site}/pages/{page}', [PageController::class, 'show']);
     Route::put('sites/{site}/pages/{page}', [PageController::class, 'update']);
     Route::delete('sites/{site}/pages/{page}', [PageController::class, 'destroy']);
     Route::post('sites/{site}/pages/reorder', [PageController::class, 'reorder']);
-
-    // Page Revisions
-    Route::get('sites/{site}/pages/{page}/revisions', [PageRevisionController::class, 'index']);
-    Route::get('sites/{site}/pages/{page}/revisions/{revision}', [PageRevisionController::class, 'show']);
-    Route::post('sites/{site}/pages/{page}/revisions/{revision}/restore', [PageRevisionController::class, 'restore']);
-
-    // Change Requests (Drafts & PRs)
-    Route::get('pages/{page}/requests', [\App\Http\Controllers\PageChangeRequestController::class, 'index']);
-    Route::post('pages/{page}/requests', [\App\Http\Controllers\PageChangeRequestController::class, 'store']);
-    Route::get('requests/{changeRequest}', [\App\Http\Controllers\PageChangeRequestController::class, 'show']);
-    Route::post('requests/{changeRequest}/merge', [\App\Http\Controllers\PageChangeRequestController::class, 'merge']);
-    Route::post('requests/{changeRequest}/sync', [\App\Http\Controllers\PageChangeRequestController::class, 'sync']);
-
-    // Page Commits (History)
-    Route::post('sites/{site}/pages/{page}/commits', [\App\Http\Controllers\Api\PageCommitController::class, 'store']);
-    Route::get('sites/{site}/pages/{page}/commits', [\App\Http\Controllers\Api\PageCommitController::class, 'index']); // Changed from requests/{changeRequest}/commits
-    Route::get('requests/{changeRequest}/commits', [\App\Http\Controllers\Api\PageCommitController::class, 'indexByRequest']); // Add specific request lookup if needed
 
     // Notifications
     Route::get('notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);

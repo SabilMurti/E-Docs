@@ -15,21 +15,15 @@ class PageResource extends JsonResource
             'parent_id' => $this->parent_id,
             'title' => $this->title,
             'slug' => $this->slug,
-            'icon' => $this->icon,
-            'cover_image' => $this->cover_image,
-            'is_hidden' => $this->is_hidden,
             'content' => $this->content, // Tiptap JSON
             'order' => $this->order,
             'logical_id' => $this->logical_id,
             'branch_id' => $this->branch_id,
-            'is_published' => $this->is_published,
-            'created_by' => new UserResource($this->whenLoaded('creator')),
-            'updated_by' => new UserResource($this->whenLoaded('updater')),
+            'branch_name' => $this->whenLoaded('branch', fn() => $this->branch->name, $this->branch?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'children' => PageResource::collection($this->whenLoaded('children')),
             'excerpt' => $this->when($this->content, function () {
-                // Determine excerpt logic if needed, or remove
                 return null;
             }),
         ];

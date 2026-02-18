@@ -51,7 +51,7 @@ class BranchController extends Controller
             // Create Branch
             $newBranch = $site->branches()->create([
                 'name' => $validated['name'],
-                'created_by' => $request->user()->id,
+                'parent_branch_id' => $sourceBranch->id,
                 'is_default' => false,
             ]);
 
@@ -65,28 +65,28 @@ class BranchController extends Controller
             }
 
             // Pass 1: Create pages with null parent_id to avoid FK constraint violations
-            $newPages = [];
             foreach ($sourcePages as $page) {
-                $newPage = $page->replicate(['id', 'branch_id', 'created_at', 'updated_at', 'parent_id']);
-                $newPage->id = $idMap[$page->id];
+                // replicate() copies attributes but we need to change specific ones
+                $newPage = $page->replicate([
+                    'id', 
+                    'branch_id', 
+                    'created_at', 
+                    'updated_at', 
+                    'deleted_at'
+                ]);
+                
+                $newPage->id = $idMap[$page->id]; // Force new UUID
                 $newPage->branch_id = $newBranch->id;
-                $newPage->created_by = $request->user()->id;
-                $newPage->updated_by = $request->user()->id;
+                $newPage->site_id = $site->id; // Ensure site_id is set
                 $newPage->parent_id = null; // Temporarily null
                 
                 $newPage->save();
-                $newPages[] = $newPage;
             }
 
             // Pass 2: Restore parent_id hierarchy
             foreach ($sourcePages as $page) {
                 if ($page->parent_id && isset($idMap[$page->parent_id])) {
-                    // Update the newly created page
-                    // We can use direct DB update to be faster/simpler, or find and update model
-                    // Using DB query to avoid re-hydrating models
-                    DB::table('pages')
-                        ->where('id', $idMap[$page->id])
-                        ->update(['parent_id' => $idMap[$page->parent_id]]);
+                    Page::where('id', $idMap[$page->id])->update(['parent_id' => $idMap[$page->parent_id]]);
                 }
             }
 

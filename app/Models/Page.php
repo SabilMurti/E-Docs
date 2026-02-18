@@ -17,23 +17,16 @@ class Page extends Model
     protected $fillable = [
         'site_id',
         'branch_id',
-        'logical_id',
         'parent_id',
         'title',
         'slug',
         'content',
-        'icon',
-        'cover_image',
-        'is_hidden',
         'order',
-        'is_published',
-        'created_by',
-        'updated_by',
+        'logical_id',
     ];
 
     protected $casts = [
         'content' => 'array',
-        'is_published' => 'boolean',
         'order' => 'integer',
     ];
 
@@ -44,27 +37,8 @@ class Page extends Model
                 $page->slug = Str::slug($page->title);
             }
         });
-
-        static::updating(function (Page $page) {
-            // Create revision on content update
-            if ($page->isDirty('content') || $page->isDirty('title')) {
-                $original = $page->getOriginal();
-                if ($original['content'] !== null) {
-                    PageRevision::create([
-                        'page_id' => $page->id,
-                        'user_id' => $page->updated_by,
-                        'content' => $original['content'],
-                        'title' => $original['title'],
-                        'revision_number' => $page->revisions()->count() + 1,
-                    ]);
-                }
-            }
-        });
     }
 
-    /**
-     * The space this page belongs to
-     */
     /**
      * The site this page belongs to
      */
@@ -95,40 +69,11 @@ class Page extends Model
     }
 
     /**
-     * All revisions of this page
+     * Commit history for this page
      */
-    public function revisions(): HasMany
+    public function commitPages(): HasMany
     {
-        return $this->hasMany(PageRevision::class)->orderByDesc('revision_number');
-    }
-
-    /**
-     * Change requests (Drafts & PRs)
-     */
-    public function changeRequests(): HasMany
-    {
-        return $this->hasMany(PageChangeRequest::class)->orderByDesc('created_at');
-    }
-
-    public function commits(): HasMany
-    {
-        return $this->hasMany(PageCommit::class)->orderByDesc('created_at');
-    }
-
-    /**
-     * User who created this page
-     */
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * User who last updated this page
-     */
-    public function updater(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
+        return $this->hasMany(CommitPage::class)->orderByDesc('created_at');
     }
 
     /**

@@ -13,19 +13,24 @@ class Branch extends Model
 
     protected $fillable = [
         'site_id',
+        'parent_branch_id',
         'name',
-        'created_by',
         'is_default'
     ];
+
+    public function parent()
+    {
+        return $this->belongsTo(Branch::class, 'parent_branch_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Branch::class, 'parent_branch_id');
+    }
 
     public function site()
     {
         return $this->belongsTo(Site::class);
-    }
-
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function pages()

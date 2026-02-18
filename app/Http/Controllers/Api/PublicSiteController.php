@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PageResource;
 use App\Models\Page;
 use App\Models\Site;
-use Illuminate\Http\Request;
 
 class PublicSiteController extends Controller
 {
@@ -36,10 +35,18 @@ class PublicSiteController extends Controller
         // For now let's load all published pages for this site and let frontend build the tree
         // This is more efficient than N+1 recursive queries for deep trees
         
-        $pages = Page::where('site_id', $site->id)
-            ->where('is_published', true)
-            ->orderBy('order', 'asc')
-            ->select(['id', 'site_id', 'parent_id', 'slug', 'title', 'icon', 'order', 'is_published'])
+        // Find the default branch
+        $defaultBranch = $site->branches()->where('is_default', true)->first();
+        
+        $pagesQuery = Page::where('site_id', $site->id)
+            ->where('is_published', true);
+
+        if ($defaultBranch) {
+            $pagesQuery->where('branch_id', $defaultBranch->id);
+        }
+
+        $pages = $pagesQuery->orderBy('order', 'asc')
+            ->select(['id', 'site_id', 'parent_id', 'slug', 'title', 'icon', 'order', 'is_published', 'branch_id'])
             ->get();
 
         return response()->json([
@@ -63,13 +70,20 @@ class PublicSiteController extends Controller
     {
         $site = $this->findSite($identifier);
 
-        $page = Page::where('site_id', $site->id)
+        $defaultBranch = $site->branches()->where('is_default', true)->first();
+
+        $pageQuery = Page::where('site_id', $site->id)
             ->where(function ($query) use ($pageId) {
                 $query->where('id', $pageId)
                     ->orWhere('slug', $pageId);
             })
-            ->where('is_published', true)
-            ->with(['creator:id,name', 'updater:id,name'])
+            ->where('is_published', true);
+
+        if ($defaultBranch) {
+            $pageQuery->where('branch_id', $defaultBranch->id);
+        }
+
+        $page = $pageQuery->with(['creator:id,name', 'updater:id,name'])
             ->firstOrFail();
 
         return new PageResource($page);

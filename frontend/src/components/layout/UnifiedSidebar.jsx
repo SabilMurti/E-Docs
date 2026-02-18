@@ -1,785 +1,986 @@
-import { useState, useEffect } from 'react';
-import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  Home,
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  LogOut,
-  Moon,
-  Sun,
-  Menu,
-  X,
-  Globe,
-  Layers,
-  Sparkles,
-  FileText,
-  MoreHorizontal,
-  Trash2,
-  Settings,
-  Book,
-  Share2,
-  Search,
-  GitPullRequest
-} from 'lucide-react';
-import useAuthStore from '../../stores/authStore';
-import useSiteStore from '../../stores/siteStore';
-import usePageStore from '../../stores/pageStore';
-import { useTheme } from '../../stores/ThemeContext';
-import Dropdown from '../common/Dropdown';
-import ConfirmModal from '../common/ConfirmModal';
-import InputModal from '../common/InputModal';
-import PublishModal from '../sites/PublishModal';
-import Button from '../common/Button';
-import { toast } from 'sonner';
+    Home,
+    ChevronDown,
+    ChevronRight,
+    Plus,
+    LogOut,
+    Moon,
+    Sun,
+    Menu,
+    X,
+    Globe,
+    Layers,
+    Sparkles,
+    FileText,
+    MoreHorizontal,
+    Trash2,
+    Settings,
+    Book,
+    Share2,
+    Search,
+    GitPullRequest,
+    GitBranch,
+} from "lucide-react";
+import useAuthStore from "../../stores/authStore";
+import useSiteStore from "../../stores/siteStore";
+import usePageStore from "../../stores/pageStore";
+import { useTheme } from "../../stores/ThemeContext";
+import Dropdown from "../common/Dropdown";
+import ConfirmModal from "../common/ConfirmModal";
+import InputModal from "../common/InputModal";
+import PublishModal from "../sites/PublishModal";
+import Button from "../common/Button";
+import { toast } from "sonner";
 
 // Page Tree Item Component
-function PageTreeItem({ page, siteId, level = 0, onDeleteRequest, onAddSubpageRequest }) {
-  const { pageId } = useParams();
-  const navigate = useNavigate();
-  const isActive = pageId === page.id;
-  const hasChildren = page.children && page.children.length > 0;
-  
-  // Keep expanded if it has children and one of them is active, otherwise default to false
-  const [isExpanded, setIsExpanded] = useState(() => {
-    if (!hasChildren) return false;
-    const checkActive = (children) => {
-      return children.some(child => child.id === pageId || (child.children && checkActive(child.children)));
-    };
-    return checkActive(page.children);
-  });
-  
-  // Padding based on level
-  const paddingLeft = level === 0 ? 8 : (level * 16) + 12;
+function PageTreeItem({
+    page,
+    siteId,
+    level = 0,
+    onDeleteRequest,
+    onAddSubpageRequest,
+}) {
+    const { pageId } = useParams();
+    const navigate = useNavigate();
+    const isActive = pageId === page.id;
+    const hasChildren = page.children && page.children.length > 0;
 
-  useEffect(() => {
-    if (hasChildren) {
-      const checkActive = (children) => {
-        return children.some(child => child.id === pageId || (child.children && checkActive(child.children)));
-      };
-      if (checkActive(page.children)) {
-        setIsExpanded(true);
-      }
-    }
-  }, [pageId, page.children, hasChildren]);
+    // Keep expanded if it has children and one of them is active, otherwise default to false
+    const [isExpanded, setIsExpanded] = useState(() => {
+        if (!hasChildren) return false;
+        const checkActive = (children) => {
+            return children.some(
+                (child) =>
+                    child.id === pageId ||
+                    (child.children && checkActive(child.children)),
+            );
+        };
+        return checkActive(page.children);
+    });
 
-  return (
-    <div className="relative">
-      {/* Vertical line for hierarchy (only for subpages) */}
-      {level > 0 && (
-        <div 
-          className="absolute left-[18px] top-0 bottom-0 w-[1px] bg-[var(--color-border-secondary)] opacity-50"
-          style={{ left: `${(level - 1) * 16 + 18}px` }}
-        />
-      )}
+    // Padding based on level
+    const paddingLeft = level === 0 ? 8 : level * 16 + 12;
 
-      <div 
-        className={`
+    useEffect(() => {
+        if (hasChildren) {
+            const checkActive = (children) => {
+                return children.some(
+                    (child) =>
+                        child.id === pageId ||
+                        (child.children && checkActive(child.children)),
+                );
+            };
+            if (checkActive(page.children)) {
+                setIsExpanded(true);
+            }
+        }
+    }, [pageId, page.children, hasChildren]);
+
+    return (
+        <div className="relative">
+            {/* Vertical line for hierarchy (only for subpages) */}
+            {level > 0 && (
+                <div
+                    className="absolute left-[18px] top-0 bottom-0 w-[1px] bg-[var(--color-border-secondary)] opacity-50"
+                    style={{ left: `${(level - 1) * 16 + 18}px` }}
+                />
+            )}
+
+            <div
+                className={`
           group flex items-center gap-1.5 py-1.5 pr-1.5 rounded-md
           cursor-pointer transition-all text-[13px] select-none relative
-          ${isActive 
-            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-medium' 
-            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
+          ${
+              isActive
+                  ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-medium"
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
           }
         `}
-        style={{ paddingLeft: `${paddingLeft}px` }}
-        onClick={() => navigate(`/sites/${siteId}/pages/${page.id}`)}
-      >
-        {/* Toggle Expander Area */}
-        <div className="w-5 h-5 flex items-center justify-center shrink-0">
-          {hasChildren && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(!isExpanded);
-              }}
-              className={`
+                style={{ paddingLeft: `${paddingLeft}px` }}
+                onClick={() => navigate(`/sites/${siteId}/pages/${page.id}`)}
+            >
+                {/* Toggle Expander Area */}
+                <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    {hasChildren && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsExpanded(!isExpanded);
+                            }}
+                            className={`
                 p-0.5 rounded-md transition-all
                 hover:bg-[var(--color-bg-hover)] 
-                ${isExpanded ? 'text-[var(--color-text-primary)] rotate-0' : 'text-[var(--color-text-muted)] rotate-0'}
+                ${isExpanded ? "text-[var(--color-text-primary)] rotate-0" : "text-[var(--color-text-muted)] rotate-0"}
               `}
-            >
-              {isExpanded ? <ChevronDown size={14} strokeWidth={2.5} /> : <ChevronRight size={14} strokeWidth={2.5} />}
-            </button>
-          )}
+                        >
+                            {isExpanded ? (
+                                <ChevronDown size={14} strokeWidth={2.5} />
+                            ) : (
+                                <ChevronRight size={14} strokeWidth={2.5} />
+                            )}
+                        </button>
+                    )}
+                </div>
+
+                {/* Page Icon/Indicator */}
+                <div className="shrink-0 flex items-center justify-center">
+                    {page.icon ? (
+                        <span className="text-sm">{page.icon}</span>
+                    ) : (
+                        <FileText
+                            size={14}
+                            className={
+                                isActive
+                                    ? "text-[var(--color-accent)]"
+                                    : "text-[var(--color-text-muted)]"
+                            }
+                        />
+                    )}
+                </div>
+
+                {/* Page Title */}
+                <span className="truncate flex-1 ml-0.5">
+                    {page.title || "Untitled"}
+                </span>
+
+                {/* Action Buttons (Visible on Hover) */}
+                <div
+                    className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Direct + button for subpages as requested */}
+                    <button
+                        onClick={() => onAddSubpageRequest(page.id)}
+                        className="p-1 rounded hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-text-muted)] transition-colors"
+                        title="Add subpage"
+                    >
+                        <Plus size={14} />
+                    </button>
+
+                    <Dropdown
+                        trigger={
+                            <button className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]">
+                                <MoreHorizontal size={14} />
+                            </button>
+                        }
+                        align="right"
+                    >
+                        <Dropdown.Item
+                            icon={Plus}
+                            onClick={() => onAddSubpageRequest(page.id)}
+                        >
+                            Add subpage
+                        </Dropdown.Item>
+                        <Dropdown.Divider />
+                        <Dropdown.Item
+                            icon={Trash2}
+                            onClick={() => onDeleteRequest(page)}
+                            danger
+                        >
+                            Delete
+                        </Dropdown.Item>
+                    </Dropdown>
+                </div>
+            </div>
+
+            {/* Recursive Children Display */}
+            {hasChildren && isExpanded && (
+                <div className="mt-0.5">
+                    {page.children.map((child) => (
+                        <PageTreeItem
+                            key={child.id}
+                            page={child}
+                            siteId={siteId}
+                            level={level + 1}
+                            onDeleteRequest={onDeleteRequest}
+                            onAddSubpageRequest={onAddSubpageRequest}
+                        />
+                    ))}
+                </div>
+            )}
+            {/* Create Branch Modal Removed */}
         </div>
-
-        {/* Page Icon/Indicator */}
-        <div className="shrink-0 flex items-center justify-center">
-          {page.icon ? (
-            <span className="text-sm">{page.icon}</span>
-          ) : (
-            <FileText size={14} className={isActive ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'} />
-          )}
-        </div>
-
-        {/* Page Title */}
-        <span className="truncate flex-1 ml-0.5">{page.title || 'Untitled'}</span>
-
-        {/* Action Buttons (Visible on Hover) */}
-        <div 
-          className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Direct + button for subpages as requested */}
-          <button 
-            onClick={() => onAddSubpageRequest(page.id)}
-            className="p-1 rounded hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-text-muted)] transition-colors"
-            title="Add subpage"
-          >
-            <Plus size={14} />
-          </button>
-
-          <Dropdown
-            trigger={
-              <button className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]">
-                <MoreHorizontal size={14} />
-              </button>
-            }
-            align="right"
-          >
-            <Dropdown.Item icon={Plus} onClick={() => onAddSubpageRequest(page.id)}>
-              Add subpage
-            </Dropdown.Item>
-            <Dropdown.Divider />
-            <Dropdown.Item icon={Trash2} onClick={() => onDeleteRequest(page)} danger>
-              Delete
-            </Dropdown.Item>
-          </Dropdown>
-        </div>
-      </div>
-
-      {/* Recursive Children Display */}
-      {hasChildren && isExpanded && (
-        <div className="mt-0.5">
-          {page.children.map((child) => (
-            <PageTreeItem 
-              key={child.id} 
-              page={child} 
-              siteId={siteId}
-              level={level + 1}
-              onDeleteRequest={onDeleteRequest}
-              onAddSubpageRequest={onAddSubpageRequest}
-            />
-          ))}
-        </div>
-      )}
-      {/* Create Branch Modal Removed */}
-
-    </div>
-  );
+    );
 }
 
 // Site Item Component
 function SiteItem({ site, isActive }) {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
 
-  return (
-    <button
-      onClick={() => navigate(`/sites/${site.id}`)}
-      className={`
+    return (
+        <button
+            onClick={() => navigate(`/sites/${site.id}`)}
+            className={`
         w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px]
         transition-colors cursor-pointer group
-        ${isActive 
-          ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' 
-          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
+        ${
+            isActive
+                ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
         }
       `}
-    >
-      <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[var(--color-accent)] to-teal-500 flex items-center justify-center shrink-0">
-        <Sparkles size={10} className="text-white" />
-      </div>
-      <span className="truncate flex-1 text-left font-medium">{site.name}</span>
-      {site.is_published && (
-        <Globe size={11} className="text-[var(--color-accent)] shrink-0" />
-      )}
-    </button>
-  );
+        >
+            <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[var(--color-accent)] to-teal-500 flex items-center justify-center shrink-0">
+                <Sparkles size={10} className="text-white" />
+            </div>
+            <span className="truncate flex-1 text-left font-medium">
+                {site.name}
+            </span>
+            {site.is_published && (
+                <Globe
+                    size={11}
+                    className="text-[var(--color-accent)] shrink-0"
+                />
+            )}
+        </button>
+    );
 }
 
 // Main Unified Sidebar
 function UnifiedSidebar({ isOpen, onClose }) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { siteId } = useParams();
-  const { user, logout } = useAuthStore();
-  const { sites, fetchSites, createSite, currentSite, branches, currentBranch, fetchBranches, createBranch, switchBranch, isLoading: siteLoading } = useSiteStore();
-  const { pages, fetchPages, createPage, deletePage, isLoading: pagesLoading } = usePageStore();
-  const { theme, toggleTheme } = useTheme();
-  
-  const isDark = theme === 'dark';
-  const isInSite = location.pathname.startsWith('/sites/') && siteId;
-  
-  // Modal states
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showPublishModal, setShowPublishModal] = useState(false);
-  const [showCreateBranchModal, setShowCreateBranchModal] = useState(false);
-  const [pageToDelete, setPageToDelete] = useState(null);
-  const [parentIdForNewPage, setParentIdForNewPage] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newBranchName, setNewBranchName] = useState('');
-  
-  // Site creation modal state
-  const [showCreateSiteModal, setShowCreateSiteModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { siteId } = useParams();
+    const { user, logout } = useAuthStore();
+    const {
+        sites,
+        fetchSites,
+        createSite,
+        currentSite,
+        branches,
+        currentBranch,
+        fetchBranches,
+        createBranch,
+        switchBranch,
+        isLoading: siteLoading,
+    } = useSiteStore();
+    const {
+        pages,
+        fetchPages,
+        createPage,
+        deletePage,
+        isLoading: pagesLoading,
+    } = usePageStore();
+    const { theme, toggleTheme } = useTheme();
 
-  // Fetch branches when siteId changes
-  useEffect(() => {
-    if (siteId) {
-      switchBranch('main'); // Reset to main when switching sites
-      fetchBranches(siteId);
-    }
-  }, [siteId, fetchBranches, switchBranch]);
+    const isDark = theme === "dark";
+    const isInSite = location.pathname.startsWith("/sites/") && siteId;
 
-  useEffect(() => {
-    fetchSites();
-  }, [fetchSites]);
+    // Modal states
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showPublishModal, setShowPublishModal] = useState(false);
+    const [showCreateBranchModal, setShowCreateBranchModal] = useState(false);
+    const [pageToDelete, setPageToDelete] = useState(null);
+    const [parentIdForNewPage, setParentIdForNewPage] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [newBranchName, setNewBranchName] = useState("");
 
-  useEffect(() => {
-    if (siteId) {
-      fetchPages(siteId, currentBranch);
-    }
-  }, [siteId, fetchPages, currentBranch]);
+    // Site creation modal state
+    const [showCreateSiteModal, setShowCreateSiteModal] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
 
-  // Helper to find page in tree
-  const findPageInTree = (nodes, predicate) => {
-    for (const node of nodes) {
-      if (predicate(node)) return node;
-      if (node.children) {
-        const found = findPageInTree(node.children, predicate);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  const handleSwitchBranch = async (branchName) => {
-    if (branchName === currentBranch) return;
-
-    // 1. Switch the store state first for UI responsiveness (optimistic)
-    switchBranch(branchName);
-
-    // 2. Determine current location context
-    let currentLogicalId = null;
-    
-    // We try to find the logical ID of the *currently viewing* page
-    // We must use the 'pages' from store which are presumably the *old* branch's pages 
-    // (since we just switched branch name but haven't fetched new pages yet)
-    
-    // Use the URL to get the ID, as it is the most reliable source of truth for "where am I"
-    const pathParts = location.pathname.split('/pages/');
-    const currentPageId = pathParts.length > 1 ? pathParts[1] : null;
-
-    if (currentPageId) {
-        const currentPage = findPageInTree(pages, p => p.id === currentPageId);
-        if (currentPage) {
-            currentLogicalId = currentPage.logical_id;
+    // Fetch branches when siteId changes
+    useEffect(() => {
+        if (siteId) {
+            switchBranch("main"); // Reset to main when switching sites
+            fetchBranches(siteId);
         }
-    }
+    }, [siteId, fetchBranches, switchBranch]);
 
-    // 3. Fetch pages for the NEW branch
-    const newPages = await fetchPages(siteId, branchName);
-    
-    // 4. Navigate to the equivalent page or root
-    if (currentPageId && currentLogicalId && newPages) {
-       const targetPage = findPageInTree(newPages, p => p.logical_id === currentLogicalId);
-       
-       if (targetPage) {
-           navigate(`/sites/${siteId}/pages/${targetPage.id}`);
-           toast.success(`Switched to branch '${branchName}'`);
-       } else {
-           // Page deleted or doesn't exist in new branch
-           navigate(`/sites/${siteId}`);
-           toast.success(`Switched to '${branchName}' (Page not found in this branch)`);
-       }
-    } else {
-       // Was on root or unknown page
-       navigate(`/sites/${siteId}`);
-       toast.success(`Switched to branch '${branchName}'`);
-    }
-  };
+    useEffect(() => {
+        fetchSites();
+    }, [fetchSites]);
 
-  const handleCreateBranch = async (e) => {
-    e.preventDefault();
-    if (!newBranchName.trim()) return;
-    
-    setIsSubmitting(true);
-    const result = await createBranch(siteId, {
-      name: newBranchName.trim(),
-      source_branch: currentBranch
-    });
-    setIsSubmitting(false);
-    
-    if (result.success) {
-      setNewBranchName('');
-      setShowCreateBranchModal(false);
-      handleSwitchBranch(result.data.name); // Switch to new branch using our smart handler
-      toast.success(`Switched to branch: ${result.data.name}`);
-    } else {
-      toast.error('Failed to create branch: ' + result.error);
-    }
-  };
+    useEffect(() => {
+        if (siteId) {
+            fetchPages(siteId, currentBranch);
+        }
+    }, [siteId, fetchPages, currentBranch]);
 
-  const activeSiteId = location.pathname.startsWith('/sites/') 
-    ? location.pathname.split('/')[2] 
-    : null;
+    // Helper to find page in tree
+    const findPageInTree = (nodes, predicate) => {
+        for (const node of nodes) {
+            if (predicate(node)) return node;
+            if (node.children) {
+                const found = findPageInTree(node.children, predicate);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+    const handleSwitchBranch = async (branchName) => {
+        if (branchName === currentBranch) return;
 
-  const handleAddPage = () => {
-    setParentIdForNewPage(null);
-    setShowAddModal(true);
-  };
+        // 1. Switch the store state first for UI responsiveness (optimistic)
+        switchBranch(branchName);
 
-  const handleAddSubpage = (parentId) => {
-    setParentIdForNewPage(parentId);
-    setShowAddModal(true);
-  };
+        // 2. Determine current location context
+        let currentLogicalId = null;
 
-  const handleCreatePage = async (title) => {
-    setIsSubmitting(true);
-    try {
-      await createPage(siteId, { 
-        title, 
-        content: {},
-        parent_id: parentIdForNewPage 
-      }, currentBranch);
-      setShowAddModal(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        // We try to find the logical ID of the *currently viewing* page
+        // We must use the 'pages' from store which are presumably the *old* branch's pages
+        // (since we just switched branch name but haven't fetched new pages yet)
 
-  const handleDeleteRequest = (page) => {
-    setPageToDelete(page);
-    setShowDeleteModal(true);
-  };
+        // Use the URL to get the ID, as it is the most reliable source of truth for "where am I"
+        const pathParts = location.pathname.split("/pages/");
+        const currentPageId = pathParts.length > 1 ? pathParts[1] : null;
 
-  const handleConfirmDelete = async () => {
-    if (!pageToDelete) return;
-    setIsSubmitting(true);
-    try {
-      await deletePage(siteId, pageToDelete.id);
-      setShowDeleteModal(false);
-      setPageToDelete(null);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        if (currentPageId) {
+            const currentPage = findPageInTree(
+                pages,
+                (p) => p.id === currentPageId,
+            );
+            if (currentPage) {
+                currentLogicalId = currentPage.logical_id;
+            }
+        }
 
-  // Handle create new site
-  const handleCreateSite = async (name) => {
-    setIsSubmitting(true);
-    try {
-      const result = await createSite({ name });
-      if (result.success && result.data?.id) {
-        setShowCreateSiteModal(false);
-        navigate(`/sites/${result.data.id}`);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        // 3. Fetch pages for the NEW branch
+        const newPages = await fetchPages(siteId, branchName);
 
-  return (
-    <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={onClose}
-        />
-      )}
+        // 4. Navigate to the equivalent page or root
+        if (currentPageId && currentLogicalId && newPages) {
+            const targetPage = findPageInTree(
+                newPages,
+                (p) => p.logical_id === currentLogicalId,
+            );
 
-      {/* Sidebar */}
-      <aside className={`
+            if (targetPage) {
+                navigate(`/sites/${siteId}/pages/${targetPage.id}`);
+                toast.success(`Switched to branch '${branchName}'`);
+            } else {
+                // Page deleted or doesn't exist in new branch
+                navigate(`/sites/${siteId}`);
+                toast.success(
+                    `Switched to '${branchName}' (Page not found in this branch)`,
+                );
+            }
+        } else {
+            // Was on root or unknown page
+            navigate(`/sites/${siteId}`);
+            toast.success(`Switched to branch '${branchName}'`);
+        }
+    };
+
+    const handleCreateBranch = async (e) => {
+        e.preventDefault();
+        if (!newBranchName.trim()) return;
+
+        setIsSubmitting(true);
+        const result = await createBranch(siteId, {
+            name: newBranchName.trim(),
+            source_branch: currentBranch,
+        });
+        setIsSubmitting(false);
+
+        if (result.success) {
+            setNewBranchName("");
+            setShowCreateBranchModal(false);
+            handleSwitchBranch(result.data.name); // Switch to new branch using our smart handler
+            toast.success(`Switched to branch: ${result.data.name}`);
+        } else {
+            toast.error("Failed to create branch: " + result.error);
+        }
+    };
+
+    const activeSiteId = location.pathname.startsWith("/sites/")
+        ? location.pathname.split("/")[2]
+        : null;
+
+    const handleLogout = () => {
+        logout();
+        navigate("/login");
+    };
+
+    const handleAddPage = () => {
+        setParentIdForNewPage(null);
+        setShowAddModal(true);
+    };
+
+    const handleAddSubpage = (parentId) => {
+        setParentIdForNewPage(parentId);
+        setShowAddModal(true);
+    };
+
+    const handleCreatePage = async (title) => {
+        setIsSubmitting(true);
+        try {
+            await createPage(
+                siteId,
+                {
+                    title,
+                    content: {},
+                    parent_id: parentIdForNewPage,
+                },
+                currentBranch,
+            );
+            setShowAddModal(false);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteRequest = (page) => {
+        setPageToDelete(page);
+        setShowDeleteModal(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!pageToDelete) return;
+        setIsSubmitting(true);
+        try {
+            await deletePage(siteId, pageToDelete.id, currentBranch);
+            setShowDeleteModal(false);
+            setPageToDelete(null);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Handle create new site
+    const handleCreateSite = async (name) => {
+        setIsSubmitting(true);
+        try {
+            const result = await createSite({ name });
+            if (result.success && result.data?.id) {
+                setShowCreateSiteModal(false);
+                navigate(`/sites/${result.data.id}`);
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <>
+            {/* Mobile Overlay */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+                    onClick={onClose}
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside
+                className={`
         fixed top-0 left-0 z-50 h-screen
         w-[260px] bg-[var(--color-bg-secondary)] border-r border-[var(--color-border-primary)]
         flex flex-col
         transition-transform duration-200 ease-out
         lg:translate-x-0
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        {/* Header - User Section */}
-        <div className="p-3 border-b border-[var(--color-border-primary)]">
-          <div className="flex items-center gap-2.5 mb-3">
-            {user?.avatar_url ? (
-              <img 
-                src={user.avatar_url} 
-                alt={user.name}
-                className="w-8 h-8 rounded-full ring-2 ring-[var(--color-border-secondary)]"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-accent)] to-teal-500 flex items-center justify-center text-white text-xs font-medium">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{user?.name}</p>
-            </div>
-            
-            <button
-              onClick={onClose}
-              className="lg:hidden p-1.5 rounded-lg hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+      `}
             >
-              <X size={16} />
-            </button>
-          </div>
-
-          {/* Search Bar */}
-          <div className="relative group">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-accent)] transition-colors" />
-            <input 
-              type="text"
-              placeholder="Search pages..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-all"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Dynamic Content */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {isInSite ? (
-            /* === SITE VIEW: Show Pages === */
-            <>
-              {/* Back to Home */}
-              <button
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2 w-full px-2.5 py-1.5 mb-2 text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-              >
-                <ChevronRight size={14} className="rotate-180" />
-                <span>Back to Home</span>
-              </button>
-
-              {/* Current Site Header */}
-              <div className="flex items-center gap-2 px-2.5 py-2 mb-2 bg-[var(--color-bg-tertiary)] rounded-lg">
-                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--color-accent)] to-teal-500 flex items-center justify-center">
-                  <Sparkles size={12} className="text-white" />
-                </div>
-                <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate flex-1">
-                  {currentSite?.name || 'Loading...'}
-                </span>
-                
-                <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => setShowPublishModal(true)}
-                    className={`p-1 rounded hover:bg-[var(--color-bg-hover)] transition-colors ${currentSite?.is_published ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'}`}
-                    title={currentSite?.is_published ? "Site is Live" : "Publish Site"}
-                  >
-                    <Globe size={14} />
-                  </button>
-                  <button
-                    onClick={() => navigate(`/sites/${siteId}/settings`)}
-                    className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
-                  >
-                    <Settings size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Branch Switcher */}
-              <div className="mx-2 mb-2">
-                 <Dropdown
-                    trigger={
-                      <button className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded hover:border-[var(--color-border-hover)] transition-colors">
-                        <div className="flex items-center gap-1.5 truncate">
-                           <Layers size={12} className="text-[var(--color-accent)]" />
-                           <span className="truncate max-w-[120px]">{currentBranch}</span>
+                {/* Header - User Section */}
+                <div className="p-3 border-b border-[var(--color-border-primary)]">
+                    <div className="flex items-center gap-2.5 mb-3">
+                        {user?.avatar_url ? (
+                            <img
+                                src={user.avatar_url}
+                                alt={user.name}
+                                className="w-8 h-8 rounded-full ring-2 ring-[var(--color-border-secondary)]"
+                            />
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-accent)] to-teal-500 flex items-center justify-center text-white text-xs font-medium">
+                                {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                            </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                                {user?.name}
+                            </p>
                         </div>
-                        <ChevronRight size={12} className="rotate-90 text-[var(--color-text-muted)]" />
-                      </button>
-                    }
-                    align="start"
-                    className="w-48"
-                 >
-                    <div className="px-2 py-1.5 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border-secondary)] mb-1">
-                      Switch Branch
-                    </div>
-                    <div className="max-h-48 overflow-y-auto">
-                      {branches.map(branch => (
-                        <Dropdown.Item 
-                          key={branch.id} 
-                          onClick={() => handleSwitchBranch(branch.name)}
-                          isActive={currentBranch === branch.name}
-                          icon={branch.name === 'main' ? Globe : Layers}
+
+                        <button
+                            onClick={onClose}
+                            className="lg:hidden p-1.5 rounded-lg hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
                         >
-                          <div className="flex items-center justify-between w-full">
-                            <span className="truncate">{branch.name}</span>
-                            {branch.is_default && <span className="text-[9px] bg-[var(--color-bg-tertiary)] px-1 rounded ml-1">Default</span>}
-                          </div>
-                        </Dropdown.Item>
-                      ))}
+                            <X size={16} />
+                        </button>
                     </div>
-                    <Dropdown.Divider />
-                    <Dropdown.Item icon={Plus} onClick={() => setShowCreateBranchModal(true)}>
-                      New Branch...
-                    </Dropdown.Item>
-                    <Dropdown.Item icon={GitPullRequest} onClick={() => navigate(`/sites/${siteId}/merge-requests`)}>
-                      Merge Requests
-                    </Dropdown.Item>
-                 </Dropdown>
-              </div>
 
-              {/* Pages Section */}
-              <div className="flex items-center justify-between px-2 py-1 mb-1">
-                <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Pages
-                </span>
-                <button 
-                  onClick={handleAddPage}
-                  className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
+                    {/* Search Bar */}
+                    <div className="relative group">
+                        <Search
+                            size={14}
+                            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-accent)] transition-colors"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Search pages..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-9 pr-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                            >
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
+                </div>
 
-              {/* Page Tree */}
-              {pagesLoading ? (
-                <div className="py-6 text-center">
-                  <div className="w-full h-0.5 bg-[var(--color-bg-hover)] overflow-hidden rounded-full">
-                    <div className="h-full bg-[var(--color-accent)]/50 w-1/3 animate-pulse" />
-                  </div>
-                </div>
-              ) : pages.length === 0 ? (
-                <div className="py-8 text-center">
-                  <FileText size={24} className="mx-auto mb-2 text-[var(--color-text-muted)] opacity-50" />
-                  <p className="text-xs text-[var(--color-text-muted)]">No pages yet</p>
-                  <button 
-                    onClick={handleAddPage}
-                    className="mt-2 text-[var(--color-accent)] text-xs hover:underline"
-                  >
-                    Create one?
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-0.5">
-                  {pages
-                    .filter(p => !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map((page) => (
-                    <PageTreeItem 
-                      key={page.id} 
-                      page={page} 
-                      siteId={siteId}
-                      onDeleteRequest={handleDeleteRequest}
-                      onAddSubpageRequest={handleAddSubpage}
-                    />
-                  ))}
-                  {searchQuery && pages.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                    <p className="text-[10px] text-center text-[var(--color-text-muted)] py-4">No pages match "{searchQuery}"</p>
-                  )}
-                </div>
-              )}
+                {/* Dynamic Content */}
+                <div className="flex-1 overflow-y-auto p-2">
+                    {isInSite ? (
+                        /* === SITE VIEW: Show Pages === */
+                        <>
+                            {/* Back to Home */}
+                            <button
+                                onClick={() => navigate("/")}
+                                className="flex items-center gap-2 w-full px-2.5 py-1.5 mb-2 text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
+                            >
+                                <ChevronRight
+                                    size={14}
+                                    className="rotate-180"
+                                />
+                                <span>Back to Home</span>
+                            </button>
 
-              {/* Other Sites Section - when in site view */}
-              <div className="mt-4 pt-4 border-t border-[var(--color-border-secondary)]">
-                <div className="flex items-center justify-between px-2 py-1 mb-1">
-                  <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                    Other Sites
-                  </span>
-                  <button
-                    onClick={() => setShowCreateSiteModal(true)}
-                    className="p-0.5 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                    title="Create new site"
-                  >
-                    <Plus size={12} />
-                  </button>
-                </div>
-                <div className="space-y-0.5">
-                  {sites.filter(s => s.id !== siteId).slice(0, 5).map((site) => (
-                    <SiteItem 
-                      key={site.id} 
-                      site={site} 
-                      isActive={false}
-                    />
-                  ))}
-                  {sites.filter(s => s.id !== siteId).length === 0 && (
-                    <button 
-                      onClick={() => setShowCreateSiteModal(true)}
-                      className="w-full px-2.5 py-2 text-center text-xs text-[var(--color-accent)] hover:underline"
-                    >
-                      + Create new site
-                    </button>
-                  )}
-                </div>
-              </div>
-            </>
-          ) : (
-            /* === HOME VIEW: Show Sites === */
-            <>
-              <NavLink 
-                to="/" 
-                className={({ isActive }) => `
+                            {/* Current Site Header */}
+                            <div className="flex items-center gap-2 px-2.5 py-2 mb-2 bg-[var(--color-bg-tertiary)] rounded-lg">
+                                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[var(--color-accent)] to-teal-500 flex items-center justify-center">
+                                    <Sparkles
+                                        size={12}
+                                        className="text-white"
+                                    />
+                                </div>
+                                <span className="text-sm font-semibold text-[var(--color-text-primary)] truncate flex-1">
+                                    {currentSite?.name || "Loading..."}
+                                </span>
+
+                                <div className="flex items-center gap-0.5">
+                                    <button
+                                        onClick={() =>
+                                            navigate(`/sites/${siteId}/pulls`)
+                                        }
+                                        className="p-1 rounded hover:bg-(--color-bg-hover) text-(--color-text-muted) hover:text-(--color-text-primary) transition-colors"
+                                        title="Pull Requests"
+                                    >
+                                        <GitPullRequest size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            navigate(
+                                                `/sites/${siteId}/branches`,
+                                            )
+                                        }
+                                        className="p-1 rounded hover:bg-(--color-bg-hover) text-(--color-text-muted) hover:text-(--color-text-primary) transition-colors"
+                                        title="Manage Branches"
+                                    >
+                                        <GitBranch size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            setShowPublishModal(true)
+                                        }
+                                        className={`p-1 rounded hover:bg-(--color-bg-hover) transition-colors ${currentSite?.is_published ? "text-(--color-accent)" : "text-(--color-text-muted)"}`}
+                                        title={
+                                            currentSite?.is_published
+                                                ? "Site is Live"
+                                                : "Publish Site"
+                                        }
+                                    >
+                                        <Globe size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            navigate(
+                                                `/sites/${siteId}/settings`,
+                                            )
+                                        }
+                                        className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
+                                    >
+                                        <Settings size={14} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Branch Switcher */}
+                            <div className="mx-2 mb-2">
+                                <Dropdown
+                                    trigger={
+                                        <button className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded hover:border-[var(--color-border-hover)] transition-colors">
+                                            <div className="flex items-center gap-1.5 truncate">
+                                                <Layers
+                                                    size={12}
+                                                    className="text-[var(--color-accent)]"
+                                                />
+                                                <span className="truncate max-w-[120px]">
+                                                    {currentBranch}
+                                                </span>
+                                            </div>
+                                            <ChevronRight
+                                                size={12}
+                                                className="rotate-90 text-[var(--color-text-muted)]"
+                                            />
+                                        </button>
+                                    }
+                                    align="start"
+                                    className="w-48"
+                                >
+                                    <div className="px-2 py-1.5 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border-secondary)] mb-1">
+                                        Switch Branch
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto">
+                                        {branches.map((branch) => (
+                                            <Dropdown.Item
+                                                key={branch.id}
+                                                onClick={() =>
+                                                    handleSwitchBranch(
+                                                        branch.name,
+                                                    )
+                                                }
+                                                isActive={
+                                                    currentBranch ===
+                                                    branch.name
+                                                }
+                                                icon={
+                                                    branch.name === "main"
+                                                        ? Globe
+                                                        : Layers
+                                                }
+                                            >
+                                                <div className="flex items-center justify-between w-full">
+                                                    <span className="truncate">
+                                                        {branch.name}
+                                                    </span>
+                                                    {Boolean(
+                                                        branch.is_default,
+                                                    ) && (
+                                                        <span className="text-[9px] bg-[var(--color-bg-tertiary)] px-1 rounded ml-1">
+                                                            Default
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </Dropdown.Item>
+                                        ))}
+                                    </div>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item
+                                        icon={Plus}
+                                        onClick={() =>
+                                            setShowCreateBranchModal(true)
+                                        }
+                                    >
+                                        New Branch...
+                                    </Dropdown.Item>
+                                </Dropdown>
+                            </div>
+
+                            {/* Pages Section */}
+                            <div className="flex items-center justify-between px-2 py-1 mb-1">
+                                <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                                    Pages
+                                </span>
+                                <button
+                                    onClick={handleAddPage}
+                                    className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                                >
+                                    <Plus size={14} />
+                                </button>
+                            </div>
+
+                            {/* Page Tree */}
+                            {pagesLoading ? (
+                                <div className="py-6 text-center">
+                                    <div className="w-full h-0.5 bg-[var(--color-bg-hover)] overflow-hidden rounded-full">
+                                        <div className="h-full bg-[var(--color-accent)]/50 w-1/3 animate-pulse" />
+                                    </div>
+                                </div>
+                            ) : pages.length === 0 ? (
+                                <div className="py-8 text-center">
+                                    <FileText
+                                        size={24}
+                                        className="mx-auto mb-2 text-[var(--color-text-muted)] opacity-50"
+                                    />
+                                    <p className="text-xs text-[var(--color-text-muted)]">
+                                        No pages yet
+                                    </p>
+                                    <button
+                                        onClick={handleAddPage}
+                                        className="mt-2 text-[var(--color-accent)] text-xs hover:underline"
+                                    >
+                                        Create one?
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-0.5">
+                                    {pages
+                                        .filter(
+                                            (p) =>
+                                                !searchQuery ||
+                                                p.title
+                                                    .toLowerCase()
+                                                    .includes(
+                                                        searchQuery.toLowerCase(),
+                                                    ),
+                                        )
+                                        .map((page) => (
+                                            <PageTreeItem
+                                                key={page.id}
+                                                page={page}
+                                                siteId={siteId}
+                                                onDeleteRequest={
+                                                    handleDeleteRequest
+                                                }
+                                                onAddSubpageRequest={
+                                                    handleAddSubpage
+                                                }
+                                            />
+                                        ))}
+                                    {searchQuery &&
+                                        pages.filter((p) =>
+                                            p.title
+                                                .toLowerCase()
+                                                .includes(
+                                                    searchQuery.toLowerCase(),
+                                                ),
+                                        ).length === 0 && (
+                                            <p className="text-[10px] text-center text-[var(--color-text-muted)] py-4">
+                                                No pages match "{searchQuery}"
+                                            </p>
+                                        )}
+                                </div>
+                            )}
+
+                            {/* Other Sites Section - when in site view */}
+                            <div className="mt-4 pt-4 border-t border-[var(--color-border-secondary)]">
+                                <div className="flex items-center justify-between px-2 py-1 mb-1">
+                                    <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                                        Other Sites
+                                    </span>
+                                    <button
+                                        onClick={() =>
+                                            setShowCreateSiteModal(true)
+                                        }
+                                        className="p-0.5 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                                        title="Create new site"
+                                    >
+                                        <Plus size={12} />
+                                    </button>
+                                </div>
+                                <div className="space-y-0.5">
+                                    {sites
+                                        .filter((s) => s.id !== siteId)
+                                        .slice(0, 5)
+                                        .map((site) => (
+                                            <SiteItem
+                                                key={site.id}
+                                                site={site}
+                                                isActive={false}
+                                            />
+                                        ))}
+                                    {sites.filter((s) => s.id !== siteId)
+                                        .length === 0 && (
+                                        <button
+                                            onClick={() =>
+                                                setShowCreateSiteModal(true)
+                                            }
+                                            className="w-full px-2.5 py-2 text-center text-xs text-[var(--color-accent)] hover:underline"
+                                        >
+                                            + Create new site
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        /* === HOME VIEW: Show Sites === */
+                        <>
+                            <NavLink
+                                to="/"
+                                className={({ isActive }) => `
                   flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium mb-2
                   transition-all duration-150
-                  ${isActive 
-                    ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' 
-                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
+                  ${
+                      isActive
+                          ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+                          : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
                   }
                 `}
-              >
-                <Home size={16} />
-                <span>Home</span>
-              </NavLink>
+                            >
+                                <Home size={16} />
+                                <span>Home</span>
+                            </NavLink>
 
-              {/* Sites Section */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between px-2.5 py-1 mb-1">
-                  <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                    Your Sites
-                  </span>
-                  <button
-                    onClick={() => setShowCreateSiteModal(true)}
-                    className="p-0.5 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                    title="Create new site"
-                  >
-                    <Plus size={12} />
-                  </button>
+                            {/* Sites Section */}
+                            <div className="pt-2">
+                                <div className="flex items-center justify-between px-2.5 py-1 mb-1">
+                                    <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                                        Your Sites
+                                    </span>
+                                    <button
+                                        onClick={() =>
+                                            setShowCreateSiteModal(true)
+                                        }
+                                        className="p-0.5 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                                        title="Create new site"
+                                    >
+                                        <Plus size={12} />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-0.5">
+                                    {sites.length === 0 ? (
+                                        <div className="px-2.5 py-6 text-center">
+                                            <Layers
+                                                size={28}
+                                                className="mx-auto text-[var(--color-text-muted)] opacity-50 mb-2"
+                                            />
+                                            <p className="text-xs text-[var(--color-text-muted)]">
+                                                No sites yet
+                                            </p>
+                                            <button
+                                                onClick={() =>
+                                                    setShowCreateSiteModal(true)
+                                                }
+                                                className="mt-2 text-[var(--color-accent)] text-xs hover:underline"
+                                            >
+                                                Create one?
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        sites.map((site) => (
+                                            <SiteItem
+                                                key={site.id}
+                                                site={site}
+                                                isActive={
+                                                    site.id === activeSiteId
+                                                }
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
 
-                <div className="space-y-0.5">
-                  {sites.length === 0 ? (
-                    <div className="px-2.5 py-6 text-center">
-                      <Layers size={28} className="mx-auto text-[var(--color-text-muted)] opacity-50 mb-2" />
-                      <p className="text-xs text-[var(--color-text-muted)]">No sites yet</p>
-                      <button 
-                        onClick={() => setShowCreateSiteModal(true)}
-                        className="mt-2 text-[var(--color-accent)] text-xs hover:underline"
-                      >
-                        Create one?
-                      </button>
+                {/* Footer */}
+                <div className="p-2 border-t border-[var(--color-border-primary)] space-y-0.5">
+                    <button
+                        onClick={toggleTheme}
+                        className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-[13px] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] transition-colors"
+                    >
+                        {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                        <span>{isDark ? "Light mode" : "Dark mode"}</span>
+                    </button>
+
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-[13px] text-[var(--color-text-secondary)] hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)] transition-colors"
+                    >
+                        <LogOut size={16} />
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </aside>
+
+            {/* Modals */}
+            <InputModal
+                isOpen={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                onSubmit={handleCreatePage}
+                title={parentIdForNewPage ? "Add Subpage" : "Add New Page"}
+                message="Enter a title for your page."
+                placeholder="e.g. Getting Started"
+                submitText="Create"
+                isLoading={isSubmitting}
+            />
+
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => {
+                    setShowDeleteModal(false);
+                    setPageToDelete(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                title="Delete Page"
+                message={`Are you sure you want to delete "${pageToDelete?.title}"?`}
+                confirmText="Delete"
+                variant="danger"
+                isLoading={isSubmitting}
+            />
+
+            {/* Create Site Modal */}
+            <InputModal
+                isOpen={showCreateSiteModal}
+                onClose={() => setShowCreateSiteModal(false)}
+                onSubmit={handleCreateSite}
+                title="Create New Site"
+                message="Enter a name for your documentation site."
+                placeholder="e.g. My Documentation"
+                submitText="Create Site"
+                isLoading={isSubmitting}
+            />
+
+            {/* Publish Modal */}
+            <PublishModal
+                isOpen={showPublishModal}
+                onClose={() => setShowPublishModal(false)}
+                site={currentSite}
+            />
+
+            {/* Create Branch Modal */}
+            {showCreateBranchModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="w-full max-w-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl p-4 m-4">
+                        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+                            Create New Branch
+                        </h3>
+                        <form onSubmit={handleCreateBranch}>
+                            <div className="mb-4">
+                                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+                                    Branch Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newBranchName}
+                                    onChange={(e) =>
+                                        setNewBranchName(e.target.value)
+                                    }
+                                    placeholder="e.g. feature-xyz"
+                                    className="w-full px-3 py-2 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg focus:outline-none focus:border-[var(--color-accent)]"
+                                    autoFocus
+                                />
+                                <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
+                                    Create branch from{" "}
+                                    <strong>{currentBranch}</strong>
+                                </p>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setShowCreateBranchModal(false)
+                                    }
+                                    className="px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <Button
+                                    type="submit"
+                                    loading={isSubmitting}
+                                    size="sm"
+                                >
+                                    Create Branch
+                                </Button>
+                            </div>
+                        </form>
                     </div>
-                  ) : (
-                    sites.map((site) => (
-                      <SiteItem 
-                        key={site.id} 
-                        site={site} 
-                        isActive={site.id === activeSiteId}
-                      />
-                    ))
-                  )}
                 </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-2 border-t border-[var(--color-border-primary)] space-y-0.5">
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-[13px] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] transition-colors"
-          >
-            {isDark ? <Sun size={16} /> : <Moon size={16} />}
-            <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-[13px] text-[var(--color-text-secondary)] hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)] transition-colors"
-          >
-            <LogOut size={16} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Modals */}
-      <InputModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={handleCreatePage}
-        title={parentIdForNewPage ? "Add Subpage" : "Add New Page"}
-        message="Enter a title for your page."
-        placeholder="e.g. Getting Started"
-        submitText="Create"
-        isLoading={isSubmitting}
-      />
-
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setPageToDelete(null);
-        }}
-        onConfirm={handleConfirmDelete}
-        title="Delete Page"
-        message={`Are you sure you want to delete "${pageToDelete?.title}"?`}
-        confirmText="Delete"
-        variant="danger"
-        isLoading={isSubmitting}
-      />
-
-      {/* Create Site Modal */}
-      <InputModal
-        isOpen={showCreateSiteModal}
-        onClose={() => setShowCreateSiteModal(false)}
-        onSubmit={handleCreateSite}
-        title="Create New Site"
-        message="Enter a name for your documentation site."
-        placeholder="e.g. My Documentation"
-        submitText="Create Site"
-        isLoading={isSubmitting}
-      />
-
-      {/* Publish Modal */}
-      <PublishModal 
-        isOpen={showPublishModal} 
-        onClose={() => setShowPublishModal(false)}
-        site={currentSite}
-      />
-      
-      {/* Create Branch Modal */}
-      {showCreateBranchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-2xl p-4 m-4">
-             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Create New Branch</h3>
-             <form onSubmit={handleCreateBranch}>
-               <div className="mb-4">
-                 <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">Branch Name</label>
-                 <input 
-                   type="text" 
-                   value={newBranchName}
-                   onChange={e => setNewBranchName(e.target.value)}
-                   placeholder="e.g. feature-xyz"
-                   className="w-full px-3 py-2 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg focus:outline-none focus:border-[var(--color-accent)]"
-                   autoFocus
-                 />
-                 <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-                   Create branch from <strong>{currentBranch}</strong>
-                 </p>
-               </div>
-               <div className="flex justify-end gap-2">
-                 <button 
-                   type="button" 
-                   onClick={() => setShowCreateBranchModal(false)}
-                   className="px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors"
-                 >
-                   Cancel
-                 </button>
-                 <Button type="submit" loading={isSubmitting} size="sm">
-                   Create Branch
-                 </Button>
-               </div>
-             </form>
-          </div>
-        </div>
-      )}
-    </>
-  );
+            )}
+        </>
+    );
 }
 
 export default UnifiedSidebar;
