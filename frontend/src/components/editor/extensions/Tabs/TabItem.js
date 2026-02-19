@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import { TabItemView } from './TabItemView';
 
 export const TabItem = Node.create({
   name: 'tabItem',
@@ -14,9 +16,10 @@ export const TabItem = Node.create({
         parseHTML: element => element.getAttribute('data-title'),
         renderHTML: attributes => ({ 'data-title': attributes.title }),
       },
-      class: {
-        default: 'tab-panel',
-        renderHTML: attributes => ({ class: 'tab-panel p-4' }),
+      isActive: {
+        default: false,
+        parseHTML: element => element.getAttribute('data-active') === 'true',
+        renderHTML: attributes => ({ 'data-active': attributes.isActive }),
       }
     };
   },
@@ -30,6 +33,10 @@ export const TabItem = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'tab-item', 'data-tab-panel': '' }), 0];
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'tab-item' }), 0];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(TabItemView);
   },
 });

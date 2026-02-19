@@ -166,24 +166,6 @@ export const BLOCK_DEFINITIONS = [
         action: (editor) => editor.chain().focus().setCard().run()
       },
       {
-        id: 'tabs',
-        name: 'Tabs',
-        icon: AppWindow,
-        description: 'Tabbed content sections',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="tabs-wrapper">
-            <div class="tabs-header">
-              <button class="tab-btn active">Tab 1</button>
-              <button class="tab-btn">Tab 2</button>
-              <button class="tab-btn">Tab 3</button>
-            </div>
-            <div class="tab-content">
-              <p>This is the content of Tab 1. Click other tabs to switch.</p>
-            </div>
-          </div>
-        `).run()
-      },
-      {
         id: 'expandable',
         name: 'Toggle / Expandable',
         icon: Maximize2,
@@ -239,16 +221,16 @@ export const BLOCK_DEFINITIONS = [
           content: [
             { 
               type: 'tabItem', 
-              attrs: { title: 'First Tab' }, 
+              attrs: { title: 'Tab 1' }, 
               content: [
-                { type: 'paragraph', content: [{ type: 'text', text: 'Content for the first tab...' }] }
+                { type: 'paragraph', content: [{ type: 'text', text: 'Isi konten untuk Tab 1 di sini...' }] }
               ] 
             },
             { 
               type: 'tabItem', 
-              attrs: { title: 'Second Tab' }, 
+              attrs: { title: 'Tab 2' }, 
               content: [
-                { type: 'paragraph', content: [{ type: 'text', text: 'Content for the second tab...' }] }
+                { type: 'paragraph', content: [{ type: 'text', text: 'Isi konten untuk Tab 2 di sini...' }] }
               ] 
             }
           ]

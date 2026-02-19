@@ -42,6 +42,20 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
     },
     // Disable default codeBlock, we use CodeBlockPlus
     codeBlock: false,
+    // Enable proper list nesting
+    bulletList: {
+      keepMarks: true,
+      keepAttributes: false,
+    },
+    orderedList: {
+      keepMarks: true,
+      keepAttributes: false,
+    },
+    listItem: {
+      HTMLAttributes: {
+        class: 'list-item-base',
+      },
+    },
   }),
   
   Placeholder.configure({

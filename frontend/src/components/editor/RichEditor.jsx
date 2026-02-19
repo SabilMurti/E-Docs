@@ -45,9 +45,6 @@ export default function RichEditor({
   
   const extensions = useMemo(() => [
     ...getExtensions(placeholder),
-    Callout,
-    Tabs,
-    TabItem
   ], [placeholder]);
   
   const editor = useEditor({
