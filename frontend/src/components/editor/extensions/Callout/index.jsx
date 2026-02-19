@@ -1,69 +1,64 @@
 /**
  * Callout Extension for Tiptap
- * 
- * A proper node extension for callouts (Info, Success, Warning, Danger)
- * Features:
- * - Proper Tiptap node (not raw HTML)
- * - Editable content
- * - Type switching
- * - Custom styling per type
+ *
+ * Uses inline styles to guarantee background color survives
+ * any CSS reset (prose, ProseMirror, etc.)
  */
 
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from '@tiptap/react';
-import { Info, CheckCircle2, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
+import { Info, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
-// Callout types configuration
+// Callout config with INLINE styles (immune to CSS overrides)
 const CALLOUT_TYPES = {
   info: {
     icon: Info,
     label: 'Info',
-    bgClass: 'bg-blue-50 dark:bg-blue-950/30',
-    borderClass: 'border-blue-400 dark:border-blue-600',
-    iconClass: 'text-blue-500',
-    emoji: '💡'
+    bg: '#dbeafe',
+    bgDark: 'rgba(59,130,246,0.15)',
+    border: '#3b82f6',
+    iconColor: '#3b82f6',
   },
   success: {
     icon: CheckCircle2,
     label: 'Success',
-    bgClass: 'bg-emerald-50 dark:bg-emerald-950/30',
-    borderClass: 'border-emerald-400 dark:border-emerald-600',
-    iconClass: 'text-emerald-500',
-    emoji: '✅'
+    bg: '#dcfce7',
+    bgDark: 'rgba(34,197,94,0.15)',
+    border: '#22c55e',
+    iconColor: '#22c55e',
   },
   warning: {
     icon: AlertTriangle,
     label: 'Warning',
-    bgClass: 'bg-amber-50 dark:bg-amber-950/30',
-    borderClass: 'border-amber-400 dark:border-amber-600',
-    iconClass: 'text-amber-500',
-    emoji: '⚠️'
+    bg: '#fef3c7',
+    bgDark: 'rgba(245,158,11,0.15)',
+    border: '#f59e0b',
+    iconColor: '#f59e0b',
   },
   danger: {
     icon: XCircle,
     label: 'Danger',
-    bgClass: 'bg-red-50 dark:bg-red-950/30',
-    borderClass: 'border-red-400 dark:border-red-600',
-    iconClass: 'text-red-500',
-    emoji: '🚨'
-  }
+    bg: '#fee2e2',
+    bgDark: 'rgba(239,68,68,0.15)',
+    border: '#ef4444',
+    iconColor: '#ef4444',
+  },
 };
 
-/**
- * React component for rendering the Callout node
- */
-function CalloutView({ node, updateAttributes, editor }) {
+function CalloutView({ node, updateAttributes }) {
   const [showTypePicker, setShowTypePicker] = useState(false);
   const typePickerRef = useRef(null);
   const type = node.attrs.type || 'info';
-  const config = CALLOUT_TYPES[type] || CALLOUT_TYPES.info;
-  const Icon = config.icon;
-  
-  // Close type picker on click outside
+  const cfg = CALLOUT_TYPES[type] || CALLOUT_TYPES.info;
+  const Icon = cfg.icon;
+
+  // Detect dark mode
+  const isDark = document.documentElement.classList.contains('dark');
+  const bgColor = isDark ? cfg.bgDark : cfg.bg;
+
   useEffect(() => {
     if (!showTypePicker) return;
-    
     const handleClick = (e) => {
       if (typePickerRef.current && !typePickerRef.current.contains(e.target)) {
         setShowTypePicker(false);
@@ -72,149 +67,154 @@ function CalloutView({ node, updateAttributes, editor }) {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showTypePicker]);
-  
+
   return (
-    <NodeViewWrapper className="callout-wrapper my-4">
-      <div 
-        className={`
-          callout-block relative rounded-lg border-l-4 p-4
-          ${config.bgClass} ${config.borderClass}
-          transition-colors duration-200
-        `}
+    <NodeViewWrapper
+      as="div"
+      data-callout-type={type}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '0.75rem',
+        padding: '0.875rem 1rem',
+        borderLeft: `4px solid ${cfg.border}`,
+        borderRadius: '0 8px 8px 0',
+        backgroundColor: bgColor,
+        margin: '0.75rem 0',
+        position: 'relative',
+        boxSizing: 'border-box',
+      }}
+    >
+      {/* Icon + Type Selector — non-editable */}
+      <div
+        ref={typePickerRef}
+        contentEditable={false}
+        style={{ position: 'relative', flexShrink: 0, marginTop: '1px' }}
       >
-        {/* Icon + Type Selector */}
-        <div className="flex items-start gap-3">
-          <div className="relative" ref={typePickerRef}>
-            <button
-              onClick={() => setShowTypePicker(!showTypePicker)}
-              className={`
-                w-8 h-8 rounded-lg flex items-center justify-center
-                ${config.iconClass} hover:bg-white/50 dark:hover:bg-black/20
-                transition-colors cursor-pointer
-              `}
-              contentEditable={false}
-              title="Change callout type"
-            >
-              <Icon size={20} />
-            </button>
-            
-            {/* Type Picker Dropdown */}
-            {showTypePicker && (
-              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg z-10 py-1 min-w-[140px]">
-                {Object.entries(CALLOUT_TYPES).map(([key, cfg]) => {
-                  const TypeIcon = cfg.icon;
-                  const isActive = key === type;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        updateAttributes({ type: key });
-                        setShowTypePicker(false);
-                      }}
-                      className={`
-                        w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm
-                        hover:bg-neutral-100 dark:hover:bg-neutral-800
-                        ${isActive ? 'bg-neutral-100 dark:bg-neutral-800' : ''}
-                      `}
-                    >
-                      <TypeIcon size={14} className={cfg.iconClass} />
-                      <span>{cfg.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+        <button
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setShowTypePicker((v) => !v);
+          }}
+          title="Change callout type"
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            color: cfg.iconColor,
+          }}
+        >
+          <Icon size={18} />
+        </button>
+
+        {/* Type Picker Dropdown */}
+        {showTypePicker && (
+          <div className="callout-type-picker">
+            {Object.entries(CALLOUT_TYPES).map(([key, c]) => {
+              const TypeIcon = c.icon;
+              return (
+                <button
+                  key={key}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    updateAttributes({ type: key });
+                    setShowTypePicker(false);
+                  }}
+                  className={`callout-type-option ${key === type ? 'callout-type-active' : ''}`}
+                >
+                  <TypeIcon size={14} style={{ color: c.iconColor }} />
+                  <span>{c.label}</span>
+                </button>
+              );
+            })}
           </div>
-          
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <NodeViewContent className="callout-content outline-none" />
-          </div>
-        </div>
+        )}
+      </div>
+
+      {/* Editable Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <NodeViewContent
+          style={{
+            outline: 'none',
+            color: 'var(--color-text-primary)',
+            fontSize: '0.9375rem',
+            lineHeight: '1.6',
+          }}
+        />
       </div>
     </NodeViewWrapper>
   );
 }
 
-/**
- * Callout Extension
- */
 export const Callout = Node.create({
   name: 'callout',
-  
+
   group: 'block',
-  
-  content: 'block+',
-  
+
+  content: 'paragraph+',
+
   defining: true,
-  
+  isolating: true,
+
   addAttributes() {
     return {
       type: {
         default: 'info',
-        parseHTML: element => element.getAttribute('data-type') || 'info',
-        renderHTML: attributes => ({
-          'data-type': attributes.type,
-        }),
+        parseHTML: (el) => el.getAttribute('data-type') || 'info',
+        renderHTML: (attrs) => ({ 'data-type': attrs.type }),
       },
     };
   },
-  
+
   parseHTML() {
-    return [
-      {
-        tag: 'div[data-callout]',
-      },
-    ];
+    return [{ tag: 'div[data-callout]' }];
   },
-  
+
   renderHTML({ HTMLAttributes }) {
     return ['div', mergeAttributes(HTMLAttributes, { 'data-callout': '' }), 0];
   },
-  
+
   addNodeView() {
     return ReactNodeViewRenderer(CalloutView);
   },
-  
+
   addCommands() {
     return {
-      setCallout: (attributes) => ({ commands, state, chain }) => {
-        const { selection } = state;
-        const { $from } = selection;
-        const currentNode = $from.parent;
-        
-        // If current node is empty paragraph, replace it with callout containing a paragraph
-        if (currentNode.type.name === 'paragraph' && currentNode.textContent === '') {
-          return chain()
-            .deleteCurrentNode()
-            .insertContent({
-              type: this.name,
-              attrs: attributes,
-              content: [{ type: 'paragraph' }]
-            })
-            .run();
-        }
-        
-        // Otherwise wrap existing content
-        return commands.wrapIn(this.name, attributes);
-      },
-      toggleCallout: (attributes) => ({ commands }) => {
-        return commands.toggleWrap(this.name, attributes);
-      },
-      updateCalloutType: (type) => ({ commands, state }) => {
-        const { selection } = state;
-        const node = state.doc.nodeAt(selection.from);
-        if (node?.type.name === 'callout') {
-          return commands.updateAttributes('callout', { type });
-        }
-        return false;
-      },
+      setCallout:
+        (attributes) =>
+        ({ commands, state, chain }) => {
+          const { $from } = state.selection;
+          const currentNode = $from.parent;
+
+          if (currentNode.type.name === 'paragraph' && currentNode.textContent === '') {
+            return chain()
+              .deleteCurrentNode()
+              .insertContent({
+                type: this.name,
+                attrs: attributes,
+                content: [{ type: 'paragraph' }],
+              })
+              .run();
+          }
+
+          return commands.wrapIn(this.name, attributes);
+        },
+      toggleCallout:
+        (attributes) =>
+        ({ commands }) =>
+          commands.toggleWrap(this.name, attributes),
     };
   },
-  
+
   addKeyboardShortcuts() {
     return {
-      // Mod = Ctrl on Windows, Cmd on Mac
       'Mod-Shift-c': () => this.editor.commands.setCallout({ type: 'info' }),
     };
   },
