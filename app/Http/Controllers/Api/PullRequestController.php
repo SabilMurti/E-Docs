@@ -450,16 +450,19 @@ class PullRequestController extends Controller
             ->unique()
             ->toArray();
 
-        // Find the "base" content (the content before the first commit in source branch)
-        // We look at the very first commit of each page in this branch
+        // Find the "base" content for conflict detection.
+        // We use the LATEST commit's previous_content for each page.
+        // This is critical: after a conflict resolution, a new commit is created
+        // with previous_content = target branch content. Using the latest commit
+        // ensures that resolved conflicts are not re-flagged.
         $baseVersions = CommitPage::whereIn('commit_id', $sourceCommits->pluck('id'))
             ->join('pages', 'commit_pages.page_id', '=', 'pages.id')
-            ->select('commit_pages.*', 'pages.logical_id') // Correct: Get content from commit_page, ID from page
-            ->orderBy('commit_pages.created_at', 'asc')
+            ->select('commit_pages.*', 'pages.logical_id')
+            ->orderBy('commit_pages.id', 'desc') // UUID v7 is time-ordered; reliable even within same second
             ->get()
             ->groupBy('logical_id')
             ->map(function($group) {
-                return $group->first();
+                return $group->first(); // First of desc = latest
             });
 
         // Also include pages that currently exist in source but have no logical_id in target (New pages)

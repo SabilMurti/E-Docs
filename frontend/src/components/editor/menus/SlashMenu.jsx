@@ -17,7 +17,7 @@ import {
   Table as TableIcon, Image as ImageIcon,
   Youtube, FileUp, ChevronRight,
   Columns as ColumnsIcon, LayoutGrid, PanelLeft, PanelRight,
-  Square, Network
+  Square, Network, Layers
 } from 'lucide-react';
 
 // Block definitions with categories
@@ -103,6 +103,15 @@ const BLOCKS = [
         action: (editor) => editor.chain().focus().setColumns({ layout: 'sidebar-left' }).run() },
       { id: 'right-sidebar', name: 'Sidebar Right', icon: PanelRight, description: 'Large left, small right',
         action: (editor) => editor.chain().focus().setColumns({ layout: 'sidebar-right' }).run() },
+      { id: 'tabs', name: 'Tabs', icon: Layers, description: 'Interactive tabbed content',
+        action: (editor) => editor.chain().focus().insertContent({
+          type: 'tabs',
+          attrs: { activeTab: 0 },
+          content: [
+            { type: 'tabItem', attrs: { title: 'First Tab' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Content for the first tab...' }] }] },
+            { type: 'tabItem', attrs: { title: 'Second Tab' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Content for the second tab...' }] }] }
+          ]
+        }).run() },
     ]
   },
 ];

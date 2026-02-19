@@ -26,6 +26,8 @@ import Typography from '@tiptap/extension-typography';
 // Custom Extensions
 import { SmartNestedList } from './extensions/SmartNestedList';
 import { CustomCodeBlock } from './extensions/CustomCodeBlock';
+import { Callout } from './extensions/Callout/index.jsx';
+import { Tabs, TabItem } from './extensions/Tabs';
 
 // Components
 import SlashCommandMenu from './SlashCommandMenu';
@@ -57,87 +59,17 @@ export default function PageEditor({
   const editor = useEditor({
     editable,
     extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        dropcursor: { 
-          color: 'var(--color-accent)', 
-          width: 2 
-        },
-        // Disable default CodeBlock to use our custom one
-        codeBlock: false,
-        // Enable proper list nesting
-        bulletList: {
-          keepMarks: true,
-          keepAttributes: false,
-        },
-        orderedList: {
-          keepMarks: true,
-          keepAttributes: false,
-        },
-        listItem: {
-          // Allow any content inside list items for nesting (e.g. other lists)
-          HTMLAttributes: {
-            class: 'list-item-base',
-          },
-        },
-      }),
-      SmartNestedList,
-      CustomCodeBlock,
-      Placeholder.configure({
-        placeholder: ({ node }) => {
-          if (node.type.name === 'heading') {
-            return `Heading ${node.attrs.level}`;
-          }
-          if (node.type.name === 'codeBlock') {
-            return '';
-          }
-          // Only show 'Type /' on empty paragraphs, including inside lists
-          return 'Type / for commands';
-        },
-        includeChildren: true, 
-        showOnlyCurrent: true,
-      }),
+      ...getExtensions('Type / for commands'),
       Image.configure({ 
         inline: true, 
         allowBase64: true 
       }),
-      Link.configure({ 
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-[color:var(--color-accent)] underline hover:opacity-80',
-        },
-      }),
-      TaskList.configure({
-        HTMLAttributes: {
-          class: 'task-list',
-        },
-      }),
-      TaskItem.configure({ 
-        nested: true, // Crucial for nested task lists
-        HTMLAttributes: {
-          class: 'task-item',
-        },
-      }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      Highlight.configure({ multicolor: true }),
-      Underline,
       Youtube.configure({ 
         width: 640, 
         height: 480,
         nocookie: true 
       }),
-      Subscript,
-      Superscript,
-      TextAlign.configure({ 
-        types: ['heading', 'paragraph'] 
-      }),
-      TextStyle,
-      Color,
       CharacterCount.configure({ limit: null }),
-      Typography,
     ],
     content: content || '',
     onUpdate: ({ editor }) => {
@@ -327,7 +259,9 @@ export default function PageEditor({
       )}
 
       {/* Editor Content */}
-      <EditorContent editor={editor} />
+      <div className="rich-editor-prose">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }

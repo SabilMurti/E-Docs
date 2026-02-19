@@ -9,7 +9,7 @@ import {
   Quote, Code2, Info, AlertTriangle, CheckCircle2, XCircle,
   Table as TableIcon, CreditCard, AppWindow, Maximize2,
   Footprints, LayoutGrid, FileUp, Image as ImageIcon,
-  Globe, Youtube as YoutubeIcon, Link2, Calculator, Braces, PenTool
+  Globe, Youtube as YoutubeIcon, Link2, Calculator, Braces, PenTool, Layers
 } from 'lucide-react';
 
 // Block type definitions with categories
@@ -166,24 +166,6 @@ export const BLOCK_DEFINITIONS = [
         action: (editor) => editor.chain().focus().setCard().run()
       },
       {
-        id: 'tabs',
-        name: 'Tabs',
-        icon: AppWindow,
-        description: 'Tabbed content sections',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="tabs-wrapper">
-            <div class="tabs-header">
-              <button class="tab-btn active">Tab 1</button>
-              <button class="tab-btn">Tab 2</button>
-              <button class="tab-btn">Tab 3</button>
-            </div>
-            <div class="tab-content">
-              <p>This is the content of Tab 1. Click other tabs to switch.</p>
-            </div>
-          </div>
-        `).run()
-      },
-      {
         id: 'expandable',
         name: 'Toggle / Expandable',
         icon: Maximize2,
@@ -227,6 +209,32 @@ export const BLOCK_DEFINITIONS = [
         icon: LayoutGrid,
         description: 'Multi-column layout',
         action: (editor) => editor.chain().focus().setColumns({ layout: 'two-columns' }).run()
+      },
+      {
+        id: 'tabs',
+        name: 'Tabs',
+        icon: Layers,
+        description: 'Interactive tabbed content',
+        action: (editor) => editor.chain().focus().insertContent({
+          type: 'tabs',
+          attrs: { activeTab: 0 },
+          content: [
+            { 
+              type: 'tabItem', 
+              attrs: { title: 'Tab 1' }, 
+              content: [
+                { type: 'paragraph', content: [{ type: 'text', text: 'Isi konten untuk Tab 1 di sini...' }] }
+              ] 
+            },
+            { 
+              type: 'tabItem', 
+              attrs: { title: 'Tab 2' }, 
+              content: [
+                { type: 'paragraph', content: [{ type: 'text', text: 'Isi konten untuk Tab 2 di sini...' }] }
+              ] 
+            }
+          ]
+        }).run()
       }
     ]
   },

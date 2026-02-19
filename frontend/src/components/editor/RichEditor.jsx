@@ -12,6 +12,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 
 import { getExtensions } from './extensions';
+import { Callout } from './extensions/Callout/index.jsx';
+import { Tabs, TabItem } from './extensions/Tabs';
 
 // UI Components
 import SlashMenu from './menus/SlashMenu';
@@ -41,7 +43,9 @@ export default function RichEditor({
     position: { top: 0, left: 0 }
   });
   
-  const extensions = useMemo(() => getExtensions(placeholder), [placeholder]);
+  const extensions = useMemo(() => [
+    ...getExtensions(placeholder),
+  ], [placeholder]);
   
   const editor = useEditor({
     extensions,
@@ -116,7 +120,7 @@ export default function RichEditor({
   }, [slashMenu.visible]);
   
   useEffect(() => {
-    if (editor && content) {
+    if (editor && content && !editor.isFocused) {
       const currentContent = editor.getJSON();
       if (JSON.stringify(currentContent) !== JSON.stringify(content)) {
         editor.commands.setContent(content);
@@ -156,7 +160,7 @@ export default function RichEditor({
 
       {/* Main Content Area - Single Column, Centered */}
       <div className="max-w-4xl mx-auto w-full px-4 md:px-6">
-         <div className="prose prose-invert max-w-none w-full pb-32">
+         <div className="rich-editor-prose">
             <EditorContent editor={editor} />
          </div>
       </div>

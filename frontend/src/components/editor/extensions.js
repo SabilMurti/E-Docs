@@ -31,6 +31,7 @@ import { Columns, Column } from './extensions/Columns';
 import { Toggle } from './extensions/Toggle';
 import { Card } from './extensions/Card';
 import { ExcalidrawNode } from './extensions/Excalidraw';
+import { Tabs, TabItem } from './extensions/Tabs';
 
 export const getExtensions = (placeholderText = 'Start typing...') => [
   StarterKit.configure({
@@ -41,6 +42,20 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
     },
     // Disable default codeBlock, we use CodeBlockPlus
     codeBlock: false,
+    // Enable proper list nesting
+    bulletList: {
+      keepMarks: true,
+      keepAttributes: false,
+    },
+    orderedList: {
+      keepMarks: true,
+      keepAttributes: false,
+    },
+    listItem: {
+      HTMLAttributes: {
+        class: 'list-item-base',
+      },
+    },
   }),
   
   Placeholder.configure({
@@ -149,4 +164,6 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   Toggle,
   Card,
   ExcalidrawNode,
+  Tabs,
+  TabItem,
 ];
