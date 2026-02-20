@@ -44,9 +44,17 @@ function EditorBubbleMenu({ editor }) {
   }, [editor]);
 
   return (
-    <BubbleMenu 
-      editor={editor} 
+    <BubbleMenu
+      editor={editor}
       tippyOptions={{ duration: 100 }}
+      shouldShow={({ editor }) => {
+        // Don't show when table is active (table has its own bubble menu)
+        if (editor.isActive('table')) {
+          return false;
+        }
+        // Show when there's a selection or cursor is not in empty doc
+        return !editor.isActive('table');
+      }}
       className="flex items-center gap-1 p-1 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden"
     >
       <MenuButton

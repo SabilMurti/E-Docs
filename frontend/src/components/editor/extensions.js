@@ -5,10 +5,6 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import { Table } from '@tiptap/extension-table';
-import { TableRow } from '@tiptap/extension-table-row';
-import { TableCell } from '@tiptap/extension-table-cell';
-import { TableHeader } from '@tiptap/extension-table-header';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import Youtube from '@tiptap/extension-youtube';
@@ -32,6 +28,12 @@ import { Toggle } from './extensions/Toggle';
 import { Card } from './extensions/Card';
 import { ExcalidrawNode } from './extensions/Excalidraw';
 import { Tabs, TabItem } from './extensions/Tabs';
+import { ButtonNode } from './extensions/ButtonExtension';
+import { APIEndpoint } from './extensions/APIEndpointExtension';
+import { Steps } from './extensions/StepsExtension';
+import { Step } from './extensions/StepExtension';
+import { KeyboardHandler } from './extensions/KeyboardHandler';
+import { TableExtensions } from './extensions/Table';
 
 export const getExtensions = (placeholderText = 'Start typing...') => [
   StarterKit.configure({
@@ -92,45 +94,11 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
     HTMLAttributes: { class: 'task-list' },
   }),
   
-  TaskItem.configure({ 
+  TaskItem.configure({
     nested: true,
     HTMLAttributes: { class: 'task-item' },
   }),
-  
-  Table.configure({
-    resizable: true,
-  }).extend({
-    addAttributes() {
-      return {
-        style: {
-          default: 'default',
-          parseHTML: element => element.getAttribute('data-style'),
-          renderHTML: attributes => ({ 'data-style': attributes.style }),
-        },
-      };
-    },
-  }),
-  TableRow,
-  TableHeader,
-  TableCell.extend({
-    addAttributes() {
-      return {
-        ...this.parent?.(),
-        backgroundColor: {
-          default: null,
-          parseHTML: element => element.getAttribute('data-background-color'),
-          renderHTML: attributes => {
-            if (!attributes.backgroundColor) return {};
-            return {
-              'data-background-color': attributes.backgroundColor,
-              style: `background-color: ${attributes.backgroundColor}`,
-            };
-          },
-        },
-      };
-    },
-  }),
-  
+
   Highlight.configure({ multicolor: true }),
   Underline,
   
@@ -166,4 +134,10 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   ExcalidrawNode,
   Tabs,
   TabItem,
+  ButtonNode,
+  APIEndpoint,
+  Steps,
+  Step,
+  KeyboardHandler,
+  ...TableExtensions,
 ];

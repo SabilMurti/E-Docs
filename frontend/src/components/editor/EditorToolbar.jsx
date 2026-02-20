@@ -1,6 +1,6 @@
 import {
   Bold, Italic, Strikethrough, Code, List, ListOrdered, Quote, Minus, Undo, Redo,
-  Heading1, Heading2, Heading3, CheckSquare, Table, Image as ImageIcon,
+  Heading1, Heading2, Heading3, CheckSquare, Image as ImageIcon,
   Highlighter, Link, AlignLeft, AlignCenter, AlignRight, Underline
 } from 'lucide-react';
 import { useCallback } from 'react';
@@ -93,7 +93,6 @@ function EditorToolbar({ editor }) {
       {/* Inserts */}
       <ToolbarButton onClick={setLink} isActive={editor.isActive('link')} title="Link"><Link size={18} /></ToolbarButton>
       <ToolbarButton onClick={addImage} title="Image"><ImageIcon size={18} /></ToolbarButton>
-      <ToolbarButton onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Table"><Table size={18} /></ToolbarButton>
       <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} isActive={editor.isActive('blockquote')} title="Quote"><Quote size={18} /></ToolbarButton>
       <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider"><Minus size={18} /></ToolbarButton>
 

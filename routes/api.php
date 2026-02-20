@@ -12,13 +12,15 @@ use Illuminate\Support\Facades\Route;
 
 // Auth Routes
 Route::prefix('auth')->group(function () {
-    // Google
-    Route::get('google', [AuthController::class, 'redirectToGoogle']);
-    Route::get('google/callback', [AuthController::class, 'handleGoogleCallback']);
+    // Google - Rate limited
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::get('google', [AuthController::class, 'redirectToGoogle']);
+        Route::get('google/callback', [AuthController::class, 'handleGoogleCallback']);
 
-    // GitHub
-    Route::get('github', [AuthController::class, 'redirectToGithub']);
-    Route::get('github/callback', [AuthController::class, 'handleGithubCallback']);
+        // GitHub - Rate limited
+        Route::get('github', [AuthController::class, 'redirectToGithub']);
+        Route::get('github/callback', [AuthController::class, 'handleGithubCallback']);
+    });
 
     // Protected Auth
     Route::middleware('auth:sanctum')->group(function () {
@@ -32,8 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sites
     Route::apiResource('sites', SiteController::class);
     Route::post('sites/{site}/publish', [SiteController::class, 'publish']);
-
     Route::post('sites/{site}/unpublish', [SiteController::class, 'unpublish']);
+    Route::post('sites/{site}/republish', [SiteController::class, 'republish']);
 
     // Site Members (Collaboration)
     Route::get('sites/{site}/members', [SiteMemberController::class, 'index']);
@@ -91,16 +93,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
     Route::post('notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
 
-    // Search
-    Route::get('sites/{site}/search', [SearchController::class, 'search']);
+    // Search - Rate limited
+    Route::middleware('throttle:30,1')->get('sites/{site}/search', [SearchController::class, 'search']);
 
-    // Uploads
-    Route::post('upload', [UploadController::class, 'store']);
+    // Uploads - Rate limited (10 per minute, 50MB total)
+    Route::middleware('throttle:10,1')->post('upload', [UploadController::class, 'store']);
 });
 
 // Public Routes (supports both slug and UUID)
 Route::prefix('public')->group(function () {
-    // Public Site routes
-    Route::get('sites/{identifier}', [PublicSiteController::class, 'show']);
-    Route::get('sites/{identifier}/pages/{pageId}', [PublicSiteController::class, 'page']);
+    // Public Site routes - Rate limited
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('sites/{identifier}', [PublicSiteController::class, 'show']);
+        Route::get('sites/{identifier}/pages/{pageId}', [PublicSiteController::class, 'page']);
+        Route::get('sites/{identifier}/search', [PublicSiteController::class, 'search']);
+    });
 });

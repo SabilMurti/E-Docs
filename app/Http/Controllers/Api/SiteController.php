@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreateSiteRequest;
+use App\Http\Requests\UpdateSiteRequest;
 use App\Models\Site;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class SiteController extends Controller
@@ -16,7 +18,7 @@ class SiteController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
+
         $sites = Site::where('user_id', $user->id)
             ->orWhereHas('members', function($query) use ($user) {
                 $query->where('user_id', $user->id);
@@ -25,22 +27,15 @@ class SiteController extends Controller
             ->latest()
             ->get();
 
-        return response()->json([
-            'data' => $sites
-        ]);
+        return response()->json(['data' => $sites]);
     }
 
     /**
      * Create a new site
      */
-    public function store(Request $request)
+    public function store(CreateSiteRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'logo_url' => 'nullable|url',
-            'settings' => 'nullable|array',
-        ]);
+        $validated = $request->validated();
 
         $site = Site::create([
             'user_id' => $request->user()->id,
@@ -89,24 +84,31 @@ class SiteController extends Controller
     /**
      * Update site
      */
-    public function update(Request $request, Site $site)
+    public function update(UpdateSiteRequest $request, Site $site)
     {
-        if (!$site->canEdit($request->user())) {
-            abort(403, 'You do not have permission to edit this site.');
+        $validated = $request->validated();
+
+        // Auto-update slug if name changed and slug wasn't explicitly provided
+        if ($request->has('name') && !$request->has('slug')) {
+            $baseSlug = \Illuminate\Support\Str::slug($validated['name']);
+            $slug = $baseSlug;
+            $counter = 1;
+
+            // Check if slug exists (excluding current site)
+            while (Site::where('slug', $slug)->where('id', '!=', $site->id)->exists()) {
+                $slug = $baseSlug . '-' . $counter;
+                $counter++;
+            }
+
+            $validated['slug'] = $slug;
         }
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'logo_url' => 'nullable|string',
-            'settings' => 'nullable|array',
-        ]);
-
-        $site->update($validated);
+        $site->update(array_filter($validated, fn($key) => $request->has($key), ARRAY_FILTER_USE_KEY));
 
         return response()->json([
             'data' => $site,
-            'message' => 'Site updated successfully.'
+            'message' => 'Site updated successfully.',
+            'public_url' => $site->public_url
         ]);
     }
 
@@ -156,6 +158,36 @@ class SiteController extends Controller
         return response()->json([
             'data' => $site,
             'message' => 'Site unpublished successfully.'
+        ]);
+    }
+
+    /**
+     * Republish site (regenerate slug and public URL)
+     */
+    public function republish(Request $request, Site $site)
+    {
+        if (!$site->canEdit($request->user())) {
+            abort(403, 'Only the owner can republish this site.');
+        }
+
+        // Regenerate slug from name
+        $baseSlug = \Illuminate\Support\Str::slug($site->name);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        // Check if slug exists (excluding current site)
+        while (Site::where('slug', $slug)->where('id', '!=', $site->id)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        $site->update(['slug' => $slug]);
+
+        return response()->json([
+            'data' => $site,
+            'message' => 'Site republished successfully.',
+            'public_url' => $site->public_url,
+            'old_slug' => $request->input('old_slug')
         ]);
     }
 }

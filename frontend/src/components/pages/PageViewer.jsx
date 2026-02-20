@@ -273,18 +273,28 @@ function PageViewer({ content }) {
                           }
 
                           return (
-                            <Tag 
-                              key={k} 
+                            <Tag
+                              key={k}
                               className={cellClass}
                               style={bgColor ? { backgroundColor: bgColor } : {}}
                               colSpan={cell.attrs?.colspan || 1}
                               rowSpan={cell.attrs?.rowspan || 1}
                             >
-                               {cell.content?.map((p, l) => (
-                                 <p key={l} className="mb-0">
-                                   {p.content?.map((c, m) => renderText(c, m)) || ''}
-                                 </p>
-                               ))}
+                              {cell.content?.map((child, l) => {
+                                // Render based on child node type
+                                if (child.type === 'paragraph') {
+                                  return (
+                                    <p key={l} className="mb-0 last:mb-0">
+                                      {child.content?.map((c, m) => renderText(c, m)) || ''}
+                                    </p>
+                                  );
+                                } else if (child.type === 'text') {
+                                  return renderText(child, l);
+                                } else {
+                                  // Render other node types
+                                  return renderText(child, l);
+                                }
+                              })}
                             </Tag>
                           );
                         })}

@@ -46,18 +46,8 @@ class SiteMemberController extends Controller
      */
     public function store(Request $request, Site $site)
     {
-        // Ensure user has permission to manage members
-        // Typically owner or admin role
-        $currentUser = auth()->user();
-        $isOwner = $site->user_id === $currentUser->id;
-
-        // Members check for admin role
-        $isAdmin = $site->members()
-            ->where('user_id', $currentUser->id)
-            ->where('role', 'admin')
-            ->exists();
-
-        if (!$isOwner && !$isAdmin) {
+        // Ensure user has permission to manage members (owner or admin)
+        if (!$site->canAdmin(auth()->user())) {
             abort(403, 'You do not have permission to invite members.');
         }
 
@@ -137,15 +127,11 @@ class SiteMemberController extends Controller
      */
     public function destroy(Site $site, string $userId)
     {
-        $currentUser = auth()->user();
-        $isOwner = $site->user_id === $currentUser->id;
-        $isAdmin = $site->members()->where('user_id', $currentUser->id)->where('role', 'admin')->exists();
-
-        if (!$isOwner && !$isAdmin) {
+        if (!$site->canAdmin(auth()->user())) {
             abort(403, 'You do not have permission to remove members.');
         }
 
-        if ($userId === $currentUser->id && $isOwner) {
+        if ($userId === auth()->id() && $site->user_id === $userId) {
             abort(400, 'Owner cannot leave the site. Transfer ownership first.');
         }
 

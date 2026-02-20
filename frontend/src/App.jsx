@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import useAuthStore from "./stores/authStore";
 import { ThemeProvider } from "./stores/ThemeContext";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import MainLayout from "./components/layout/MainLayout";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
@@ -22,6 +23,7 @@ import CreatePullRequestPage from "./components/pages/CreatePullRequestPage";
 import PullRequestDetailPage from "./components/pages/PullRequestDetailPage";
 import CommitHistoryPage from "./components/pages/CommitHistoryPage";
 import BranchesPage from "./components/pages/BranchesPage";
+import TestTable from "./pages/TestTable";
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -74,9 +76,10 @@ function App() {
 
     return (
         <ThemeProvider>
-            <BrowserRouter>
-                <Toaster richColors position="bottom-right" theme="system" />
-                <Routes>
+            <ErrorBoundary>
+                <BrowserRouter>
+                    <Toaster richColors position="bottom-right" theme="system" />
+                    <Routes>
                     {/* Auth callback route - handles OAuth redirect */}
                     <Route
                         path="/auth/callback"
@@ -181,8 +184,12 @@ function App() {
 
                     {/* Catch all - redirect to home */}
                     <Route path="*" element={<Navigate to="/" replace />} />
+
+                    {/* Test Routes - Development only */}
+                    <Route path="/test-table" element={<TestTable />} />
                 </Routes>
             </BrowserRouter>
+            </ErrorBoundary>
         </ThemeProvider>
     );
 }

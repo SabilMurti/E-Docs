@@ -60,18 +60,18 @@ export const ImageUpload = Extension.create({
 
   addCommands() {
     return {
-      triggerImageUpload: () => ({ view }) => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = (e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            performUpload(view, file);
-          }
-        };
-        input.click();
+      triggerImageUpload: () => ({ view, chain }) => {
+        // Open modal instead of file input
+        const event = new CustomEvent('openMediaModal', { detail: { type: 'image' } });
+        window.dispatchEvent(event);
         return true;
+      },
+      insertImageFromURL: () => ({ commands }) => {
+        const url = window.prompt('Enter image URL:');
+        if (url) {
+          return commands.setImage({ src: url, alt: 'Image' });
+        }
+        return false;
       },
       triggerFileUpload: () => ({ view }) => {
         const input = document.createElement('input');

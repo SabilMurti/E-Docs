@@ -129,31 +129,31 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
   return (
     <NodeViewWrapper className="code-block-wrapper my-8 group code-block-plus relative font-sans">
       {/* Floating Controls (Top Right Overlay) */}
-      <div 
-        className="absolute -top-10 right-0 z-30 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0" 
+      <div
+        className="absolute -top-10 right-0 z-30 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0"
         contentEditable={false}
       >
         {/* Language Picker */}
         <div className="relative" ref={langPickerRef}>
-          <button 
+          <button
             onClick={() => setShowLangPicker(!showLangPicker)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#252526] hover:bg-[#333] border border-[#333] hover:border-[#444] text-xs font-medium text-gray-300 hover:text-white transition-all shadow-xl backdrop-blur-sm"
+            className="cb-btn flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-xl backdrop-blur-sm"
             title="Change language"
           >
             <span className="opacity-70">Lang:</span>
-            <span className="text-blue-400 font-semibold">{languageDisplay}</span>
-            <ChevronDown size={12} className={`text-gray-500 transition-transform duration-200 ${showLangPicker ? 'rotate-180' : ''}`} />
+            <span className="cb-lang-highlight font-semibold">{languageDisplay}</span>
+            <ChevronDown size={12} className="cb-text-muted transition-transform duration-200" style={showLangPicker ? { transform: 'rotate(180deg)' } : {}} />
           </button>
-          
+
           {/* Language Dropdown */}
           {showLangPicker && (
-            <div className="absolute top-full right-0 mt-2 w-64 max-h-[300px] bg-[#1e1e1e] border border-[#444] rounded-xl shadow-2xl z-50 flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-1 ring-white/10 overflow-hidden">
+            <div className="cb-dropdown absolute top-full right-0 mt-2 w-64 max-h-[300px] rounded-xl shadow-2xl z-50 flex flex-col animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
               {/* Search Header */}
-              <div className="p-3 border-b border-[#333] bg-[#252526]">
+              <div className="cb-dropdown-header p-3">
                 <input
                   ref={searchInputRef}
                   type="text"
-                  className="w-full px-3 py-2 text-sm bg-[#1a1a1a] border border-[#333] rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-gray-500"
+                  className="cb-dropdown-input w-full px-3 py-2 text-sm rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="Search language..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -166,9 +166,9 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                   }}
                 />
               </div>
-              
+
               {/* Language List */}
-              <div className="overflow-y-auto flex-1 p-2 scrollbar-thin scrollbar-thumb-[#444] scrollbar-track-transparent bg-[#1e1e1e]">
+              <div className="cb-dropdown-list overflow-y-auto flex-1 p-2 scrollbar-thin scrollbar-track-transparent">
                 {filteredLanguages.length > 0 ? (
                   <div className="grid grid-cols-1 gap-1">
                     {filteredLanguages.map(lang => (
@@ -180,11 +180,8 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                           setSearchQuery('');
                         }}
                         className={`
-                          w-full text-left px-3 py-2 text-xs rounded-lg transition-all
-                          ${language === lang.id 
-                            ? 'bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/20' 
-                            : 'text-gray-400 hover:text-gray-100 hover:bg-[#333]'
-                          }
+                          cb-dropdown-item w-full text-left px-3 py-2 text-xs rounded-lg transition-all
+                          ${language === lang.id ? 'cb-dropdown-item-active' : ''}
                         `}
                       >
                        {lang.name}
@@ -192,7 +189,7 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="px-2 py-8 text-center text-sm text-gray-500">
+                  <div className="px-2 py-8 text-center text-sm cb-text-muted">
                     No languages found
                   </div>
                 )}
@@ -204,33 +201,33 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
         {/* Copy Button */}
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#252526] hover:bg-[#333] border border-[#333] hover:border-[#444] text-gray-300 hover:text-white transition-all shadow-xl backdrop-blur-sm"
+          className="cb-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all shadow-xl backdrop-blur-sm"
           title="Copy code"
         >
-          {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="text-gray-400" />}
+          {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="cb-text-muted" />}
           <span className="text-xs font-medium">{copied ? 'Copied' : 'Copy'}</span>
         </button>
       </div>
 
-      <div className="relative rounded-xl overflow-hidden bg-[#1e1e1e] border border-[#333] shadow-2xl ring-1 ring-white/5">
+      <div className="cb-container relative rounded-xl overflow-hidden">
         {/* Bloom Effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
-        
+        <div className="cb-bloom absolute inset-0 pointer-events-none" />
+
         {/* Header Bar */}
-        <div 
-          className="relative flex items-center justify-between px-4 py-3 bg-[#252526] border-b border-[#333]" 
+        <div
+          className="cb-header relative flex items-center justify-between px-4 py-3"
           contentEditable={false}
         >
           <div className="flex items-center gap-4 flex-1">
             {/* Window Controls */}
             <div className="flex items-center gap-2 group/dots">
-              <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e] hover:brightness-110 shadow-sm" />
-              <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123] hover:brightness-110 shadow-sm" />
-              <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29] hover:brightness-110 shadow-sm" />
+              <div className="cb-dot-red w-3 h-3 rounded-full hover:brightness-110 shadow-sm" />
+              <div className="cb-dot-yellow w-3 h-3 rounded-full hover:brightness-110 shadow-sm" />
+              <div className="cb-dot-green w-3 h-3 rounded-full hover:brightness-110 shadow-sm" />
             </div>
 
             {/* Vertical Divider */}
-            <div className="w-[1px] h-4 bg-[#444]" />
+            <div className="cb-divider w-[1px] h-4" />
 
             {/* Filename Input */}
             <div className="flex-1 flex justify-center -ml-16">
@@ -239,16 +236,16 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                 value={filename}
                 onChange={(e) => updateAttributes({ filename: e.target.value })}
                 placeholder="Untitled"
-                className="bg-transparent text-center text-xs font-medium text-gray-400 focus:text-gray-100 focus:outline-none placeholder-gray-600 min-w-[100px] hover:text-gray-300 transition-colors"
+                className="cb-filename-input bg-transparent text-center text-xs font-medium focus:outline-none min-w-[100px] transition-colors"
                 spellCheck={false}
               />
             </div>
           </div>
         </div>
-        
+
         {/* Code Content */}
-        <div className="relative bg-[#1e1e1e]">
-          <pre className={`relative font-mono text-sm leading-relaxed p-5 overflow-x-auto text-gray-300 ${showLineNumbers ? 'line-numbers' : ''}`}>
+        <div className="cb-code-area relative">
+          <pre className={`relative font-mono text-sm leading-relaxed p-5 overflow-x-auto ${showLineNumbers ? 'line-numbers' : ''}`}>
             <NodeViewContent as="code" className={`language-${language}`} />
           </pre>
         </div>

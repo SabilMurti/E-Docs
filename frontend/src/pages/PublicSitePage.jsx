@@ -9,10 +9,12 @@ import {
     Sparkles,
     Sun,
     Moon,
+    Search,
 } from "lucide-react";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import PageViewer from "../components/pages/PageViewer";
 import TableOfContents from "../components/pages/TableOfContents";
+import PublicSearchBar from "../components/pages/PublicSearchBar";
 import client from "../api/client";
 import { useTheme } from "../stores/ThemeContext";
 
@@ -100,12 +102,26 @@ export default function PublicSitePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [error, setError] = useState(null);
+    const [searchOpen, setSearchOpen] = useState(false);
     const { theme, toggleTheme } = useTheme();
     const isDark = theme === "dark";
 
     useEffect(() => {
         fetchSiteAndPages();
     }, [identifier]);
+
+    // Keyboard shortcut for search (Ctrl/Cmd + K)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+                e.preventDefault();
+                setSearchOpen(true);
+            }
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, []);
 
     // Handle URL change for pageSlug
     useEffect(() => {
@@ -255,7 +271,20 @@ export default function PublicSitePage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        {/* Search Button */}
+                        <button
+                            onClick={() => setSearchOpen(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-(--color-bg-secondary) border border-(--color-border-primary) text-(--color-text-muted) hover:text-(--color-text-primary) hover:border-emerald-500/50 transition-all text-xs font-medium"
+                            title="Search documentation (Ctrl+K)"
+                        >
+                            <Search size={14} />
+                            <span className="hidden sm:inline">Search...</span>
+                            <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-(--color-border-primary) bg-(--color-bg-primary) px-1.5 font-mono text-[10px] font-medium text-(--color-text-muted)">
+                                <span className="text-xs">⌘</span>K
+                            </kbd>
+                        </button>
+
                         {/* Theme Toggle */}
                         <button
                             onClick={toggleTheme}
@@ -416,24 +445,18 @@ export default function PublicSitePage() {
                                 <TableOfContents
                                     content={currentPage?.content}
                                 />
-
-                                <div className="mt-10 p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 shadow-sm">
-                                    <h4 className="text-xs font-extrabold text-emerald-500 mb-2 uppercase tracking-widest">
-                                        Need Help?
-                                    </h4>
-                                    <p className="text-[11px] text-(--color-text-secondary) leading-relaxed mb-4">
-                                        This documentation is built with E-Docs.
-                                        Contact the author for more info.
-                                    </p>
-                                    <button className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/20">
-                                        Contact Support
-                                    </button>
-                                </div>
                             </div>
                         </aside>
                     </div>
                 </main>
             </div>
+
+            {/* Search Bar */}
+            <PublicSearchBar
+                siteIdentifier={identifier}
+                isOpen={searchOpen}
+                onClose={() => setSearchOpen(false)}
+            />
         </div>
     );
 }

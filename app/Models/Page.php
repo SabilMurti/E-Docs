@@ -19,6 +19,7 @@ class Page extends Model
         'branch_id',
         'parent_id',
         'title',
+        'icon',
         'slug',
         'content',
         'order',

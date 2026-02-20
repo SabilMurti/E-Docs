@@ -58,6 +58,30 @@ class User extends Authenticatable
      */
     public function commits(): HasMany
     {
-        return $this->hasMany(Commit::class);
+        return $this->hasMany(Commit::class, 'user_id');
+    }
+
+    /**
+     * Pull requests authored by this user
+     */
+    public function authoredPullRequests(): HasMany
+    {
+        return $this->hasMany(PullRequest::class, 'author_id');
+    }
+
+    /**
+     * Pull requests merged by this user
+     */
+    public function mergedPullRequests(): HasMany
+    {
+        return $this->hasMany(PullRequest::class, 'merged_by');
+    }
+
+    /**
+     * Reviews written by this user
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(PullRequestReview::class, 'user_id');
     }
 }

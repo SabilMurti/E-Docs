@@ -17,9 +17,10 @@ import { Tabs, TabItem } from './extensions/Tabs';
 
 // UI Components
 import SlashMenu from './menus/SlashMenu';
-import BubbleToolbar from './BubbleToolbar';
 import InsertToolbar from './InsertToolbar';
-import { TableToolbar, useTableCreation } from './TablePlus';
+import MathSymbolsDropdown from './menus/MathSymbolsDropdown';
+import MediaInsertModal from './MediaInsertModal';
+import { TableBubbleMenu } from './extensions/Table';
 
 /**
  * RichEditor Component
@@ -29,19 +30,49 @@ import { TableToolbar, useTableCreation } from './TablePlus';
  * @param {boolean} editable - Whether editor is editable
  * @param {string} placeholder - Placeholder text
  */
-export default function RichEditor({ 
-  content, 
-  onChange, 
+export default function RichEditor({
+  content,
+  onChange,
   editable = true,
-  placeholder = null 
+  placeholder = null
 }) {
   const wrapperRef = useRef(null);
-  
+
   const [slashMenu, setSlashMenu] = useState({
     visible: false,
     query: '',
     position: { top: 0, left: 0 }
   });
+
+  // Media insert modal state
+  const [mediaModal, setMediaModal] = useState({
+    isOpen: false,
+    type: 'image'
+  });
+
+  // Handle media insertion
+  const handleMediaInsert = useCallback((media) => {
+    // Editor will be accessed when the function is called, not when defined
+    setTimeout(() => {
+      if (!editor) return;
+      
+      if (media.type === 'image') {
+        editor.chain().focus().setImage({ src: media.src, alt: media.alt }).run();
+      }
+      
+      setMediaModal({ isOpen: false, type: 'image' });
+    }, 0);
+  }, []);
+
+  // Listen for image upload triggers from extensions
+  useEffect(() => {
+    const handleOpenModal = (e) => {
+      setMediaModal({ isOpen: true, type: e.detail?.type || 'image' });
+    };
+
+    window.addEventListener('openMediaModal', handleOpenModal);
+    return () => window.removeEventListener('openMediaModal', handleOpenModal);
+  }, []);
   
   const extensions = useMemo(() => [
     ...getExtensions(placeholder),
@@ -142,19 +173,13 @@ export default function RichEditor({
       {editable && (
         <div className="editor-toolbar sticky top-0 z-20 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-secondary)] px-4 py-2 flex items-center gap-2">
           <InsertToolbar editor={editor} />
+
+          {/* Math Symbols Dropdown */}
+          <MathSymbolsDropdown editor={editor} />
+
           <div className="ml-auto flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
             <span>Type <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono">/</kbd> for commands</span>
           </div>
-        </div>
-      )}
-      
-      {/* Bubble Menu */}
-      {editable && <BubbleToolbar editor={editor} />}
-      
-      {/* Table Toolbar */}
-      {editable && editor?.isActive('table') && (
-        <div className="table-toolbar-container sticky top-12 z-10 flex justify-center py-2">
-          <TableToolbar editor={editor} />
         </div>
       )}
 
@@ -174,6 +199,19 @@ export default function RichEditor({
           onClose={() => setSlashMenu(prev => ({ ...prev, visible: false }))}
         />
       )}
+
+      {/* Table Bubble Menu */}
+      {editable && (
+        <TableBubbleMenu editor={editor} />
+      )}
+
+      {/* Media Insert Modal */}
+      <MediaInsertModal
+        isOpen={mediaModal.isOpen}
+        onClose={() => setMediaModal({ isOpen: false, type: 'image' })}
+        onInsert={handleMediaInsert}
+        type={mediaModal.type}
+      />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { FloatingMenu } from '@tiptap/react';
-import { 
-  Heading1, Heading2, List, ListOrdered, CheckSquare, 
-  Quote, Image as ImageIcon, Code, Table, Minus, 
-  Youtube, Paperclip 
+import {
+  Heading1, Heading2, List, ListOrdered, CheckSquare,
+  Quote, Image as ImageIcon, Code, Minus,
+  Youtube, Paperclip
 } from 'lucide-react';
 import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
@@ -73,10 +73,6 @@ const addYoutube = useCallback(() => {
     if (url) {
       editor.commands.setYoutubeVideo({ src: url });
     }
-  }, [editor]);
-
-  const addTable = useCallback(() => {
-    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
   }, [editor]);
 
   return (
@@ -152,13 +148,6 @@ const addYoutube = useCallback(() => {
           label="Code Block"
         >
           <Code size={18} />
-        </MenuButton>
-
-        <MenuButton
-          onClick={addTable}
-          label="Table"
-        >
-          <Table size={18} />
         </MenuButton>
 
         <div className="w-px h-4 bg-gray-200 mx-1" />

@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Globe, Lock, Trash2, ArrowLeft, Copy, Check,
-  ExternalLink, Sparkles, AlertTriangle, Save, X
+  ExternalLink, Sparkles, AlertTriangle, Save, X, RefreshCw
 } from 'lucide-react';
 import useSiteStore from '../stores/siteStore';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import SiteMembers from '../components/sites/SiteMembers';
 import ConfirmModal from '../components/common/ConfirmModal';
+import { toast } from 'sonner';
+import client from '../api/client';
 
 function SiteSettingsPage() {
   const { siteId } = useParams();
@@ -16,6 +18,7 @@ function SiteSettingsPage() {
   const { currentSite, fetchSite, updateSite, deleteSite, publishSite, unpublishSite, isLoading } = useSiteStore();
 
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isRepublishing, setIsRepublishing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -52,6 +55,26 @@ function SiteSettingsPage() {
     setEditMode(false);
   };
 
+  const handleRepublish = async () => {
+    if (!currentSite?.is_published) return;
+    
+    setIsRepublishing(true);
+    try {
+      const response = await client.post(`/sites/${siteId}/republish`, {
+        old_slug: currentSite.slug
+      });
+      
+      if (response.data) {
+        toast.success('Site republished! URL updated.');
+        await fetchSite(siteId);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to republish site');
+    } finally {
+      setIsRepublishing(false);
+    }
+  };
+
   const handleDelete = async () => {
     setIsDeleting(true);
     const result = await deleteSite(siteId);
@@ -59,7 +82,9 @@ function SiteSettingsPage() {
     setIsDeleting(false);
   };
 
-  const publicUrl = `${window.location.origin}/public/${currentSite?.id}`;
+  const publicUrl = currentSite?.is_published
+    ? `${window.location.origin}/public/${currentSite.slug}`
+    : '';
 
   const copyUrl = () => {
     navigator.clipboard.writeText(publicUrl);
@@ -194,30 +219,55 @@ function SiteSettingsPage() {
             </div>
 
             {currentSite?.is_published && (
-              <div className="mt-4 p-4 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 rounded-xl">
-                <p className="text-xs font-semibold text-[var(--color-accent)] uppercase tracking-wider mb-2">
-                  Public URL
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] px-3 py-2 rounded-lg text-xs font-mono truncate">
-                    {publicUrl}
-                  </code>
-                  <button
-                    onClick={copyUrl}
-                    className="p-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] hover:border-[var(--color-accent)]/40 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
-                    title="Copy URL"
-                  >
-                    {copied ? <Check size={16} className="text-[var(--color-accent)]" /> : <Copy size={16} />}
-                  </button>
-                  <a
-                    href={publicUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] hover:border-[var(--color-accent)]/40 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
-                    title="Open in new tab"
-                  >
-                    <ExternalLink size={16} />
-                  </a>
+              <div className="mt-4 space-y-4">
+                <div className="p-4 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 rounded-xl">
+                  <p className="text-xs font-semibold text-[var(--color-accent)] uppercase tracking-wider mb-2">
+                    Public URL
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] px-3 py-2 rounded-lg text-xs font-mono truncate">
+                      {publicUrl}
+                    </code>
+                    <button
+                      onClick={copyUrl}
+                      className="p-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] hover:border-[var(--color-accent)]/40 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
+                      title="Copy URL"
+                    >
+                      {copied ? <Check size={16} className="text-[var(--color-accent)]" /> : <Copy size={16} />}
+                    </button>
+                    <a
+                      href={publicUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] hover:border-[var(--color-accent)]/40 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors"
+                      title="Open in new tab"
+                    >
+                      <ExternalLink size={16} />
+                    </a>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                    💡 The URL automatically updates when you change the site name.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-[var(--color-text-primary)]">Regenerate URL</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        Create a new unique URL based on the current site name.
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleRepublish}
+                      isLoading={isRepublishing}
+                      icon={RefreshCw}
+                    >
+                      Republish
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

@@ -7,9 +7,9 @@ import {
   Type, Heading1, Heading2, Heading3,
   List, ListOrdered, CheckSquare, Minus,
   Quote, Code2, Info, AlertTriangle, CheckCircle2, XCircle,
-  Table as TableIcon, CreditCard, AppWindow, Maximize2,
+  CreditCard, AppWindow, Maximize2,
   Footprints, LayoutGrid, FileUp, Image as ImageIcon,
-  Globe, Youtube as YoutubeIcon, Link2, Calculator, Braces, PenTool, Layers
+  Globe, Youtube as YoutubeIcon, Link2, Calculator, Braces, PenTool, Layers, Table
 } from 'lucide-react';
 
 // Block type definitions with categories
@@ -152,13 +152,6 @@ export const BLOCK_DEFINITIONS = [
     category: 'Advanced blocks',
     items: [
       {
-        id: 'table',
-        name: 'Table',
-        icon: TableIcon,
-        description: 'Insert data table',
-        action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-      },
-      {
         id: 'cards',
         name: 'Cards',
         icon: CreditCard,
@@ -177,31 +170,7 @@ export const BLOCK_DEFINITIONS = [
         name: 'Steps',
         icon: Footprints,
         description: 'Step-by-step guide',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="stepper">
-            <div class="step">
-              <div class="step-number">1</div>
-              <div class="step-content">
-                <h4>Step One</h4>
-                <p>Description of the first step...</p>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-number">2</div>
-              <div class="step-content">
-                <h4>Step Two</h4>
-                <p>Description of the second step...</p>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-number">3</div>
-              <div class="step-content">
-                <h4>Step Three</h4>
-                <p>Description of the third step...</p>
-              </div>
-            </div>
-          </div>
-        `).run()
+        action: (editor) => editor.chain().focus().setSteps().run()
       },
       {
         id: 'columns',
@@ -235,6 +204,13 @@ export const BLOCK_DEFINITIONS = [
             }
           ]
         }).run()
+      },
+      {
+        id: 'table',
+        name: 'Table',
+        icon: Table,
+        description: 'Insert a table',
+        action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
       }
     ]
   },
@@ -245,8 +221,12 @@ export const BLOCK_DEFINITIONS = [
         id: 'image',
         name: 'Image',
         icon: ImageIcon,
-        description: 'Add image from URL',
-        action: (editor) => editor.chain().focus().triggerImageUpload().run()
+        description: 'Upload or embed image',
+        action: (editor) => {
+          // Trigger modal via event
+          const event = new CustomEvent('openMediaModal', { detail: { type: 'image' } });
+          window.dispatchEvent(event);
+        }
       },
       {
         id: 'youtube',
@@ -308,17 +288,34 @@ export const BLOCK_DEFINITIONS = [
         }
       },
       {
+        id: 'button',
+        name: 'Button',
+        icon: Maximize2,
+        description: 'Button linking to another page',
+        action: (editor, extra) => {
+          const config = extra || {
+            text: 'Click here',
+            url: '#',
+            variant: 'primary'
+          };
+          editor.chain().focus().insertContent({
+            type: 'button',
+            attrs: {
+              text: config.text,
+              url: config.url,
+              variant: config.variant || 'primary'
+            }
+          }).run();
+        }
+      },
+      {
         id: 'math',
         name: 'Math / LaTeX',
         icon: Calculator,
-        description: 'Mathematical formula',
-        action: (editor, extra) => {
-          const formula = extra?.formula || window.prompt('Enter LaTeX formula (e.g., E = mc^2):');
-          if (formula) {
-            editor.chain().focus().insertContent(`
-              <code class="math-formula">$${formula}$</code>
-            `).run();
-          }
+        description: 'Insert math symbols',
+        action: (editor) => {
+          // Just a placeholder - actual math symbols are in the toolbar dropdown
+          console.log('Use the ∑ button in toolbar for math symbols');
         }
       },
       {
@@ -326,17 +323,11 @@ export const BLOCK_DEFINITIONS = [
         name: 'API Endpoint',
         icon: Braces,
         description: 'API documentation block',
-        action: (editor) => editor.chain().focus().insertContent(`
-          <div class="api-block">
-            <div class="api-header">
-              <span class="method-badge get">GET</span>
-              <code>/api/v1/endpoint</code>
-            </div>
-            <div class="api-body">
-              <p>API endpoint description...</p>
-            </div>
-          </div>
-        `).run()
+        action: (editor) => editor.chain().focus().setAPIEndpoint({
+          method: 'GET',
+          endpoint: '/api/v1/endpoint',
+          description: 'API endpoint description...'
+        }).run()
       },
       {
         id: 'flowchart',
