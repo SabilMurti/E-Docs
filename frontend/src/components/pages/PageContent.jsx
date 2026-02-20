@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import usePageStore from "../../stores/pageStore";
 import useSiteStore from "../../stores/siteStore";
 import RichEditor from "../editor/RichEditor";
+import PageEditor from "../editor/PageEditor";
 import LoadingSpinner from "../common/LoadingSpinner";
 import InputModal from "../common/InputModal";
 import ConfirmModal from "../common/ConfirmModal";
@@ -875,7 +876,7 @@ export default function PageContent() {
                 <div className="px-4 py-6 md:px-16 lg:px-24 xl:px-32">
                     <div className="max-w-3xl mx-auto">
                         {mode === "edit" ? (
-                            <RichEditor
+                            <PageEditor
                                 content={localContent}
                                 onChange={handleContentChange}
                                 editable={true}

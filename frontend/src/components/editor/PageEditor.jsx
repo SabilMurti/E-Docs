@@ -1,42 +1,32 @@
 /**
- * RichEditor - Main editor component
+ * PageEditor - Optimized Rich Text Editor for Page Content
  * 
- * A clean, modular rich text editor with:
- * - Slash command menu
- * - Bubble toolbar
- * - Block handle with drag-drop
- * - Proper extension support
+ * Features:
+ * - Proper scroll container handling for bubble menus
+ * - Optimized extensions for page editing
+ * - Better performance with lazy loading
+ * - Fixed table toolbar positioning
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-
 import { getExtensions } from './extensions';
-import { Callout } from './extensions/Callout/index.jsx';
-import { Tabs, TabItem } from './extensions/Tabs';
-
-// UI Components
+import { TableBubbleMenu } from './extensions/Table';
+import EditorBubbleMenu from './EditorBubbleMenu';
+import EditorToolbar from './EditorToolbar';
 import SlashMenu from './menus/SlashMenu';
 import InsertToolbar from './InsertToolbar';
 import MathSymbolsDropdown from './menus/MathSymbolsDropdown';
 import MediaInsertModal from './MediaInsertModal';
-import { TableBubbleMenu } from './extensions/Table';
 
-/**
- * RichEditor Component
- * 
- * @param {Object} content - Initial content (TipTap JSON)
- * @param {Function} onChange - Callback when content changes
- * @param {boolean} editable - Whether editor is editable
- * @param {string} placeholder - Placeholder text
- */
-export default function RichEditor({
+export default function PageEditor({
   content,
   onChange,
   editable = true,
   placeholder = null
 }) {
   const wrapperRef = useRef(null);
+  const editorContainerRef = useRef(null);
 
   const [slashMenu, setSlashMenu] = useState({
     visible: false,
@@ -44,7 +34,6 @@ export default function RichEditor({
     position: { top: 0, left: 0 }
   });
 
-  // Media insert modal state
   const [mediaModal, setMediaModal] = useState({
     isOpen: false,
     type: 'image'
@@ -52,19 +41,18 @@ export default function RichEditor({
 
   // Handle media insertion
   const handleMediaInsert = useCallback((media) => {
-    // Editor will be accessed when the function is called, not when defined
     setTimeout(() => {
       if (!editor) return;
-      
+
       if (media.type === 'image') {
         editor.chain().focus().setImage({ src: media.src, alt: media.alt }).run();
       }
-      
+
       setMediaModal({ isOpen: false, type: 'image' });
     }, 0);
-  }, []);
+  }, [editor]);
 
-  // Listen for image upload triggers from extensions
+  // Listen for image upload triggers
   useEffect(() => {
     const handleOpenModal = (e) => {
       setMediaModal({ isOpen: true, type: e.detail?.type || 'image' });
@@ -73,11 +61,11 @@ export default function RichEditor({
     window.addEventListener('openMediaModal', handleOpenModal);
     return () => window.removeEventListener('openMediaModal', handleOpenModal);
   }, []);
-  
+
   const extensions = useMemo(() => [
     ...getExtensions(placeholder),
   ], [placeholder]);
-  
+
   const editor = useEditor({
     extensions,
     content: (Array.isArray(content) && content.length === 0) ? '' : (content || ''),
@@ -87,37 +75,38 @@ export default function RichEditor({
     },
     editorProps: {
       attributes: {
-        class: 'rich-editor-content focus:outline-none min-h-[400px] pl-12 pr-4 py-4',
+        class: 'page-editor-content focus:outline-none min-h-[400px] px-4 py-4',
       },
     },
-  });
-  
-  // Slash command detection - Standard Logic
+    immediatelyRender: false,
+  }, [content, extensions, editable]);
+
+  // Slash command detection
   useEffect(() => {
     if (!editor) return;
-    
+
     const handleTransaction = () => {
       const { selection } = editor.state;
       const { $from } = selection;
-      
+
       if (!selection.empty) {
         if (slashMenu.visible) {
           setSlashMenu(prev => ({ ...prev, visible: false }));
         }
         return;
       }
-      
+
       const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
       const match = textBefore.match(/(?:^|\s)\/([a-zA-Z0-9]*)$/);
-      
+
       if (match) {
         const query = match[1];
         const matchIndex = textBefore.lastIndexOf(match[0]);
         const slashOffset = match[0].indexOf('/');
         const startPos = $from.pos - (textBefore.length - matchIndex - slashOffset);
-        
+
         const coords = editor.view.coordsAtPos(startPos);
-        
+
         setSlashMenu({
           visible: true,
           query,
@@ -132,24 +121,26 @@ export default function RichEditor({
         }
       }
     };
-    
+
     editor.on('transaction', handleTransaction);
     return () => editor.off('transaction', handleTransaction);
   }, [editor, slashMenu.visible]);
-  
+
+  // Close slash menu on click outside
   useEffect(() => {
     if (!slashMenu.visible) return;
-    
+
     const handleClick = (e) => {
       if (!e.target.closest('.slash-menu')) {
         setSlashMenu(prev => ({ ...prev, visible: false }));
       }
     };
-    
+
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, [slashMenu.visible]);
-  
+
+  // Sync content changes
   useEffect(() => {
     if (editor && content && !editor.isFocused) {
       const currentContent = editor.getJSON();
@@ -158,41 +149,36 @@ export default function RichEditor({
       }
     }
   }, [content, editor]);
-  
+
   if (!editor) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-6 h-6 border-2 border-[color:var(--color-accent)] border-t-transparent rounded-full" />
+        <div className="animate-spin w-6 h-6 border-2 border-[var(--color-accent)] border-t-transparent rounded-full" />
       </div>
     );
   }
-  
+
   return (
-    <div ref={wrapperRef} className="rich-editor relative group">
-      {/* Toolbar */}
+    <div ref={wrapperRef} className="page-editor relative group">
+      {/* Toolbar - Fixed at top */}
       {editable && (
         <div className="editor-toolbar sticky top-0 z-20 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-secondary)] px-4 py-2 flex items-center gap-2">
           <InsertToolbar editor={editor} />
-
-          {/* Math Symbols Dropdown */}
           <MathSymbolsDropdown editor={editor} />
-
           <div className="ml-auto flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
             <span>Type <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono">/</kbd> for commands</span>
           </div>
         </div>
       )}
 
-      {/* Editor Container - Proper positioning for bubble menus */}
-      <div className="rich-editor-container relative">
-        {/* Main Content Area - Single Column, Centered */}
-        <div className="max-w-4xl mx-auto w-full px-4 md:px-6">
-          <div className="rich-editor-prose">
-            <EditorContent editor={editor} />
-          </div>
+      {/* Editor Container - Proper positioning context for bubble menus */}
+      <div ref={editorContainerRef} className="page-editor-container relative">
+        {/* Main Content Area */}
+        <div className="max-w-3xl mx-auto w-full">
+          <EditorContent editor={editor} />
         </div>
 
-        {/* Bubble Menus - Inside container for proper positioning */}
+        {/* Bubble Menus - Rendered inside editor container for proper positioning */}
         {editable && (
           <>
             <EditorBubbleMenu editor={editor} />

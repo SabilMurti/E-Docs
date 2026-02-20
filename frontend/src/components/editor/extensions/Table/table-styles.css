@@ -111,6 +111,7 @@
    ============================================= */
 .table-bubble-menu-wrapper {
   z-index: 1000;
+  position: relative;
 }
 
 .table-bubble-menu {
@@ -126,6 +127,34 @@
   animation: tableMenuSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   max-width: 100%;
   position: relative;
+}
+
+/* Page Editor specific - ensure proper positioning context */
+.page-editor-container {
+  position: relative;
+  min-height: 400px;
+}
+
+.page-editor-content {
+  outline: none;
+}
+
+/* Rich Editor specific */
+.rich-editor-container {
+  position: relative;
+  min-height: 400px;
+}
+
+.rich-editor-prose {
+  outline: none;
+}
+
+/* Ensure bubble menus work in scrollable containers */
+.page-editor .table-bubble-menu-wrapper,
+.page-editor .tippy-box,
+.rich-editor .table-bubble-menu-wrapper,
+.rich-editor .tippy-box {
+  will-change: transform;
 }
 
 @keyframes tableMenuSlideIn {
