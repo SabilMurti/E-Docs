@@ -27,6 +27,7 @@ export default function PageEditor({
 }) {
   const wrapperRef = useRef(null);
   const editorContainerRef = useRef(null);
+  const editorRef = useRef(null);
 
   const [slashMenu, setSlashMenu] = useState({
     visible: false,
@@ -38,37 +39,6 @@ export default function PageEditor({
     isOpen: false,
     type: 'image'
   });
-
-  // Handle media insertion
-  const handleMediaInsert = useCallback((media) => {
-    setTimeout(() => {
-      if (!editorRef.current) return;
-
-      if (media.type === 'image') {
-        editorRef.current.chain().focus().setImage({ src: media.src, alt: media.alt }).run();
-      }
-
-      setMediaModal({ isOpen: false, type: 'image' });
-    }, 0);
-  }, []);
-
-  // Listen for image upload triggers
-  useEffect(() => {
-    const handleOpenModal = (e) => {
-      setMediaModal({ isOpen: true, type: e.detail?.type || 'image' });
-    };
-
-    window.addEventListener('openMediaModal', handleOpenModal);
-    return () => window.removeEventListener('openMediaModal', handleOpenModal);
-  }, []);
-
-  // Editor ref for use in callbacks
-  const editorRef = useRef(null);
-
-  // Sync ref with editor instance
-  useEffect(() => {
-    editorRef.current = editor;
-  }, [editor]);
 
   const extensions = useMemo(() => [
     ...getExtensions(placeholder),
@@ -87,14 +57,46 @@ export default function PageEditor({
       },
     },
     immediatelyRender: false,
-  }, [content, extensions, editable]);
+  });
+
+  // Sync editor to ref
+  useEffect(() => {
+    if (editor) {
+      editorRef.current = editor;
+    }
+  }, [editor]);
+
+  // Handle media insertion
+  const handleMediaInsert = useCallback((media) => {
+    setTimeout(() => {
+      const currentEditor = editorRef.current;
+      if (!currentEditor) return;
+
+      if (media.type === 'image') {
+        currentEditor.chain().focus().setImage({ src: media.src, alt: media.alt }).run();
+      }
+
+      setMediaModal({ isOpen: false, type: 'image' });
+    }, 0);
+  }, []);
+
+  // Listen for image upload triggers
+  useEffect(() => {
+    const handleOpenModal = (e) => {
+      setMediaModal({ isOpen: true, type: e.detail?.type || 'image' });
+    };
+
+    window.addEventListener('openMediaModal', handleOpenModal);
+    return () => window.removeEventListener('openMediaModal', handleOpenModal);
+  }, []);
 
   // Slash command detection
   useEffect(() => {
-    if (!editorRef.current) return;
+    const currentEditor = editorRef.current;
+    if (!currentEditor) return;
 
     const handleTransaction = () => {
-      const { selection } = editorRef.current.state;
+      const { selection } = currentEditor.state;
       const { $from } = selection;
 
       if (!selection.empty) {
@@ -113,7 +115,7 @@ export default function PageEditor({
         const slashOffset = match[0].indexOf('/');
         const startPos = $from.pos - (textBefore.length - matchIndex - slashOffset);
 
-        const coords = editorRef.current.view.coordsAtPos(startPos);
+        const coords = currentEditor.view.coordsAtPos(startPos);
 
         setSlashMenu({
           visible: true,
@@ -130,8 +132,8 @@ export default function PageEditor({
       }
     };
 
-    editorRef.current.on('transaction', handleTransaction);
-    return () => editorRef.current?.off('transaction', handleTransaction);
+    currentEditor.on('transaction', handleTransaction);
+    return () => currentEditor.off('transaction', handleTransaction);
   }, [slashMenu.visible]);
 
   // Close slash menu on click outside
@@ -150,10 +152,11 @@ export default function PageEditor({
 
   // Sync content changes
   useEffect(() => {
-    if (editorRef.current && content && !editorRef.current.isFocused) {
-      const currentContent = editorRef.current.getJSON();
+    const currentEditor = editorRef.current;
+    if (currentEditor && content && !currentEditor.isFocused) {
+      const currentContent = currentEditor.getJSON();
       if (JSON.stringify(currentContent) !== JSON.stringify(content)) {
-        editorRef.current.commands.setContent(content);
+        currentEditor.commands.setContent(content);
       }
     }
   }, [content]);
