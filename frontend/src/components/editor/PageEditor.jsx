@@ -42,15 +42,15 @@ export default function PageEditor({
   // Handle media insertion
   const handleMediaInsert = useCallback((media) => {
     setTimeout(() => {
-      if (!editor) return;
+      if (!editorRef.current) return;
 
       if (media.type === 'image') {
-        editor.chain().focus().setImage({ src: media.src, alt: media.alt }).run();
+        editorRef.current.chain().focus().setImage({ src: media.src, alt: media.alt }).run();
       }
 
       setMediaModal({ isOpen: false, type: 'image' });
     }, 0);
-  }, [editor]);
+  }, []);
 
   // Listen for image upload triggers
   useEffect(() => {
@@ -61,6 +61,14 @@ export default function PageEditor({
     window.addEventListener('openMediaModal', handleOpenModal);
     return () => window.removeEventListener('openMediaModal', handleOpenModal);
   }, []);
+
+  // Editor ref for use in callbacks
+  const editorRef = useRef(null);
+
+  // Sync ref with editor instance
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   const extensions = useMemo(() => [
     ...getExtensions(placeholder),
@@ -83,10 +91,10 @@ export default function PageEditor({
 
   // Slash command detection
   useEffect(() => {
-    if (!editor) return;
+    if (!editorRef.current) return;
 
     const handleTransaction = () => {
-      const { selection } = editor.state;
+      const { selection } = editorRef.current.state;
       const { $from } = selection;
 
       if (!selection.empty) {
@@ -105,7 +113,7 @@ export default function PageEditor({
         const slashOffset = match[0].indexOf('/');
         const startPos = $from.pos - (textBefore.length - matchIndex - slashOffset);
 
-        const coords = editor.view.coordsAtPos(startPos);
+        const coords = editorRef.current.view.coordsAtPos(startPos);
 
         setSlashMenu({
           visible: true,
@@ -122,9 +130,9 @@ export default function PageEditor({
       }
     };
 
-    editor.on('transaction', handleTransaction);
-    return () => editor.off('transaction', handleTransaction);
-  }, [editor, slashMenu.visible]);
+    editorRef.current.on('transaction', handleTransaction);
+    return () => editorRef.current?.off('transaction', handleTransaction);
+  }, [slashMenu.visible]);
 
   // Close slash menu on click outside
   useEffect(() => {
@@ -142,13 +150,13 @@ export default function PageEditor({
 
   // Sync content changes
   useEffect(() => {
-    if (editor && content && !editor.isFocused) {
-      const currentContent = editor.getJSON();
+    if (editorRef.current && content && !editorRef.current.isFocused) {
+      const currentContent = editorRef.current.getJSON();
       if (JSON.stringify(currentContent) !== JSON.stringify(content)) {
-        editor.commands.setContent(content);
+        editorRef.current.commands.setContent(content);
       }
     }
-  }, [content, editor]);
+  }, [content]);
 
   if (!editor) {
     return (
