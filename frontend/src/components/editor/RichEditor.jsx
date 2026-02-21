@@ -20,7 +20,6 @@ import SlashMenu from './menus/SlashMenu';
 import InsertToolbar from './InsertToolbar';
 import MathSymbolsDropdown from './menus/MathSymbolsDropdown';
 import MediaInsertModal from './MediaInsertModal';
-import { TableBubbleMenu } from './extensions/Table';
 
 /**
  * RichEditor Component
@@ -92,32 +91,36 @@ export default function RichEditor({
     },
   });
   
-  // Slash command detection - Standard Logic
+  // Slash command detection
   useEffect(() => {
     if (!editor) return;
-    
+
     const handleTransaction = () => {
       const { selection } = editor.state;
       const { $from } = selection;
-      
+
+      // Hide menu if there's a selection
       if (!selection.empty) {
         if (slashMenu.visible) {
           setSlashMenu(prev => ({ ...prev, visible: false }));
         }
         return;
       }
-      
+
+      // Get text before cursor
       const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
-      const match = textBefore.match(/(?:^|\s)\/([a-zA-Z0-9]*)$/);
       
+      // Match slash command - must be at start of line or after whitespace
+      const match = textBefore.match(/(?:^|\s)\/([a-zA-Z0-9]*)$/);
+
       if (match) {
         const query = match[1];
         const matchIndex = textBefore.lastIndexOf(match[0]);
         const slashOffset = match[0].indexOf('/');
         const startPos = $from.pos - (textBefore.length - matchIndex - slashOffset);
-        
+
         const coords = editor.view.coordsAtPos(startPos);
-        
+
         setSlashMenu({
           visible: true,
           query,
@@ -132,7 +135,7 @@ export default function RichEditor({
         }
       }
     };
-    
+
     editor.on('transaction', handleTransaction);
     return () => editor.off('transaction', handleTransaction);
   }, [editor, slashMenu.visible]);
@@ -194,10 +197,7 @@ export default function RichEditor({
 
         {/* Bubble Menus - Inside container for proper positioning */}
         {editable && (
-          <>
-            <EditorBubbleMenu editor={editor} />
-            <TableBubbleMenu editor={editor} />
-          </>
+          <EditorBubbleMenu editor={editor} />
         )}
       </div>
 

@@ -23,7 +23,6 @@ import CreatePullRequestPage from "./components/pages/CreatePullRequestPage";
 import PullRequestDetailPage from "./components/pages/PullRequestDetailPage";
 import CommitHistoryPage from "./components/pages/CommitHistoryPage";
 import BranchesPage from "./components/pages/BranchesPage";
-import TestTable from "./pages/TestTable";
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -184,9 +183,6 @@ function App() {
 
                     {/* Catch all - redirect to home */}
                     <Route path="*" element={<Navigate to="/" replace />} />
-
-                    {/* Test Routes - Development only */}
-                    <Route path="/test-table" element={<TestTable />} />
                 </Routes>
             </BrowserRouter>
             </ErrorBoundary>

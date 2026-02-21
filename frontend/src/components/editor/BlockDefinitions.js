@@ -210,7 +210,20 @@ export const BLOCK_DEFINITIONS = [
         name: 'Table',
         icon: Table,
         description: 'Insert a table',
-        action: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+        action: (editor) => {
+          const tableNode = {
+            type: "table",
+            attrs: { theme: "default" },
+            content: Array.from({ length: 3 }).map((_, rowIdx) => ({
+              type: "tableRow",
+              content: Array.from({ length: 3 }).map(() => ({
+                type: rowIdx === 0 ? "tableHeader" : "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Text" }] }]
+              }))
+            }))
+          };
+          editor.chain().focus().insertContent(tableNode).run();
+        }
       }
     ]
   },
@@ -308,16 +321,7 @@ export const BLOCK_DEFINITIONS = [
           }).run();
         }
       },
-      {
-        id: 'math',
-        name: 'Math / LaTeX',
-        icon: Calculator,
-        description: 'Insert math symbols',
-        action: (editor) => {
-          // Just a placeholder - actual math symbols are in the toolbar dropdown
-          console.log('Use the ∑ button in toolbar for math symbols');
-        }
-      },
+
       {
         id: 'api',
         name: 'API Endpoint',

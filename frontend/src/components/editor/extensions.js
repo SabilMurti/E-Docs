@@ -14,13 +14,17 @@ import TextAlign from '@tiptap/extension-text-align';
 import TextStyle from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import Typography from '@tiptap/extension-typography';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 
 // Custom Extensions
 import Image from './extensions/ImageExtension';
 import FileAttachment from './extensions/FileAttachment';
 import { Callout } from './extensions/Callout/index.jsx';
 import { CodeBlockPlus } from './extensions/CodeBlockPlus/index.jsx';
-import { DragHandle } from './extensions/DragHandle';
+// import { DragHandle } from './extensions/DragHandle';
 import { ImageUpload } from './extensions/ImageUpload';
 import { FontSize } from './extensions/FontSize';
 import { Columns, Column } from './extensions/Columns';
@@ -33,7 +37,6 @@ import { APIEndpoint } from './extensions/APIEndpointExtension';
 import { Steps } from './extensions/StepsExtension';
 import { Step } from './extensions/StepExtension';
 import { KeyboardHandler } from './extensions/KeyboardHandler';
-import { TableExtensions } from './extensions/Table';
 
 export const getExtensions = (placeholderText = 'Start typing...') => [
   StarterKit.configure({
@@ -68,6 +71,9 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
       if (node.type.name === 'codeBlock') {
         return null; // No placeholder for code blocks
       }
+      if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+        return 'Text'; // Use simple text to prevent layout collapse
+      }
       return placeholderText;
     },
     includeChildren: true,
@@ -99,6 +105,102 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
     HTMLAttributes: { class: 'task-item' },
   }),
 
+  Table.extend({
+    addAttributes() {
+      return {
+        ...this.parent?.(),
+        theme: {
+          default: 'default',
+          parseHTML: element => element.getAttribute('data-theme'),
+          renderHTML: attributes => {
+            return {
+              'data-theme': attributes.theme,
+            }
+          },
+        },
+      }
+    },
+  }).configure({
+    resizable: true,
+    HTMLAttributes: {
+      class: 'border-collapse table-auto w-full my-4',
+    },
+  }),
+  TableRow,
+  TableHeader.extend({
+    addAttributes() {
+      return {
+        ...this.parent?.(),
+        backgroundColor: {
+          default: null,
+          parseHTML: element => element.style.backgroundColor || null,
+          renderHTML: attributes => {
+            if (!attributes.backgroundColor) return {}
+            return { style: `background-color: ${attributes.backgroundColor}` }
+          },
+        },
+        borderColor: {
+          default: '#e2e8f0',
+          parseHTML: element => element.style.borderColor || null,
+          renderHTML: attributes => {
+            if (!attributes.borderColor) return {}
+            return { style: `border-color: ${attributes.borderColor}` }
+          },
+        },
+        borderWidth: {
+          default: '1px',
+          parseHTML: element => element.style.borderWidth || null,
+          renderHTML: attributes => {
+            if (!attributes.borderWidth) return {}
+            return { style: `border-width: ${attributes.borderWidth}; border-style: solid` }
+          },
+        },
+      }
+    },
+    renderHTML({ HTMLAttributes }) {
+      return ['th', HTMLAttributes, 0];
+    },
+  }).configure({
+    HTMLAttributes: {
+      class: 'p-2 font-bold text-left bg-slate-100 dark:bg-slate-800',
+    },
+  }),
+  TableCell.extend({
+    addAttributes() {
+      return {
+        ...this.parent?.(),
+        backgroundColor: {
+          default: null,
+          parseHTML: element => element.style.backgroundColor || null,
+          renderHTML: attributes => {
+            if (!attributes.backgroundColor) return {}
+            return { style: `background-color: ${attributes.backgroundColor}` }
+          },
+        },
+        borderColor: {
+          default: '#e2e8f0',
+          parseHTML: element => element.style.borderColor || null,
+          renderHTML: attributes => {
+            if (!attributes.borderColor) return {}
+            return { style: `border-color: ${attributes.borderColor}` }
+          },
+        },
+        borderWidth: {
+          default: '1px',
+          parseHTML: element => element.style.borderWidth || null,
+          renderHTML: attributes => {
+            if (!attributes.borderWidth) return {}
+            return { style: `border-width: ${attributes.borderWidth}; border-style: solid` }
+          },
+        },
+      }
+    },
+  }).configure({
+    HTMLAttributes: {
+      class: 'p-2 relative vertical-top',
+    },
+  }),
+
   Highlight.configure({ multicolor: true }),
   Underline,
   
@@ -124,7 +226,7 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   // Custom extensions
   Callout,
   CodeBlockPlus,
-  DragHandle,
+  // DragHandle,
   ImageUpload,
   FontSize,
   Columns,
@@ -139,5 +241,4 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   Steps,
   Step,
   KeyboardHandler,
-  ...TableExtensions,
 ];
