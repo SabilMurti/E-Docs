@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\BranchName;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Page;
@@ -36,9 +37,16 @@ class BranchController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|not_in:main', // 'main' is reserved/default usually
+            'name' => 'required|string|max:255',
             'source_branch' => 'required|string|exists:branches,name',
         ]);
+
+        // Check if branch name is reserved
+        if (BranchName::isReserved($validated['name'])) {
+            return response()->json([
+                'message' => 'Branch name "' . $validated['name'] . '" is reserved.'
+            ], 400);
+        }
 
         // Check if branch exists
         if ($site->branches()->where('name', $validated['name'])->exists()) {
@@ -114,13 +122,7 @@ class BranchController extends Controller
             return response()->json(['message' => 'Cannot delete default branch.'], 400);
         }
 
-        // Delete branch (cascades or soft deletes)
-        // Check migration: $table->foreignUuid('branch_id')... cascade?
-        // In migration we made it nullable without cascade definition in the add_column migration?
-        // Actually we didn't define constraint in the add_column migration because "We can't immediately add foreign key".
-        // So we need to manually delete pages.
-        
-        DB::transaction(function () use ($branch) {
+        DB::transaction(function () use ($branch, $site) {
             Page::where('branch_id', $branch->id)->delete();
             $branch->delete();
         });

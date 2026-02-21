@@ -1,0 +1,408 @@
+/* =============================================
+   Steps / Stepper Block Styles
+   Modern Timeline Design with Theme Support
+   ============================================= */
+
+.steps-block-wrapper {
+  position: relative;
+}
+
+.steps-container {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  transition: box-shadow var(--transition-normal);
+}
+
+.steps-container:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* =============================================
+   Header
+   ============================================= */
+
+.steps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border-primary);
+  gap: 1rem;
+}
+
+.steps-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.steps-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  background: var(--color-accent);
+  color: white;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+}
+
+.steps-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.steps-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.steps-progress-text {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.steps-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  max-width: 50%;
+  justify-content: flex-end;
+}
+
+/* Progress Bar */
+.steps-progress-bar-container {
+  width: 100%;
+  max-width: 120px;
+  height: 6px;
+  background: var(--color-border-primary);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.steps-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover));
+  border-radius: 9999px;
+  transition: width 0.3s ease-out;
+}
+
+/* Header Actions */
+.steps-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.steps-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.steps-action-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.steps-add-btn:hover {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+/* =============================================
+   Steps Content Container
+   ============================================= */
+
+.steps-content {
+  padding: 0.5rem 0;
+}
+
+.steps-nodes {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =============================================
+   Step Item (from StepBlock NodeView)
+   ============================================= */
+
+.step-item-wrapper {
+  position: relative;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  position: relative;
+  transition: background var(--transition-fast);
+  min-height: 3rem;
+}
+
+.step-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.step-item:first-child {
+  padding-top: 1rem;
+}
+
+.step-item:last-child {
+  padding-bottom: 1rem;
+}
+
+.step-item:last-child .step-connector {
+  display: none;
+}
+
+/* =============================================
+   Timeline
+   ============================================= */
+
+.step-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  padding-top: 0.125rem;
+}
+
+.step-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-hover);
+  background: var(--color-bg-primary);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.step-checkbox:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.step-checkbox.completed {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
+.step-number {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.step-connector {
+  width: 2px;
+  flex: 1;
+  min-height: 1.5rem;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-border-primary) 0px,
+    var(--color-border-primary) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  margin-top: 0.25rem;
+}
+
+.step-item:hover .step-connector {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-accent-muted) 0px,
+    var(--color-accent-muted) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.step-item[data-completed="true"] .step-connector {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-accent-light) 0px,
+    var(--color-accent-light) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* =============================================
+   Step Content
+   ============================================= */
+
+.step-content {
+  flex: 1;
+  min-width: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.step-content-inner {
+  min-height: 1.5rem;
+}
+
+.step-content-inner > *:first-child {
+  margin-top: 0;
+}
+
+.step-content-inner > *:last-child {
+  margin-bottom: 0;
+}
+
+.step-content-inner p {
+  margin: 0.25rem 0;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+}
+
+.step-content-inner p:first-child {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.step-content.completed {
+  opacity: 0.6;
+}
+
+.step-content.completed .step-content-inner p:first-child {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-accent);
+}
+
+/* =============================================
+   Step Actions
+   ============================================= */
+
+.step-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.step-actions.visible {
+  opacity: 1;
+}
+
+.step-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.step-action-btn:hover {
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
+}
+
+.step-action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.step-delete-btn:hover {
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+/* =============================================
+   Drag Handle
+   ============================================= */
+
+.steps-block [data-drag-handle] {
+  cursor: grab;
+}
+
+.steps-block [data-drag-handle]:active {
+  cursor: grabbing;
+}
+
+/* =============================================
+   Dark Mode Adjustments
+   ============================================= */
+
+.dark .steps-container {
+  border-color: var(--color-border-primary);
+}
+
+.dark .step-checkbox {
+  background: var(--color-bg-tertiary);
+}
+
+.dark .step-connector {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-neutral-700) 0px,
+    var(--color-neutral-700) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.dark .step-action-btn:hover {
+  background: var(--color-neutral-700);
+}
+
+/* =============================================
+   Responsive
+   ============================================= */
+
+@media (max-width: 640px) {
+  .steps-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .steps-header-right {
+    width: 100%;
+    max-width: none;
+    justify-content: space-between;
+  }
+  
+  .steps-progress-bar-container {
+    flex: 1;
+    max-width: none;
+  }
+  
+  .step-item {
+    gap: 0.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

@@ -1,12 +1,13 @@
 /**
  * CodeBlockPlus Extension for Tiptap
- * 
+ *
  * Enhanced code block with:
  * - Syntax highlighting (via highlight.js)
  * - Language selector
  * - Copy button
  * - Line numbers (optional)
  * - Filename header
+ * - Theme-connected colors
  */
 
 import { mergeAttributes, textblockTypeInputRule } from '@tiptap/core';
@@ -26,47 +27,16 @@ const LANGUAGES = [
   { id: 'html', name: 'HTML' },
   { id: 'css', name: 'CSS' },
   { id: 'scss', name: 'SCSS' },
-  { id: 'less', name: 'LESS' },
   { id: 'json', name: 'JSON' },
-  { id: 'xml', name: 'XML' },
-  { id: 'yaml', name: 'YAML' },
-  { id: 'markdown', name: 'Markdown' },
   { id: 'python', name: 'Python' },
   { id: 'java', name: 'Java' },
-  { id: 'c', name: 'C' },
-  { id: 'cpp', name: 'C++' },
-  { id: 'csharp', name: 'C#' },
   { id: 'go', name: 'Go' },
   { id: 'rust', name: 'Rust' },
   { id: 'php', name: 'PHP' },
   { id: 'ruby', name: 'Ruby' },
-  { id: 'swift', name: 'Swift' },
-  { id: 'kotlin', name: 'Kotlin' },
-  { id: 'dart', name: 'Dart' },
   { id: 'sql', name: 'SQL' },
   { id: 'bash', name: 'Bash' },
   { id: 'shell', name: 'Shell' },
-  { id: 'powershell', name: 'PowerShell' },
-  { id: 'dockerfile', name: 'Dockerfile' },
-  { id: 'nginx', name: 'Nginx' },
-  { id: 'graphql', name: 'GraphQL' },
-  { id: 'lua', name: 'Lua' },
-  { id: 'perl', name: 'Perl' },
-  { id: 'r', name: 'R' },
-  { id: 'scala', name: 'Scala' },
-  { id: 'elixir', name: 'Elixir' },
-  { id: 'clojure', name: 'Clojure' },
-  { id: 'haskell', name: 'Haskell' },
-  { id: 'fsharp', name: 'F#' },
-  { id: 'vbnet', name: 'VB.NET' },
-  { id: 'objectivec', name: 'Objective-C' },
-  { id: 'groovy', name: 'Groovy' },
-  { id: 'matlab', name: 'MATLAB' },
-  { id: 'julia', name: 'Julia' },
-  { id: 'makefile', name: 'Makefile' },
-  { id: 'ini', name: 'INI' },
-  { id: 'toml', name: 'TOML' },
-  { id: 'diff', name: 'Diff' },
 ];
 
 /**
@@ -78,21 +48,21 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
   const [searchQuery, setSearchQuery] = useState('');
   const langPickerRef = useRef(null);
   const searchInputRef = useRef(null);
-  
+
   const language = node.attrs.language || 'plaintext';
   const filename = node.attrs.filename || '';
   const showLineNumbers = node.attrs.showLineNumbers ?? true;
-  
+
   // Get language display name
   const languageDisplay = LANGUAGES.find(l => l.id === language)?.name || language;
-  
+
   // Filter languages by search
-  const filteredLanguages = LANGUAGES.filter(lang => 
-    !searchQuery || 
+  const filteredLanguages = LANGUAGES.filter(lang =>
+    !searchQuery ||
     lang.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     lang.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
+
   // Copy code to clipboard
   const handleCopy = () => {
     const code = node.textContent;
@@ -103,11 +73,11 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
       console.error('Failed to copy:', err);
     });
   };
-  
+
   // Close language picker on click outside
   useEffect(() => {
     if (!showLangPicker) return;
-    
+
     const handleClick = (e) => {
       if (langPickerRef.current && !langPickerRef.current.contains(e.target)) {
         setShowLangPicker(false);
@@ -117,11 +87,10 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showLangPicker]);
-  
+
   // Focus search input when picker opens
   useEffect(() => {
     if (showLangPicker && searchInputRef.current) {
-      // Small timeout to allow render
       setTimeout(() => searchInputRef.current?.focus(), 50);
     }
   }, [showLangPicker]);
@@ -129,31 +98,31 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
   return (
     <NodeViewWrapper className="code-block-wrapper my-8 group code-block-plus relative font-sans">
       {/* Floating Controls (Top Right Overlay) */}
-      <div 
-        className="absolute -top-10 right-0 z-30 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0" 
+      <div
+        className="absolute -top-10 right-0 z-30 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-2 group-hover:translate-y-0"
         contentEditable={false}
       >
         {/* Language Picker */}
         <div className="relative" ref={langPickerRef}>
-          <button 
+          <button
             onClick={() => setShowLangPicker(!showLangPicker)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#252526] hover:bg-[#333] border border-[#333] hover:border-[#444] text-xs font-medium text-gray-300 hover:text-white transition-all shadow-xl backdrop-blur-sm"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border-primary)] hover:border-[var(--color-border-secondary)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all shadow-lg"
             title="Change language"
           >
             <span className="opacity-70">Lang:</span>
-            <span className="text-blue-400 font-semibold">{languageDisplay}</span>
-            <ChevronDown size={12} className={`text-gray-500 transition-transform duration-200 ${showLangPicker ? 'rotate-180' : ''}`} />
+            <span className="font-semibold" style={{ color: 'var(--color-accent)' }}>{languageDisplay}</span>
+            <ChevronDown size={12} className="transition-transform duration-200" style={{ color: 'var(--color-text-muted)', transform: showLangPicker ? 'rotate(180deg)' : '' }} />
           </button>
-          
+
           {/* Language Dropdown */}
           {showLangPicker && (
-            <div className="absolute top-full right-0 mt-2 w-64 max-h-[300px] bg-[#1e1e1e] border border-[#444] rounded-xl shadow-2xl z-50 flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-1 ring-white/10 overflow-hidden">
+            <div className="absolute top-full right-0 mt-2 w-64 max-h-[300px] bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-xl z-50 flex flex-col animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
               {/* Search Header */}
-              <div className="p-3 border-b border-[#333] bg-[#252526]">
+              <div className="p-3 border-b border-[var(--color-border-secondary)] bg-[var(--color-bg-tertiary)]">
                 <input
                   ref={searchInputRef}
                   type="text"
-                  className="w-full px-3 py-2 text-sm bg-[#1a1a1a] border border-[#333] rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white placeholder-gray-500"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg focus:outline-none focus:border-[var(--color-accent)] focus:ring-1 focus:ring-[var(--color-accent)] text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
                   placeholder="Search language..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -166,9 +135,9 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                   }}
                 />
               </div>
-              
+
               {/* Language List */}
-              <div className="overflow-y-auto flex-1 p-2 scrollbar-thin scrollbar-thumb-[#444] scrollbar-track-transparent bg-[#1e1e1e]">
+              <div className="overflow-y-auto flex-1 p-2 scrollbar-thin scrollbar-thumb-[var(--color-border-secondary)] scrollbar-track-transparent bg-[var(--color-bg-primary)]">
                 {filteredLanguages.length > 0 ? (
                   <div className="grid grid-cols-1 gap-1">
                     {filteredLanguages.map(lang => (
@@ -182,8 +151,8 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                         className={`
                           w-full text-left px-3 py-2 text-xs rounded-lg transition-all
                           ${language === lang.id 
-                            ? 'bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/20' 
-                            : 'text-gray-400 hover:text-gray-100 hover:bg-[#333]'
+                            ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] font-medium' 
+                            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
                           }
                         `}
                       >
@@ -192,7 +161,7 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="px-2 py-8 text-center text-sm text-gray-500">
+                  <div className="px-2 py-8 text-center text-sm" style={{ color: 'var(--color-text-muted)' }}>
                     No languages found
                   </div>
                 )}
@@ -204,21 +173,18 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
         {/* Copy Button */}
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#252526] hover:bg-[#333] border border-[#333] hover:border-[#444] text-gray-300 hover:text-white transition-all shadow-xl backdrop-blur-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border-primary)] hover:border-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all"
           title="Copy code"
         >
-          {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} className="text-gray-400" />}
+          {copied ? <Check size={14} style={{ color: 'var(--color-success)' }} /> : <Copy size={14} style={{ color: 'var(--color-text-muted)' }} />}
           <span className="text-xs font-medium">{copied ? 'Copied' : 'Copy'}</span>
         </button>
       </div>
 
-      <div className="relative rounded-xl overflow-hidden bg-[#1e1e1e] border border-[#333] shadow-2xl ring-1 ring-white/5">
-        {/* Bloom Effect */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
-        
+      <div className="relative rounded-xl overflow-hidden bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] shadow-lg">
         {/* Header Bar */}
-        <div 
-          className="relative flex items-center justify-between px-4 py-3 bg-[#252526] border-b border-[#333]" 
+        <div
+          className="relative flex items-center justify-between px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border-primary)]"
           contentEditable={false}
         >
           <div className="flex items-center gap-4 flex-1">
@@ -230,7 +196,7 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
             </div>
 
             {/* Vertical Divider */}
-            <div className="w-[1px] h-4 bg-[#444]" />
+            <div className="w-[1px] h-4 bg-[var(--color-border-secondary)]" />
 
             {/* Filename Input */}
             <div className="flex-1 flex justify-center -ml-16">
@@ -239,16 +205,16 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                 value={filename}
                 onChange={(e) => updateAttributes({ filename: e.target.value })}
                 placeholder="Untitled"
-                className="bg-transparent text-center text-xs font-medium text-gray-400 focus:text-gray-100 focus:outline-none placeholder-gray-600 min-w-[100px] hover:text-gray-300 transition-colors"
+                className="bg-transparent text-center text-xs font-medium text-[var(--color-text-secondary)] focus:text-[var(--color-text-primary)] focus:outline-none placeholder-[var(--color-text-muted)] min-w-[100px] hover:text-[var(--color-text-primary)] transition-colors"
                 spellCheck={false}
               />
             </div>
           </div>
         </div>
-        
+
         {/* Code Content */}
-        <div className="relative bg-[#1e1e1e]">
-          <pre className={`relative font-mono text-sm leading-relaxed p-5 overflow-x-auto text-gray-300 ${showLineNumbers ? 'line-numbers' : ''}`}>
+        <div className="relative bg-[var(--color-bg-primary)]">
+          <pre className={`relative font-mono text-sm leading-relaxed p-5 overflow-x-auto text-[var(--color-text-primary)] ${showLineNumbers ? 'line-numbers' : ''}`}>
             <NodeViewContent as="code" className={`language-${language}`} />
           </pre>
         </div>
@@ -270,17 +236,17 @@ export const CodeBlockPlus = CodeBlockLowlight.extend({
       HTMLAttributes: {},
     }
   },
-  
+
   group: 'block',
-  
+
   content: 'text*',
-  
+
   marks: '',
-  
+
   code: true,
-  
+
   defining: true,
-  
+
   addAttributes() {
     return {
       language: {
@@ -305,95 +271,32 @@ export const CodeBlockPlus = CodeBlockLowlight.extend({
         default: true,
         parseHTML: element => element.getAttribute('data-line-numbers') !== 'false',
         renderHTML: attributes => ({
-          'data-line-numbers': attributes.showLineNumbers ? 'true' : 'false',
+          'data-line-numbers': attributes.showLineNumbers,
         }),
       },
     };
   },
-  
+
   parseHTML() {
     return [
       {
         tag: 'pre',
-        preserveWhitespace: 'full',
       },
     ];
   },
-  
+
   renderHTML({ HTMLAttributes }) {
-    return ['pre', mergeAttributes(HTMLAttributes), ['code', {}, 0]];
+    return ['pre', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), ['code', 0]];
   },
-  
+
   addNodeView() {
     return ReactNodeViewRenderer(CodeBlockView);
   },
-  
-  addCommands() {
-    return {
-      setCodeBlock: (attributes) => ({ commands, state, chain }) => {
-        const { selection } = state;
-        const { $from } = selection;
-        const currentNode = $from.parent;
-        
-        // If current node is empty paragraph, replace with code block
-        if (currentNode.type.name === 'paragraph' && currentNode.textContent === '') {
-          return chain()
-            .deleteCurrentNode()
-            .insertContent({
-              type: this.name,
-              attrs: attributes,
-              content: [{ type: 'text', text: '// Your code here' }]
-            })
-            .run();
-        }
-        
-        // Otherwise convert current node to code block
-        return commands.setNode(this.name, attributes);
-      },
-      toggleCodeBlock: (attributes) => ({ commands, state }) => {
-        const { selection } = state;
-        const node = state.doc.nodeAt(selection.$from.before(selection.$from.depth));
-        
-        if (node?.type.name === 'codeBlock') {
-          return commands.setParagraph();
-        }
-        return commands.setNode(this.name, attributes);
-      },
-    };
-  },
-  
+
   addKeyboardShortcuts() {
     return {
-      'Mod-Alt-c': () => this.editor.commands.toggleCodeBlock(),
-      // Tab should insert actual tab character inside code blocks
-      Tab: () => {
-        if (this.editor.isActive('codeBlock')) {
-          return this.editor.commands.insertContent('\t');
-        }
-        return false;
-      },
-      // Shift-Tab for unindent
-      'Shift-Tab': () => {
-        if (this.editor.isActive('codeBlock')) {
-          // TODO: Implement unindent
-          return true;
-        }
-        return false;
-      },
+      'Mod-Shift-c': () => this.editor.commands.toggleCodeBlock(),
     };
-  },
-  
-  addInputRules() {
-    return [
-      // ``` followed by optional language triggers code block
-      textblockTypeInputRule({
-        find: /^```([a-z]*)?[\s\n]$/,
-        type: this.type,
-        getAttributes: match => ({
-          language: match[1] || 'plaintext',
-        }),
-      }),
-    ];
   },
 });
 

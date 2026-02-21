@@ -14,6 +14,7 @@ class PageResource extends JsonResource
             'site_id' => $this->site_id,
             'parent_id' => $this->parent_id,
             'title' => $this->title,
+            'icon' => $this->icon,
             'slug' => $this->slug,
             'content' => $this->content, // Tiptap JSON
             'order' => $this->order,

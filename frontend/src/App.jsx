@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import useAuthStore from "./stores/authStore";
 import { ThemeProvider } from "./stores/ThemeContext";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import MainLayout from "./components/layout/MainLayout";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
@@ -74,9 +75,10 @@ function App() {
 
     return (
         <ThemeProvider>
-            <BrowserRouter>
-                <Toaster richColors position="bottom-right" theme="system" />
-                <Routes>
+            <ErrorBoundary>
+                <BrowserRouter>
+                    <Toaster richColors position="bottom-right" theme="system" />
+                    <Routes>
                     {/* Auth callback route - handles OAuth redirect */}
                     <Route
                         path="/auth/callback"
@@ -183,6 +185,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </BrowserRouter>
+            </ErrorBoundary>
         </ThemeProvider>
     );
 }

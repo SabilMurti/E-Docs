@@ -24,30 +24,32 @@ export default function FileNodeView(props) {
 
   return (
     <NodeViewWrapper className="file-attachment-node my-4 select-none">
-      <div 
-        className={`flex items-center gap-4 p-4 rounded-xl bg-[#161b22] border transition-all group hover:bg-[#1f242c]
-          ${selected ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-700 hover:border-gray-600'}
+      <div
+        className={`flex items-center gap-4 p-4 rounded-xl transition-all group
+          ${selected 
+            ? 'bg-[var(--color-bg-hover)] border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' 
+            : 'bg-[var(--color-bg-secondary)] border-[var(--color-border-primary)] hover:border-[var(--color-accent)]/50'}
         `}
       >
-        <div className="p-3 bg-gray-800 rounded-lg">
+        <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg">
           {getIcon()}
         </div>
-        
+
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-white truncate text-sm mb-0.5" title={title}>
+          <h4 className="font-medium text-[var(--color-text-primary)] truncate text-sm mb-0.5" title={title}>
             {title || 'Untitled File'}
           </h4>
-          <p className="text-xs text-gray-500 font-mono">
+          <p className="text-xs text-[var(--color-text-muted)] font-mono">
             {formatSize(size || 0)} • {type?.split('/')[1]?.toUpperCase() || 'FILE'}
           </p>
         </div>
 
-        <a 
-          href={src} 
-          download 
-          target="_blank" 
+        <a
+          href={src}
+          download
+          target="_blank"
           rel="noopener noreferrer"
-          className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+          className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
           title="Download File"
           onClick={(e) => e.stopPropagation()}
         >

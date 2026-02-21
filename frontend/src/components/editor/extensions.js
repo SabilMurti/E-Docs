@@ -5,10 +5,6 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import { Table } from '@tiptap/extension-table';
-import { TableRow } from '@tiptap/extension-table-row';
-import { TableCell } from '@tiptap/extension-table-cell';
-import { TableHeader } from '@tiptap/extension-table-header';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import Youtube from '@tiptap/extension-youtube';
@@ -18,13 +14,17 @@ import TextAlign from '@tiptap/extension-text-align';
 import TextStyle from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import Typography from '@tiptap/extension-typography';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 
 // Custom Extensions
 import Image from './extensions/ImageExtension';
 import FileAttachment from './extensions/FileAttachment';
 import { Callout } from './extensions/Callout/index.jsx';
 import { CodeBlockPlus } from './extensions/CodeBlockPlus/index.jsx';
-import { DragHandle } from './extensions/DragHandle';
+// import { DragHandle } from './extensions/DragHandle';
 import { ImageUpload } from './extensions/ImageUpload';
 import { FontSize } from './extensions/FontSize';
 import { Columns, Column } from './extensions/Columns';
@@ -32,6 +32,11 @@ import { Toggle } from './extensions/Toggle';
 import { Card } from './extensions/Card';
 import { ExcalidrawNode } from './extensions/Excalidraw';
 import { Tabs, TabItem } from './extensions/Tabs';
+import { ButtonNode } from './extensions/ButtonExtension';
+import { APIEndpoint } from './extensions/APIEndpointExtension';
+import { Steps } from './extensions/StepsExtension';
+import { Step } from './extensions/StepExtension';
+import { KeyboardHandler } from './extensions/KeyboardHandler';
 
 export const getExtensions = (placeholderText = 'Start typing...') => [
   StarterKit.configure({
@@ -66,6 +71,9 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
       if (node.type.name === 'codeBlock') {
         return null; // No placeholder for code blocks
       }
+      if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+        return 'Text'; // Use simple text to prevent layout collapse
+      }
       return placeholderText;
     },
     includeChildren: true,
@@ -92,45 +100,107 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
     HTMLAttributes: { class: 'task-list' },
   }),
   
-  TaskItem.configure({ 
+  TaskItem.configure({
     nested: true,
     HTMLAttributes: { class: 'task-item' },
   }),
-  
-  Table.configure({
-    resizable: true,
-  }).extend({
+
+  Table.extend({
     addAttributes() {
       return {
-        style: {
+        ...this.parent?.(),
+        theme: {
           default: 'default',
-          parseHTML: element => element.getAttribute('data-style'),
-          renderHTML: attributes => ({ 'data-style': attributes.style }),
+          parseHTML: element => element.getAttribute('data-theme'),
+          renderHTML: attributes => {
+            return {
+              'data-theme': attributes.theme,
+            }
+          },
         },
-      };
+      }
+    },
+  }).configure({
+    resizable: true,
+    HTMLAttributes: {
+      class: 'border-collapse table-auto w-full my-4',
     },
   }),
   TableRow,
-  TableHeader,
+  TableHeader.extend({
+    addAttributes() {
+      return {
+        ...this.parent?.(),
+        backgroundColor: {
+          default: null,
+          parseHTML: element => element.style.backgroundColor || null,
+          renderHTML: attributes => {
+            if (!attributes.backgroundColor) return {}
+            return { style: `background-color: ${attributes.backgroundColor}` }
+          },
+        },
+        borderColor: {
+          default: '#e2e8f0',
+          parseHTML: element => element.style.borderColor || null,
+          renderHTML: attributes => {
+            if (!attributes.borderColor) return {}
+            return { style: `border-color: ${attributes.borderColor}` }
+          },
+        },
+        borderWidth: {
+          default: '1px',
+          parseHTML: element => element.style.borderWidth || null,
+          renderHTML: attributes => {
+            if (!attributes.borderWidth) return {}
+            return { style: `border-width: ${attributes.borderWidth}; border-style: solid` }
+          },
+        },
+      }
+    },
+    renderHTML({ HTMLAttributes }) {
+      return ['th', HTMLAttributes, 0];
+    },
+  }).configure({
+    HTMLAttributes: {
+      class: 'p-2 font-bold text-left bg-slate-100 dark:bg-slate-800',
+    },
+  }),
   TableCell.extend({
     addAttributes() {
       return {
         ...this.parent?.(),
         backgroundColor: {
           default: null,
-          parseHTML: element => element.getAttribute('data-background-color'),
+          parseHTML: element => element.style.backgroundColor || null,
           renderHTML: attributes => {
-            if (!attributes.backgroundColor) return {};
-            return {
-              'data-background-color': attributes.backgroundColor,
-              style: `background-color: ${attributes.backgroundColor}`,
-            };
+            if (!attributes.backgroundColor) return {}
+            return { style: `background-color: ${attributes.backgroundColor}` }
           },
         },
-      };
+        borderColor: {
+          default: '#e2e8f0',
+          parseHTML: element => element.style.borderColor || null,
+          renderHTML: attributes => {
+            if (!attributes.borderColor) return {}
+            return { style: `border-color: ${attributes.borderColor}` }
+          },
+        },
+        borderWidth: {
+          default: '1px',
+          parseHTML: element => element.style.borderWidth || null,
+          renderHTML: attributes => {
+            if (!attributes.borderWidth) return {}
+            return { style: `border-width: ${attributes.borderWidth}; border-style: solid` }
+          },
+        },
+      }
+    },
+  }).configure({
+    HTMLAttributes: {
+      class: 'p-2 relative vertical-top',
     },
   }),
-  
+
   Highlight.configure({ multicolor: true }),
   Underline,
   
@@ -156,7 +226,7 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   // Custom extensions
   Callout,
   CodeBlockPlus,
-  DragHandle,
+  // DragHandle,
   ImageUpload,
   FontSize,
   Columns,
@@ -166,4 +236,9 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   ExcalidrawNode,
   Tabs,
   TabItem,
+  ButtonNode,
+  APIEndpoint,
+  Steps,
+  Step,
+  KeyboardHandler,
 ];

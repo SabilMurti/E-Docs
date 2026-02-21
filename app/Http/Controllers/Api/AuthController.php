@@ -15,12 +15,7 @@ class AuthController extends Controller
      */
     public function redirectToGoogle(): JsonResponse
     {
-        $url = Socialite::driver('google')
-            ->stateless()
-            ->redirect()
-            ->getTargetUrl();
-
-        return response()->json(['url' => $url]);
+        return $this->getOAuthRedirectUrl('google');
     }
 
     /**
@@ -28,59 +23,7 @@ class AuthController extends Controller
      */
     public function handleGoogleCallback()
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
-        
-        try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
-
-            // Find user by Google ID or Email
-            $user = User::where('google_id', $googleUser->getId())->first();
-
-            if (!$user) {
-                $user = User::where('email', $googleUser->getEmail())->first();
-                
-                if ($user) {
-                    // Link existing account
-                    $user->update([
-                        'google_id' => $googleUser->getId(),
-                        'avatar_url' => $user->avatar_url ?? $googleUser->getAvatar(),
-                    ]);
-                } else {
-                    // Create new user
-                    $user = User::create([
-                        'name' => $googleUser->getName(),
-                        'email' => $googleUser->getEmail(),
-                        'google_id' => $googleUser->getId(),
-                        'avatar_url' => $googleUser->getAvatar(),
-                    ]);
-                }
-            } else {
-                // Update avatar if changed (and not null from provider)
-                if ($googleUser->getAvatar()) {
-                    $user->update([
-                        'avatar_url' => $googleUser->getAvatar(),
-                    ]);
-                }
-            }
-
-            // Create token
-            $token = $user->createToken('auth-token')->plainTextToken;
-
-            // Redirect to frontend with token
-            $params = http_build_query([
-                'token' => $token,
-                'user' => json_encode([
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'avatar_url' => $user->avatar_url,
-                ]),
-            ]);
-
-            return redirect($frontendUrl . '/auth/callback?' . $params);
-        } catch (\Exception $e) {
-            return redirect($frontendUrl . '/login?error=' . urlencode($e->getMessage()));
-        }
+        return $this->handleOAuthCallback('google');
     }
 
     /**
@@ -88,7 +31,23 @@ class AuthController extends Controller
      */
     public function redirectToGithub(): JsonResponse
     {
-        $url = Socialite::driver('github')
+        return $this->getOAuthRedirectUrl('github');
+    }
+
+    /**
+     * Handle GitHub OAuth callback
+     */
+    public function handleGithubCallback()
+    {
+        return $this->handleOAuthCallback('github');
+    }
+
+    /**
+     * Get OAuth redirect URL
+     */
+    private function getOAuthRedirectUrl(string $driver): JsonResponse
+    {
+        $url = Socialite::driver($driver)
             ->stateless()
             ->redirect()
             ->getTargetUrl();
@@ -97,62 +56,105 @@ class AuthController extends Controller
     }
 
     /**
-     * Handle GitHub OAuth callback
+     * Handle OAuth callback for any provider
      */
-    public function handleGithubCallback()
+    private function handleOAuthCallback(string $driver)
     {
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
-        
+        $providerIdField = $driver . '_id';
+
         try {
-            $githubUser = Socialite::driver('github')->stateless()->user();
+            $providerUser = Socialite::driver($driver)->stateless()->user();
 
-            // Check if user exists with this GitHub ID
-            $user = User::where('github_id', $githubUser->getId())->first();
-
-            if (! $user) {
-                // Check if email exists (link accounts)
-                $user = User::where('email', $githubUser->getEmail())->first();
-
-                if ($user) {
-                    // Link GitHub to existing account
-                    $user->update([
-                        'github_id' => $githubUser->getId(),
-                        'avatar_url' => $user->avatar_url ?? $githubUser->getAvatar(),
-                    ]);
-                } else {
-                    // Create new user
-                    $user = User::create([
-                        'name' => $githubUser->getName() ?? $githubUser->getNickname(),
-                        'email' => $githubUser->getEmail(),
-                        'github_id' => $githubUser->getId(),
-                        'avatar_url' => $githubUser->getAvatar(),
-                    ]);
-                }
-            } else {
-                // Update avatar if changed
-                $user->update([
-                    'avatar_url' => $githubUser->getAvatar(),
-                ]);
-            }
+            // Find or create user
+            $user = $this->findOrCreateUser(
+                $providerUser,
+                $providerIdField,
+                $driver
+            );
 
             // Create token
             $token = $user->createToken('auth-token')->plainTextToken;
 
             // Redirect to frontend with token
-            $params = http_build_query([
-                'token' => $token,
-                'user' => json_encode([
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'avatar_url' => $user->avatar_url,
-                ]),
-            ]);
-
-            return redirect($frontendUrl . '/auth/callback?' . $params);
+            return $this->redirectToFrontendWithToken(
+                $frontendUrl,
+                $token,
+                $user
+            );
         } catch (\Exception $e) {
             return redirect($frontendUrl . '/login?error=' . urlencode($e->getMessage()));
         }
+    }
+
+    /**
+     * Find existing user or create new one
+     */
+    private function findOrCreateUser($providerUser, string $providerIdField, string $driver): User
+    {
+        // Find by provider ID
+        $user = User::where($providerIdField, $providerUser->getId())->first();
+
+        if ($user) {
+            // Update avatar if changed
+            if ($providerUser->getAvatar()) {
+                $user->update([
+                    $providerIdField => $providerUser->getId(),
+                    'avatar_url' => $providerUser->getAvatar(),
+                ]);
+            }
+            return $user;
+        }
+
+        // Find by email (link accounts)
+        $user = User::where('email', $providerUser->getEmail())->first();
+
+        if ($user) {
+            // Link provider to existing account
+            $user->update([
+                $providerIdField => $providerUser->getId(),
+                'avatar_url' => $user->avatar_url ?? $providerUser->getAvatar(),
+            ]);
+            return $user;
+        }
+
+        // Create new user
+        return User::create([
+            'name' => $this->getUserName($providerUser, $driver),
+            'email' => $providerUser->getEmail(),
+            $providerIdField => $providerUser->getId(),
+            'avatar_url' => $providerUser->getAvatar(),
+        ]);
+    }
+
+    /**
+     * Get user name from provider
+     */
+    private function getUserName($providerUser, string $driver): string
+    {
+        if ($driver === 'github') {
+            return $providerUser->getName() ?? $providerUser->getNickname();
+        }
+
+        return $providerUser->getName();
+    }
+
+    /**
+     * Redirect to frontend with authentication data
+     */
+    private function redirectToFrontendWithToken(string $frontendUrl, string $token, User $user)
+    {
+        $params = http_build_query([
+            'token' => $token,
+            'user' => json_encode([
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'avatar_url' => $user->avatar_url,
+            ]),
+        ]);
+
+        return redirect($frontendUrl . '/auth/callback?' . $params);
     }
 
     /**
