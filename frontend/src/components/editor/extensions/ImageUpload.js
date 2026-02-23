@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { uploadFile } from '../../../api/upload';
+import { resolveImageUrl } from '../../../api/client';
 import { toast } from 'sonner';
 
 /**
@@ -11,10 +12,12 @@ export const performUpload = (view, file, pos) => {
 
   uploadFile(file).then(data => {
     const { schema } = view.state;
+    // Resolve to absolute URL — backend may return a relative /storage/ path
+    const absoluteUrl = resolveImageUrl(data.url);
     let node;
 
     if (data.is_image) {
-      // Create image node
+      // Create image node with relative path
       node = schema.nodes.image.create({ 
         src: data.url, 
         alt: data.filename 

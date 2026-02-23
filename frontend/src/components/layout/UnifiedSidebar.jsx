@@ -37,14 +37,14 @@ import { toast } from "sonner";
 // Page Tree Item Component
 function PageTreeItem({
     page,
-    siteId,
+    siteSlug,
     level = 0,
     onDeleteRequest,
     onAddSubpageRequest,
 }) {
-    const { pageId } = useParams();
+    const { pageSlug } = useParams();
     const navigate = useNavigate();
-    const isActive = pageId === page.id;
+    const isActive = pageSlug === page.slug || pageSlug === page.id;
     const hasChildren = page.children && page.children.length > 0;
 
     // Keep expanded if it has children and one of them is active, otherwise default to false
@@ -53,22 +53,22 @@ function PageTreeItem({
         const checkActive = (children) => {
             return children.some(
                 (child) =>
-                    child.id === pageId ||
+                    child.slug === pageSlug ||
                     (child.children && checkActive(child.children)),
             );
         };
         return checkActive(page.children);
     });
 
-    // Padding based on level
-    const paddingLeft = level === 0 ? 8 : level * 16 + 12;
+    // Padding based on level (slightly tighter for deep nesting)
+    const paddingLeft = level === 0 ? 8 : level * 12 + 12;
 
     useEffect(() => {
         if (hasChildren) {
             const checkActive = (children) => {
                 return children.some(
                     (child) =>
-                        child.id === pageId ||
+                        child.slug === pageSlug ||
                         (child.children && checkActive(child.children)),
                 );
             };
@@ -76,21 +76,24 @@ function PageTreeItem({
                 setIsExpanded(true);
             }
         }
-    }, [pageId, page.children, hasChildren]);
+    }, [pageSlug, page.children, hasChildren]);
+
+    // Limit nesting to 5 levels in UI
+    const canAddSubpage = level < 4; // 0-indexed, 4 = level 5
 
     return (
         <div className="relative">
             {/* Vertical line for hierarchy (only for subpages) */}
             {level > 0 && (
                 <div
-                    className="absolute left-[18px] top-0 bottom-0 w-[1px] bg-[var(--color-border-secondary)] opacity-50"
-                    style={{ left: `${(level - 1) * 16 + 18}px` }}
+                    className="absolute left-[18px] top-0 bottom-0 w-[1px] bg-[var(--color-border-secondary)] opacity-30"
+                    style={{ left: `${(level - 1) * 12 + 18}px` }}
                 />
             )}
 
             <div
                 className={`
-          group flex items-center gap-1.5 py-1.5 pr-1.5 rounded-md
+          group flex items-center gap-1.5 py-1 pr-1.5 rounded-md
           cursor-pointer transition-all text-[13px] select-none relative
           ${
               isActive
@@ -99,7 +102,7 @@ function PageTreeItem({
           }
         `}
                 style={{ paddingLeft: `${paddingLeft}px` }}
-                onClick={() => navigate(`/sites/${siteId}/pages/${page.id}`)}
+                onClick={() => navigate(`/sites/${siteSlug}/pages/${page.slug}`)}
             >
                 {/* Toggle Expander Area */}
                 <div className="w-5 h-5 flex items-center justify-center shrink-0">
@@ -112,7 +115,7 @@ function PageTreeItem({
                             className={`
                 p-0.5 rounded-md transition-all
                 hover:bg-[var(--color-bg-hover)] 
-                ${isExpanded ? "text-[var(--color-text-primary)] rotate-0" : "text-[var(--color-text-muted)] rotate-0"}
+                ${isExpanded ? "text-[var(--color-text-primary)] animate-in fade-in duration-200" : "text-[var(--color-text-muted)]"}
               `}
                         >
                             {isExpanded ? (
@@ -134,7 +137,7 @@ function PageTreeItem({
                             className={
                                 isActive
                                     ? "text-[var(--color-accent)]"
-                                    : "text-[var(--color-text-muted)]"
+                                    : "text-[var(--color-text-muted)] opacity-70"
                             }
                         />
                     )}
@@ -150,14 +153,16 @@ function PageTreeItem({
                     className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* Direct + button for subpages as requested */}
-                    <button
-                        onClick={() => onAddSubpageRequest(page.id)}
-                        className="p-1 rounded hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-text-muted)] transition-colors"
-                        title="Add subpage"
-                    >
-                        <Plus size={14} />
-                    </button>
+                    {/* Direct + button for subpages - hide if max depth reached */}
+                    {canAddSubpage && (
+                        <button
+                            onClick={() => onAddSubpageRequest(page.id)}
+                            className="p-1 rounded hover:bg-[var(--color-accent)] hover:text-white text-[var(--color-text-muted)] transition-colors"
+                            title="Add subpage"
+                        >
+                            <Plus size={14} />
+                        </button>
+                    )}
 
                     <Dropdown
                         trigger={
@@ -167,12 +172,14 @@ function PageTreeItem({
                         }
                         align="right"
                     >
-                        <Dropdown.Item
-                            icon={Plus}
-                            onClick={() => onAddSubpageRequest(page.id)}
-                        >
-                            Add subpage
-                        </Dropdown.Item>
+                        {canAddSubpage && (
+                            <Dropdown.Item
+                                icon={Plus}
+                                onClick={() => onAddSubpageRequest(page.id)}
+                            >
+                                Add subpage
+                            </Dropdown.Item>
+                        )}
                         <Dropdown.Divider />
                         <Dropdown.Item
                             icon={Trash2}
@@ -192,7 +199,7 @@ function PageTreeItem({
                         <PageTreeItem
                             key={child.id}
                             page={child}
-                            siteId={siteId}
+                            siteSlug={siteSlug}
                             level={level + 1}
                             onDeleteRequest={onDeleteRequest}
                             onAddSubpageRequest={onAddSubpageRequest}
@@ -211,7 +218,7 @@ function SiteItem({ site, isActive }) {
 
     return (
         <button
-            onClick={() => navigate(`/sites/${site.id}`)}
+            onClick={() => navigate(`/sites/${site.slug}`)}
             className={`
         w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px]
         transition-colors cursor-pointer group
@@ -242,7 +249,7 @@ function SiteItem({ site, isActive }) {
 function UnifiedSidebar({ isOpen, onClose }) {
     const location = useLocation();
     const navigate = useNavigate();
-    const { siteId } = useParams();
+    const { siteSlug } = useParams();
     const { user, logout } = useAuthStore();
     const {
         sites,
@@ -266,7 +273,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
     const { theme, toggleTheme } = useTheme();
 
     const isDark = theme === "dark";
-    const isInSite = location.pathname.startsWith("/sites/") && siteId;
+    const isInSite = location.pathname.startsWith("/sites/") && siteSlug;
 
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
@@ -282,23 +289,22 @@ function UnifiedSidebar({ isOpen, onClose }) {
     const [showCreateSiteModal, setShowCreateSiteModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Fetch branches when siteId changes
     useEffect(() => {
-        if (siteId) {
+        if (siteSlug) {
             switchBranch("main"); // Reset to main when switching sites
-            fetchBranches(siteId);
+            fetchBranches(siteSlug);
         }
-    }, [siteId, fetchBranches, switchBranch]);
+    }, [siteSlug, fetchBranches, switchBranch]);
 
     useEffect(() => {
         fetchSites();
     }, [fetchSites]);
 
     useEffect(() => {
-        if (siteId) {
-            fetchPages(siteId, currentBranch);
+        if (siteSlug) {
+            fetchPages(siteSlug, currentBranch);
         }
-    }, [siteId, fetchPages, currentBranch]);
+    }, [siteSlug, fetchPages, currentBranch]);
 
     // Helper to find page in tree
     const findPageInTree = (nodes, predicate) => {
@@ -325,14 +331,14 @@ function UnifiedSidebar({ isOpen, onClose }) {
         // We must use the 'pages' from store which are presumably the *old* branch's pages
         // (since we just switched branch name but haven't fetched new pages yet)
 
-        // Use the URL to get the ID, as it is the most reliable source of truth for "where am I"
+        // Use the URL to get the slug, as it is the most reliable source of truth for "where am I"
         const pathParts = location.pathname.split("/pages/");
-        const currentPageId = pathParts.length > 1 ? pathParts[1] : null;
+        const currentPageSlug = pathParts.length > 1 ? pathParts[1] : null;
 
-        if (currentPageId) {
+        if (currentPageSlug) {
             const currentPage = findPageInTree(
                 pages,
-                (p) => p.id === currentPageId,
+                (p) => p.slug === currentPageSlug,
             );
             if (currentPage) {
                 currentLogicalId = currentPage.logical_id;
@@ -340,28 +346,28 @@ function UnifiedSidebar({ isOpen, onClose }) {
         }
 
         // 3. Fetch pages for the NEW branch
-        const newPages = await fetchPages(siteId, branchName);
+        const newPages = await fetchPages(siteSlug, branchName);
 
         // 4. Navigate to the equivalent page or root
-        if (currentPageId && currentLogicalId && newPages) {
+        if (currentPageSlug && currentLogicalId && newPages) {
             const targetPage = findPageInTree(
                 newPages,
                 (p) => p.logical_id === currentLogicalId,
             );
 
             if (targetPage) {
-                navigate(`/sites/${siteId}/pages/${targetPage.id}`);
+                navigate(`/sites/${siteSlug}/pages/${targetPage.slug}`);
                 toast.success(`Switched to branch '${branchName}'`);
             } else {
                 // Page deleted or doesn't exist in new branch
-                navigate(`/sites/${siteId}`);
+                navigate(`/sites/${siteSlug}`);
                 toast.success(
                     `Switched to '${branchName}' (Page not found in this branch)`,
                 );
             }
         } else {
             // Was on root or unknown page
-            navigate(`/sites/${siteId}`);
+            navigate(`/sites/${siteSlug}`);
             toast.success(`Switched to branch '${branchName}'`);
         }
     };
@@ -371,7 +377,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
         if (!newBranchName.trim()) return;
 
         setIsSubmitting(true);
-        const result = await createBranch(siteId, {
+        const result = await createBranch(siteSlug, {
             name: newBranchName.trim(),
             source_branch: currentBranch,
         });
@@ -387,7 +393,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
         }
     };
 
-    const activeSiteId = location.pathname.startsWith("/sites/")
+    const activeSiteSlug = location.pathname.startsWith("/sites/")
         ? location.pathname.split("/")[2]
         : null;
 
@@ -410,7 +416,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
         setIsSubmitting(true);
         try {
             await createPage(
-                siteId,
+                siteSlug,
                 {
                     title,
                     content: {},
@@ -433,7 +439,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
         if (!pageToDelete) return;
         setIsSubmitting(true);
         try {
-            await deletePage(siteId, pageToDelete.id, currentBranch);
+            await deletePage(siteSlug, pageToDelete.slug, currentBranch);
             setShowDeleteModal(false);
             setPageToDelete(null);
         } finally {
@@ -446,9 +452,9 @@ function UnifiedSidebar({ isOpen, onClose }) {
         setIsSubmitting(true);
         try {
             const result = await createSite({ name });
-            if (result.success && result.data?.id) {
+            if (result.success && result.data?.slug) {
                 setShowCreateSiteModal(false);
-                navigate(`/sites/${result.data.id}`);
+                navigate(`/sites/${result.data.slug}`);
             }
         } finally {
             setIsSubmitting(false);
@@ -560,7 +566,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
                                 <div className="flex items-center gap-0.5">
                                     <button
                                         onClick={() =>
-                                            navigate(`/sites/${siteId}/pulls`)
+                                            navigate(`/sites/${siteSlug}/pulls`)
                                         }
                                         className="p-1 rounded hover:bg-(--color-bg-hover) text-(--color-text-muted) hover:text-(--color-text-primary) transition-colors"
                                         title="Pull Requests"
@@ -570,7 +576,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
                                     <button
                                         onClick={() =>
                                             navigate(
-                                                `/sites/${siteId}/branches`,
+                                                `/sites/${siteSlug}/branches`,
                                             )
                                         }
                                         className="p-1 rounded hover:bg-(--color-bg-hover) text-(--color-text-muted) hover:text-(--color-text-primary) transition-colors"
@@ -594,7 +600,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
                                     <button
                                         onClick={() =>
                                             navigate(
-                                                `/sites/${siteId}/settings`,
+                                                `/sites/${siteSlug}/settings`,
                                             )
                                         }
                                         className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
@@ -728,7 +734,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
                                             <PageTreeItem
                                                 key={page.id}
                                                 page={page}
-                                                siteId={siteId}
+                                                siteSlug={siteSlug}
                                                 onDeleteRequest={
                                                     handleDeleteRequest
                                                 }
@@ -770,16 +776,16 @@ function UnifiedSidebar({ isOpen, onClose }) {
                                 </div>
                                 <div className="space-y-0.5">
                                     {sites
-                                        .filter((s) => s.id !== siteId)
+                                        .filter((s) => s.slug !== siteSlug)
                                         .slice(0, 5)
                                         .map((site) => (
                                             <SiteItem
                                                 key={site.id}
                                                 site={site}
-                                                isActive={false}
+                                                isActive={site.slug === siteSlug}
                                             />
                                         ))}
-                                    {sites.filter((s) => s.id !== siteId)
+                                    {sites.filter((s) => s.slug !== siteSlug)
                                         .length === 0 && (
                                         <button
                                             onClick={() =>
@@ -854,7 +860,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
                                                 key={site.id}
                                                 site={site}
                                                 isActive={
-                                                    site.id === activeSiteId
+                                                    site.slug === activeSiteSlug
                                                 }
                                             />
                                         ))

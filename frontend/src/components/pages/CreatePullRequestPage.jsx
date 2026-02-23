@@ -17,7 +17,7 @@ import LoadingSpinner from "../common/LoadingSpinner";
 import { toast } from "sonner";
 
 function CreatePullRequestPage() {
-    const { siteId } = useParams();
+    const { siteSlug } = useParams();
     const navigate = useNavigate();
     const [branches, setBranches] = useState([]);
     const [sourceBranch, setSourceBranch] = useState("");
@@ -31,11 +31,11 @@ function CreatePullRequestPage() {
 
     useEffect(() => {
         loadBranches();
-    }, [siteId]);
+    }, [siteSlug]);
 
     const loadBranches = async () => {
         try {
-            const res = await getBranches(siteId);
+            const res = await getBranches(siteSlug);
             const branchList = res.data || res || [];
             setBranches(branchList);
             const defaultBranch = branchList.find((b) => b.is_default);
@@ -59,7 +59,7 @@ function CreatePullRequestPage() {
         setComparing(true);
         try {
             const res = await compareBranches(
-                siteId,
+                siteSlug,
                 sourceBranch,
                 targetBranch,
             );
@@ -85,7 +85,7 @@ function CreatePullRequestPage() {
         }
         setSubmitting(true);
         try {
-            const res = await createPullRequest(siteId, {
+            const res = await createPullRequest(siteSlug, {
                 source_branch_id: sourceBranch,
                 target_branch_id: targetBranch,
                 title: title.trim(),
@@ -93,7 +93,7 @@ function CreatePullRequestPage() {
                 status: asDraft ? "draft" : "open",
             });
             toast.success("Pull request created!");
-            navigate(`/sites/${siteId}/pulls/${res.data.id}`);
+            navigate(`/sites/${siteSlug}/pulls/${res.data.id}`);
         } catch (err) {
             toast.error(err.response?.data?.message || "Failed to create PR");
         } finally {
@@ -123,7 +123,7 @@ function CreatePullRequestPage() {
             <div className="max-w-4xl mx-auto px-6 py-8">
                 {/* Back */}
                 <button
-                    onClick={() => navigate(`/sites/${siteId}/pulls`)}
+                    onClick={() => navigate(`/sites/${siteSlug}/pulls`)}
                     className="flex items-center gap-2 mb-6 text-sm transition-colors hover:opacity-80"
                     style={{ color: "var(--color-text-muted)" }}
                 >

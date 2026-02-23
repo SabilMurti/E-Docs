@@ -15,7 +15,7 @@ export default function ChangeRequestStatusBar({
   onDiscard 
 }) {
   const navigate = useNavigate();
-  const { siteId, pageId } = useParams();
+  const { siteSlug, pageSlug } = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!currentRequest && !hasUncommittedChanges) {
@@ -102,7 +102,7 @@ export default function ChangeRequestStatusBar({
           <div className="flex items-center gap-2">
             {/* View All Requests */}
             <button
-              onClick={() => navigate(`/sites/${siteId}/pages/${pageId}/requests`)}
+              onClick={() => navigate(`/sites/${siteSlug}/pages/${pageSlug}/requests`)}
               className="px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-md transition-colors flex items-center gap-1.5"
             >
               <Eye size={14} />
@@ -151,7 +151,7 @@ export default function ChangeRequestStatusBar({
                 align="right"
               >
                 <Dropdown.Item 
-                  onClick={() => navigate(`/sites/${siteId}/pages/${pageId}/requests/${currentRequest.id}`)}
+                  onClick={() => navigate(`/sites/${siteSlug}/pages/${pageSlug}/requests/${currentRequest.id}`)}
                   icon={Eye}
                 >
                   View Details

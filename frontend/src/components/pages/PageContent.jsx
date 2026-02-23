@@ -36,7 +36,7 @@ const AUTO_SAVE_KEY = "edocs-autosave-enabled";
 const AUTO_SAVE_DELAY = 3000; // 3 seconds debounce
 
 export default function PageContent() {
-    const { pageId, siteId } = useParams();
+    const { pageSlug, siteSlug } = useParams();
     const rawNavigate = useNavigate();
 
     const { currentPage, fetchPage, saveDraft, isLoading, isSaving } =
@@ -107,10 +107,10 @@ export default function PageContent() {
 
     // Fetch page on mount
     useEffect(() => {
-        if (siteId && pageId) {
-            fetchPage(siteId, pageId);
+        if (siteSlug && pageSlug) {
+            fetchPage(siteSlug, pageSlug);
         }
-    }, [siteId, pageId, fetchPage]);
+    }, [siteSlug, pageSlug, fetchPage]);
 
     // Set local content when page loads
     useEffect(() => {
@@ -126,7 +126,7 @@ export default function PageContent() {
 
         setDraftSaving(true);
         try {
-            const result = await saveDraft(siteId, currentPage.id, {
+            const result = await saveDraft(siteSlug, currentPage.slug, {
                 content: localContent,
             });
 
@@ -143,7 +143,7 @@ export default function PageContent() {
         } finally {
             setDraftSaving(false);
         }
-    }, [currentPage, localContent, siteId, hasUnsavedChanges, saveDraft]);
+    }, [currentPage, localContent, siteSlug, hasUnsavedChanges, saveDraft]);
 
     useEffect(() => {
         if (!autoSaveEnabled || !currentPage) return;
@@ -161,7 +161,7 @@ export default function PageContent() {
 
                 setDraftSaving(true);
                 try {
-                    const result = await saveDraft(siteId, currentPage.id, {
+                    const result = await saveDraft(siteSlug, currentPage.slug, {
                         content,
                     });
 
@@ -183,23 +183,16 @@ export default function PageContent() {
                 clearTimeout(autoSaveTimerRef.current);
             }
 
-            // If creating a new navigation, this might run.
-            // We need to check the ref because state might be stale in cleanup?
-            // Actually, refs are best here.
             if (hasUnsavedRef.current && autoSaveEnabled) {
-                // We can't await here, but we can trigger the promise
-                // Note: strict mode or rapid navigation might cancel this request
-                // if not handled carefully (e.g. using fetch keepalive),
-                // but standard axios/fetch usually completes if initiated.
                 const content = localContentRef.current;
                 if (content) {
-                    saveDraft(siteId, currentPage.id, { content }).catch((e) =>
+                    saveDraft(siteSlug, currentPage.slug, { content }).catch((e) =>
                         console.error("Unmount save failed", e),
                     );
                 }
             }
         };
-    }, [autoSaveEnabled, hasUnsavedChanges, currentPage, siteId, saveDraft]);
+    }, [autoSaveEnabled, hasUnsavedChanges, currentPage, siteSlug, saveDraft]);
 
     // --- CONTENT CHANGE ---
     const handleContentChange = useCallback((newContent) => {
@@ -220,8 +213,8 @@ export default function PageContent() {
 
         try {
             const result = await usePageStore.getState().updatePage(
-                siteId,
-                currentPage.id,
+                siteSlug,
+                currentPage.slug,
                 settings
             );
 
@@ -229,7 +222,7 @@ export default function PageContent() {
                 toast.success('Page settings updated');
                 setShowSettingsModal(false);
                 // Refetch to get updated page
-                await fetchPage(siteId, pageId);
+                await fetchPage(siteSlug, pageSlug);
             } else {
                 toast.error(result.error || 'Failed to update page settings');
             }
@@ -237,7 +230,7 @@ export default function PageContent() {
             console.error('Settings error:', error);
             toast.error('Failed to update page settings');
         }
-    }, [siteId, pageId, currentPage, fetchPage]);
+    }, [siteSlug, pageSlug, currentPage, fetchPage]);
 
     const handleDeletePage = useCallback(() => {
         setShowDeleteConfirm(true);
@@ -246,13 +239,13 @@ export default function PageContent() {
     const handleConfirmDelete = useCallback(async () => {
         try {
             const result = await usePageStore.getState().deletePage(
-                siteId,
-                pageId
+                siteSlug,
+                currentPage.slug
             );
 
             if (result.success) {
                 toast.success('Page deleted');
-                rawNavigate(`/sites/${siteId}`);
+                rawNavigate(`/sites/${siteSlug}`);
             } else {
                 toast.error(result.error || 'Failed to delete page');
             }
@@ -262,7 +255,7 @@ export default function PageContent() {
         } finally {
             setShowDeleteConfirm(false);
         }
-    }, [siteId, pageId, rawNavigate]);
+    }, [siteSlug, pageSlug, rawNavigate]);
 
     const handleDuplicatePage = useCallback(() => {
         toast.info('Duplicate functionality coming soon');
@@ -279,7 +272,7 @@ export default function PageContent() {
         try {
             const result = await usePageStore
                 .getState()
-                .commitChange(siteId, currentPage.id, {
+                .commitChange(siteSlug, currentPage.slug, {
                     content: localContent,
                     title: currentPage.title,
                     message: commitMessage || "Update content",
@@ -300,14 +293,14 @@ export default function PageContent() {
         } finally {
             setDraftSaving(false);
         }
-    }, [currentPage, localContent, siteId, commitMessage]);
+    }, [currentPage, localContent, siteSlug, commitMessage]);
 
     // --- SYNC/PULL ---
     const { currentRequest, fetchRequestDetails } = usePageStore();
 
     useEffect(() => {
-        if (pageId) fetchRequestDetails(pageId);
-    }, [pageId, fetchRequestDetails]);
+        if (currentPage?.slug) fetchRequestDetails(currentPage.slug);
+    }, [currentPage?.slug, fetchRequestDetails]);
 
     const isOutOfSync = useMemo(() => {
         if (!currentRequest || !currentPage) return false;
@@ -322,7 +315,7 @@ export default function PageContent() {
         setDraftSaving(true);
         try {
             await syncChangeRequest(currentRequest.id);
-            await fetchRequestDetails(pageId);
+            await fetchRequestDetails(currentPage.slug);
             toast.success("Synced with latest live version");
         } catch (error) {
             toast.error("Failed to sync changes");
@@ -334,7 +327,7 @@ export default function PageContent() {
     // --- REQUEST REVIEW ---
     const handleFetchBranches = useCallback(async () => {
         try {
-            const res = await client.get(`/sites/${siteId}/branches`);
+            const res = await client.get(`/sites/${siteSlug}/branches`);
             setSiteBranches(res.data.data);
 
             // Auto-select first main/master branch if we are on a feature branch
@@ -351,7 +344,7 @@ export default function PageContent() {
         } catch (error) {
             console.error("Failed to fetch branches:", error);
         }
-    }, [siteId, currentPage, client]);
+    }, [siteSlug, currentPage, client]);
 
     const handleRequestReview = useCallback(async () => {
         if (!currentPage) return;
@@ -373,7 +366,7 @@ export default function PageContent() {
 
         setDraftSaving(true);
         try {
-            const result = await createChangeRequest(currentPage.id, {
+            const result = await createChangeRequest(currentPage.slug, {
                 status: "open",
                 title: prTitle,
                 description: prDescription,
@@ -385,7 +378,7 @@ export default function PageContent() {
                 setHasUnsavedChanges(false);
                 toast.success("Pull Request created successfully!");
                 setShowPRModal(false);
-                navigate(`/sites/${siteId}/pulls/${result.data.id}`);
+                navigate(`/sites/${siteSlug}/pulls/${result.data.id}`);
             }
         } catch (error) {
             console.error("Failed to create PR:", error);
@@ -405,7 +398,7 @@ export default function PageContent() {
         try {
             const sourceBranch =
                 currentPage.branch_name || currentBranch || "main";
-            const res = await client.post(`/sites/${siteId}/branches`, {
+            const res = await client.post(`/sites/${siteSlug}/branches`, {
                 name: name.toLowerCase().replace(/\s+/g, "-"),
                 source_branch: sourceBranch,
             });
@@ -414,7 +407,7 @@ export default function PageContent() {
             setShowBranchModal(false);
 
             // Find the page in the new branch and navigate to it
-            const pagesRes = await client.get(`/sites/${siteId}/pages`, {
+            const pagesRes = await client.get(`/sites/${siteSlug}/pages`, {
                 params: { branch: res.data.data.name },
             });
             const allPages = pagesRes.data.data || [];
@@ -423,9 +416,9 @@ export default function PageContent() {
             );
 
             if (matchingPage) {
-                navigate(`/sites/${siteId}/pages/${matchingPage.id}`);
+                navigate(`/sites/${siteSlug}/pages/${matchingPage.slug}`);
             } else {
-                navigate(`/sites/${siteId}`);
+                navigate(`/sites/${siteSlug}`);
             }
         } catch (error) {
             toast.error(
@@ -471,7 +464,7 @@ export default function PageContent() {
         if (currentSite) {
             items.push({
                 label: currentSite.name,
-                href: `/sites/${currentSite.id}`,
+                href: `/sites/${currentSite.slug}`,
             });
         }
         if (currentPage) {
@@ -791,7 +784,7 @@ export default function PageContent() {
                         <button
                             onClick={() =>
                                 navigate(
-                                    `/sites/${siteId}/pages/${pageId}/requests`,
+                                    `/sites/${siteSlug}/pages/${pageSlug}/requests`,
                                 )
                             }
                             className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
@@ -804,7 +797,7 @@ export default function PageContent() {
                         <button
                             onClick={() =>
                                 navigate(
-                                    `/sites/${siteId}/pages/${pageId}/history`,
+                                    `/sites/${siteSlug}/pages/${pageSlug}/history`,
                                 )
                             }
                             className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
@@ -816,7 +809,7 @@ export default function PageContent() {
                         {/* Branches */}
                         <button
                             onClick={() =>
-                                navigate(`/sites/${siteId}/branches`)
+                                navigate(`/sites/${siteSlug}/branches`)
                             }
                             className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
                             title="Manage Branches"

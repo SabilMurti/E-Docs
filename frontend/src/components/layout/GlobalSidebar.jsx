@@ -48,7 +48,7 @@ function SiteItem({ site, isActive }) {
 
   return (
     <button
-      onClick={() => navigate(`/sites/${site.id}`)}
+      onClick={() => navigate(`/sites/${site.slug}`)}
       className={`
         w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px]
         transition-colors cursor-pointer group
@@ -175,7 +175,7 @@ function GlobalSidebar({ isOpen, onClose }) {
                   <SiteItem 
                     key={site.id} 
                     site={site} 
-                    isActive={site.id === activeSiteId}
+                    isActive={site.slug === activeSiteId}
                   />
                 ))
               )}

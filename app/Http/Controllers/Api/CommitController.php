@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Resources\CommitResource;
 use App\Http\Controllers\Controller;
 use App\Models\Commit;
 use App\Models\CommitPage;
@@ -27,9 +28,17 @@ class CommitController extends Controller
             $query->where('branch_id', $request->branch_id);
         }
 
+        // Filter commits that touched a specific page (by page slug or UUID)
+        if ($request->has('page_id')) {
+            $pageId = $request->page_id;
+            $query->whereHas('pages', function ($q) use ($pageId) {
+                $q->where('page_id', $pageId);
+            });
+        }
+
         $commits = $query->orderByDesc('created_at')->paginate(30);
 
-        return response()->json($commits);
+        return CommitResource::collection($commits);
     }
 
     /**
@@ -151,6 +160,6 @@ class CommitController extends Controller
 
         $commit->load('user', 'branch', 'pages.page');
 
-        return response()->json($commit);
+        return new CommitResource($commit);
     }
 }

@@ -22,7 +22,7 @@ async function getChangeRequestDetail(requestId) {
 }
 
 export default function ChangeRequestDetail() {
-  const { siteId, pageId, requestId } = useParams();
+  const { siteSlug, pageSlug, requestId } = useParams();
   const navigate = useNavigate();
   const { currentSite, fetchSite } = useSiteStore();
   const [request, setRequest] = useState(null);
@@ -37,10 +37,10 @@ export default function ChangeRequestDetail() {
 
   // Fetch Site Data if missing (e.g. on refresh)
   useEffect(() => {
-    if (siteId && (!currentSite || currentSite.id !== siteId)) {
-      fetchSite(siteId);
+    if (siteSlug && (!currentSite || currentSite.slug !== siteSlug)) {
+      fetchSite(siteSlug);
     }
-  }, [siteId, currentSite, fetchSite]);
+  }, [siteSlug, currentSite, fetchSite]);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -49,8 +49,8 @@ export default function ChangeRequestDetail() {
         setRequest(data);
         
         // Fetch current page content for diff comparison
-        if (siteId && pageId) {
-            const pageRes = await getPage(siteId, pageId);
+        if (siteSlug && pageSlug) {
+            const pageRes = await getPage(siteSlug, pageSlug);
             const pageData = pageRes.data || pageRes;
             setCurrentPage(pageData);
         }
@@ -62,7 +62,7 @@ export default function ChangeRequestDetail() {
       }
     };
     if (requestId) fetchDetail();
-  }, [requestId, siteId, pageId]);
+  }, [requestId, siteSlug, pageSlug]);
 
   const handleMergeClick = (content = null) => {
     // Crucial fix: React passes an event object by default if called from onClick.
@@ -85,7 +85,7 @@ export default function ChangeRequestDetail() {
         title: request.title
       });
       toast.success('Changes merged successfully!');
-      navigate(`/sites/${siteId}/pages/${pageId}`);
+      navigate(`/sites/${siteSlug}/pages/${pageSlug}`);
     } catch (err) {
       console.error(err);
       if (err.response?.status === 409) {
@@ -107,7 +107,7 @@ export default function ChangeRequestDetail() {
         title: request.title
       });
       toast.success('Conflict resolved and changes merged!');
-      navigate(`/sites/${siteId}/pages/${pageId}`);
+      navigate(`/sites/${siteSlug}/pages/${pageSlug}`);
     } catch (err) {
       toast.error('Failed to resolve conflict: ' + err.message);
     } finally {
@@ -118,7 +118,7 @@ export default function ChangeRequestDetail() {
   const handlePush = async () => {
     setIsMerging(true);
     try {
-      await createChangeRequest(pageId, {
+      await createChangeRequest(pageSlug, {
         status: 'open',
         title: request.title,
         content: request.content,
@@ -158,7 +158,7 @@ export default function ChangeRequestDetail() {
       <div className="flex items-center justify-between mb-8 border-b border-gray-700 pb-6">
         <div>
           <button 
-            onClick={() => navigate(`/sites/${siteId}/pages/${pageId}/requests`)}
+            onClick={() => navigate(`/sites/${siteSlug}/pages/${pageSlug}/requests`)}
             className="flex items-center gap-2 text-gray-500 hover:text-white mb-4 transition-colors"
           >
             <ArrowLeft size={16} />

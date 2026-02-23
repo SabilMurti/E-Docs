@@ -76,6 +76,14 @@ export const getCommit = async (siteId, commitId) => {
   return data;
 };
 
+// Get commits filtered to a specific page (for page history view)
+export const getPageCommits = async (siteId, pageId) => {
+  const { data } = await client.get(`/sites/${siteId}/commits`, {
+    params: { page_id: pageId },
+  });
+  return data;
+};
+
 // Member Role
 export const updateMemberRole = async (siteId, userId, role) => {
   const { data } = await client.put(`/sites/${siteId}/members/${userId}`, { role });

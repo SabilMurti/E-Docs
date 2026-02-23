@@ -122,7 +122,7 @@ function SiteCard({ site, onClick, delay = 0 }) {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/sites/${site.id}/settings`);
+              navigate(`/sites/${site.slug}/settings`);
             }}
             className="p-1.5 rounded-md hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
@@ -259,8 +259,8 @@ function HomePage() {
     try {
       const result = await createSite(data);
       console.log('Create site result:', result);
-      if (result.success && result.data?.id) {
-        navigate(`/sites/${result.data.id}`);
+      if (result.success && result.data?.slug) {
+        navigate(`/sites/${result.data.slug}`);
       } else {
         console.error('Create site failed:', result.error);
         toast.error('Failed to create site: ' + (result.error || 'Unknown error'));
@@ -362,14 +362,14 @@ function HomePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {sites.map((site, index) => (
-                    <SiteCard
-                      key={site.id}
-                      site={site}
-                      onClick={() => navigate(`/sites/${site.id}`)}
-                      delay={300 + index * 100}
-                    />
-                  ))}
+                    {sites.map((site, index) => (
+                      <SiteCard
+                        key={site.id}
+                        site={site}
+                        onClick={() => navigate(`/sites/${site.slug}`)}
+                        delay={300 + index * 100}
+                      />
+                    ))}
                 </div>
               )}
             </div>

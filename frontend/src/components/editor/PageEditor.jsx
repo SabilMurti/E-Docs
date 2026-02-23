@@ -19,6 +19,17 @@ import MathSymbolsDropdown from "./menus/MathSymbolsDropdown";
 import MediaInsertModal from "./MediaInsertModal";
 import { TableToolbar } from "./TablePlus";
 
+// Normalize content: Tiptap requires a valid doc object or empty string
+function normalizeContent(c) {
+    if (!c) return '';
+    if (Array.isArray(c)) return ''; // [] is not valid Tiptap content
+    if (typeof c === 'object') {
+        if (c.type !== 'doc') return ''; // must be a Tiptap doc node
+        return c;
+    }
+    return c;
+}
+
 export default function PageEditor({
     content,
     onChange,
@@ -47,8 +58,7 @@ export default function PageEditor({
 
     const editor = useEditor({
         extensions,
-        content:
-            Array.isArray(content) && content.length === 0 ? "" : content || "",
+        content: normalizeContent(content),
         editable,
         onUpdate: ({ editor }) => {
             onChange?.(editor.getJSON());
@@ -162,13 +172,14 @@ export default function PageEditor({
         return () => document.removeEventListener("click", handleClick);
     }, [slashMenu.visible]);
 
-    // Sync content changes
+    // Sync content changes from parent (e.g. when switching pages)
     useEffect(() => {
         const currentEditor = editorRef.current;
-        if (currentEditor && content && !currentEditor.isFocused) {
+        const normalized = normalizeContent(content);
+        if (currentEditor && normalized && !currentEditor.isFocused) {
             const currentContent = currentEditor.getJSON();
-            if (JSON.stringify(currentContent) !== JSON.stringify(content)) {
-                currentEditor.commands.setContent(content);
+            if (JSON.stringify(currentContent) !== JSON.stringify(normalized)) {
+                currentEditor.commands.setContent(normalized);
             }
         }
     }, [content]);

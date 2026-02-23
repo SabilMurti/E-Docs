@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import client from '../api/client';
 
 function SiteSettingsPage() {
-  const { siteId } = useParams();
+  const { siteSlug } = useParams();
   const navigate = useNavigate();
   const { currentSite, fetchSite, updateSite, deleteSite, publishSite, unpublishSite, isLoading } = useSiteStore();
 
@@ -26,8 +26,8 @@ function SiteSettingsPage() {
   const [formData, setFormData] = useState({ name: '', description: '' });
 
   useEffect(() => {
-    if (siteId) fetchSite(siteId);
-  }, [siteId, fetchSite]);
+    if (siteSlug) fetchSite(siteSlug);
+  }, [siteSlug, fetchSite]);
 
   useEffect(() => {
     if (currentSite) {
@@ -41,17 +41,17 @@ function SiteSettingsPage() {
   const handlePublishToggle = async () => {
     setIsPublishing(true);
     if (currentSite?.is_published) {
-      await unpublishSite(siteId);
+      await unpublishSite(siteSlug);
     } else {
-      await publishSite(siteId);
+      await publishSite(siteSlug);
     }
-    await fetchSite(siteId);
+    await fetchSite(siteSlug);
     setIsPublishing(false);
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    await updateSite(siteId, formData);
+    await updateSite(siteSlug, formData);
     setEditMode(false);
   };
 
@@ -60,13 +60,13 @@ function SiteSettingsPage() {
     
     setIsRepublishing(true);
     try {
-      const response = await client.post(`/sites/${siteId}/republish`, {
+      const response = await client.post(`/sites/${siteSlug}/republish`, {
         old_slug: currentSite.slug
       });
       
       if (response.data) {
         toast.success('Site republished! URL updated.');
-        await fetchSite(siteId);
+        await fetchSite(siteSlug);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to republish site');
@@ -77,7 +77,7 @@ function SiteSettingsPage() {
 
   const handleDelete = async () => {
     setIsDeleting(true);
-    const result = await deleteSite(siteId);
+    const result = await deleteSite(siteSlug);
     if (result.success) navigate('/');
     setIsDeleting(false);
   };
@@ -107,7 +107,7 @@ function SiteSettingsPage() {
         {/* ── Header ── */}
         <div className="flex items-center gap-4 mb-8">
           <button
-            onClick={() => navigate(`/sites/${siteId}`)}
+            onClick={() => navigate(`/sites/${siteSlug}`)}
             className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <ArrowLeft size={20} />
@@ -274,7 +274,7 @@ function SiteSettingsPage() {
           </section>
 
           {/* ── Collaborators ── */}
-          <SiteMembers siteId={siteId} />
+          <SiteMembers siteSlug={siteSlug} />
 
           {/* ── Danger Zone ── */}
           <section className="bg-[var(--color-bg-secondary)] rounded-2xl border border-red-500/30 p-6">

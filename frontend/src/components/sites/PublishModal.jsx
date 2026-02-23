@@ -20,8 +20,8 @@ export default function PublishModal({ isOpen, onClose, site }) {
     setLoading(true);
     setError(null);
     try {
-      await publishSite(site.id);
-      await fetchSite(site.id); // Refresh state
+      await publishSite(site.slug);
+      await fetchSite(site.slug); // Refresh state
       // Don't close modal, show success state instead
     } catch (err) {
       console.error(err);
@@ -37,8 +37,8 @@ export default function PublishModal({ isOpen, onClose, site }) {
     setLoading(true);
     setError(null);
     try {
-      await unpublishSite(site.id);
-      await fetchSite(site.id);
+      await unpublishSite(site.slug);
+      await fetchSite(site.slug);
     } catch (err) {
       console.error(err);
       setError('Failed to unpublish site.');

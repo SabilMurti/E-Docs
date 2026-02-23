@@ -14,7 +14,7 @@ const ROLE_CONFIG = {
   viewer:   { label: 'Viewer',   color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-bg-hover)]', border: 'border-[var(--color-border-primary)]', icon: Shield },
 };
 
-export default function SiteMembers({ siteId }) {
+export default function SiteMembers({ siteSlug }) {
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
@@ -22,12 +22,12 @@ export default function SiteMembers({ siteId }) {
   const [inviteRole, setInviteRole] = useState('editor');
   const [memberToRemove, setMemberToRemove] = useState(null);
 
-  useEffect(() => { fetchMembers(); }, [siteId]);
+  useEffect(() => { fetchMembers(); }, [siteSlug]);
 
   const fetchMembers = async () => {
     try {
       setIsLoading(true);
-      const data = await getSiteMembers(siteId);
+      const data = await getSiteMembers(siteSlug);
       setMembers(data.data || []);
     } catch {
       toast.error('Failed to load members');
@@ -41,7 +41,7 @@ export default function SiteMembers({ siteId }) {
     if (!inviteEmail) return;
     setIsInviting(true);
     try {
-      await addSiteMember(siteId, inviteEmail, inviteRole);
+      await addSiteMember(siteSlug, inviteEmail, inviteRole);
       toast.success('Member invited successfully');
       setInviteEmail('');
       fetchMembers();
@@ -55,7 +55,7 @@ export default function SiteMembers({ siteId }) {
   const handleRemoveMember = async () => {
     if (!memberToRemove) return;
     try {
-      await removeSiteMember(siteId, memberToRemove.id);
+      await removeSiteMember(siteSlug, memberToRemove.id);
       toast.success(`${memberToRemove.name} removed`);
       setMembers(members.filter(m => m.id !== memberToRemove.id));
       setMemberToRemove(null);

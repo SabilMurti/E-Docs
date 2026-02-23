@@ -105,7 +105,7 @@ Route::prefix('public')->group(function () {
     // Public Site routes - Rate limited
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('sites/{identifier}', [PublicSiteController::class, 'show']);
-        Route::get('sites/{identifier}/pages/{pageId}', [PublicSiteController::class, 'page']);
+        Route::get('sites/{identifier}/pages/{pageSlug}', [PublicSiteController::class, 'page']);
         Route::get('sites/{identifier}/search', [PublicSiteController::class, 'search']);
     });
 });

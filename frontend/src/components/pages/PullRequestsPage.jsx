@@ -14,7 +14,7 @@ import { getPullRequests } from "../../api/pulls";
 import LoadingSpinner from "../common/LoadingSpinner";
 
 function PullRequestsPage() {
-    const { siteId } = useParams();
+    const { siteSlug } = useParams();
     const navigate = useNavigate();
     const [pullRequests, setPullRequests] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -22,12 +22,12 @@ function PullRequestsPage() {
 
     useEffect(() => {
         fetchPRs();
-    }, [siteId, statusFilter]);
+    }, [siteSlug, statusFilter]);
 
     const fetchPRs = async () => {
         setLoading(true);
         try {
-            const res = await getPullRequests(siteId, statusFilter);
+            const res = await getPullRequests(siteSlug, statusFilter);
             setPullRequests(res.data || []);
         } catch (err) {
             console.error("Failed to fetch pull requests:", err);
@@ -86,7 +86,7 @@ function PullRequestsPage() {
                         <h1 className="text-2xl font-bold">Pull Requests</h1>
                     </div>
                     <button
-                        onClick={() => navigate(`/sites/${siteId}/pulls/new`)}
+                        onClick={() => navigate(`/sites/${siteSlug}/pulls/new`)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all hover:opacity-90"
                         style={{ backgroundColor: "var(--color-accent)" }}
                     >
@@ -181,7 +181,7 @@ function PullRequestsPage() {
                         {pullRequests.map((pr, index) => (
                             <Link
                                 key={pr.id}
-                                to={`/sites/${siteId}/pulls/${pr.id}`}
+                                to={`/sites/${siteSlug}/pulls/${pr.id}`}
                                 className="flex items-start gap-4 px-5 py-4 transition-colors hover:opacity-90 group"
                                 style={{
                                     backgroundColor:

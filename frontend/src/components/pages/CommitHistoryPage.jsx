@@ -31,7 +31,7 @@ function extractTextFromTiptap(node) {
 }
 
 function CommitHistoryPage() {
-    const { siteId } = useParams();
+    const { siteSlug } = useParams();
     const [commits, setCommits] = useState([]);
     const [branches, setBranches] = useState([]);
     const [selectedBranch, setSelectedBranch] = useState("");
@@ -42,15 +42,15 @@ function CommitHistoryPage() {
 
     useEffect(() => {
         loadBranches();
-    }, [siteId]);
+    }, [siteSlug]);
 
     useEffect(() => {
         fetchCommits();
-    }, [siteId, selectedBranch]);
+    }, [siteSlug, selectedBranch]);
 
     const loadBranches = async () => {
         try {
-            const res = await getBranches(siteId);
+            const res = await getBranches(siteSlug);
             const list = res.data || res || [];
             setBranches(list);
             const defaultBranch = list.find((b) => b.is_default);
@@ -63,7 +63,7 @@ function CommitHistoryPage() {
     const fetchCommits = async () => {
         setLoading(true);
         try {
-            const res = await getCommits(siteId, selectedBranch || null);
+            const res = await getCommits(siteSlug, selectedBranch || null);
             setCommits(res.data || []);
         } catch (err) {
             console.error("Failed to fetch commits:", err);
@@ -81,7 +81,7 @@ function CommitHistoryPage() {
         setExpandedCommit(commit.id);
         setLoadingDetail(true);
         try {
-            const res = await getCommit(siteId, commit.id);
+            const res = await getCommit(siteSlug, commit.id);
             setCommitDetail(res.data || res);
         } catch (err) {
             console.error(err);

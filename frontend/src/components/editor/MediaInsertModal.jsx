@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import CustomModal from '../common/CustomModal';
-import { ImageIcon, Link2, Upload, X } from 'lucide-react';
+import { ImageIcon, Link2, Upload, X, Loader2 } from 'lucide-react';
+import { uploadFile } from '../../api/upload';
+import { resolveImageUrl } from '../../api/client';
+import { toast } from 'sonner';
 
 /**
  * MediaInsertModal - Modal for inserting images (upload or URL)
- * Inspired by Pormulir's MediaUploadModal
  */
 export default function MediaInsertModal({ isOpen, onClose, onInsert, type = 'image' }) {
   const [mode, setMode] = useState('upload'); // 'upload' or 'url'
@@ -22,17 +24,24 @@ export default function MediaInsertModal({ isOpen, onClose, onInsert, type = 'im
     }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // For now, create object URL (in production, upload to server)
-      const objectUrl = URL.createObjectURL(file);
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const data = await uploadFile(file);
       onInsert({
         type: 'image',
-        src: objectUrl,
-        alt: file.name
+        src: data.url, // Store relative path
+        alt: data.filename || file.name,
       });
       handleClose();
+    } catch (err) {
+      console.error('Upload failed:', err);
+      toast.error('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -86,25 +95,41 @@ export default function MediaInsertModal({ isOpen, onClose, onInsert, type = 'im
 
         {/* Upload Mode */}
         {mode === 'upload' && (
-          <div className="border-2 border-dashed border-[var(--color-border-primary)] rounded-xl p-8 text-center hover:border-[var(--color-accent)]/50 transition-colors">
+          <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+            isUploading
+              ? 'border-[var(--color-accent)]/50 bg-[var(--color-accent)]/5'
+              : 'border-[var(--color-border-primary)] hover:border-[var(--color-accent)]/50'
+          }`}>
             <input
               type="file"
               accept="image/*"
               onChange={handleFileUpload}
               className="hidden"
               id="image-upload"
+              disabled={isUploading}
             />
             <label
               htmlFor="image-upload"
-              className="cursor-pointer flex flex-col items-center"
+              className={`flex flex-col items-center ${isUploading ? 'cursor-wait' : 'cursor-pointer'}`}
             >
-              <ImageIcon size={48} className="text-[var(--color-text-muted)] mb-3" />
-              <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                Click to upload or drag and drop
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                SVG, PNG, JPG or GIF (max. 10MB)
-              </p>
+              {isUploading ? (
+                <>
+                  <Loader2 size={48} className="text-[var(--color-accent)] mb-3 animate-spin" />
+                  <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    Uploading...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <ImageIcon size={48} className="text-[var(--color-text-muted)] mb-3" />
+                  <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    Click to upload or drag and drop
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    SVG, PNG, JPG or GIF (max. 10MB)
+                  </p>
+                </>
+              )}
             </label>
           </div>
         )}

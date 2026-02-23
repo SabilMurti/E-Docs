@@ -7,7 +7,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import Button from '../common/Button';
 
 function MergeRequestsPage() {
-  const { siteId } = useParams();
+  const { siteSlug } = useParams();
   const navigate = useNavigate();
   const { currentSite, fetchSite } = useSiteStore();
   const [requests, setRequests] = useState([]);
@@ -16,7 +16,7 @@ function MergeRequestsPage() {
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const response = await client.get(`/sites/${siteId}/merge-requests`);
+        const response = await client.get(`/sites/${siteSlug}/merge-requests`);
         setRequests(response.data.data || []);
       } catch (error) {
         console.error('Failed to fetch MRs:', error);
@@ -25,11 +25,11 @@ function MergeRequestsPage() {
       }
     };
 
-    if (siteId) {
-      if (!currentSite) fetchSite(siteId);
+    if (siteSlug) {
+      if (!currentSite) fetchSite(siteSlug);
       fetchRequests();
     }
-  }, [siteId, currentSite, fetchSite]);
+  }, [siteSlug, currentSite, fetchSite]);
 
   if (isLoading) {
     return (
@@ -51,7 +51,7 @@ function MergeRequestsPage() {
             Review and merge changes between branches.
           </p>
         </div>
-        <Button onClick={() => navigate(`/sites/${siteId}/merge-requests/new`)}>
+        <Button onClick={() => navigate(`/sites/${siteSlug}/merge-requests/new`)}>
           <Plus size={16} />
           New Merge Request
         </Button>
@@ -62,7 +62,7 @@ function MergeRequestsPage() {
           <GitPullRequest size={48} className="mx-auto text-[var(--color-text-muted)] mb-4 opacity-50" />
           <h3 className="text-lg font-medium text-[var(--color-text-primary)]">No merge requests found</h3>
           <p className="text-[var(--color-text-muted)] mb-6">Create a merge request to merge changes from one branch to another.</p>
-          <Button onClick={() => navigate(`/sites/${siteId}/merge-requests/new`)}>
+          <Button onClick={() => navigate(`/sites/${siteSlug}/merge-requests/new`)}>
             Create Merge Request
           </Button>
         </div>
@@ -71,7 +71,7 @@ function MergeRequestsPage() {
           {requests.map((mr) => (
             <div 
               key={mr.id}
-              onClick={() => navigate(`/sites/${siteId}/merge-requests/${mr.id}`)}
+              onClick={() => navigate(`/sites/${siteSlug}/merge-requests/${mr.id}`)}
               className="group p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent)]/50 transition-all cursor-pointer"
             >
               <div className="flex items-start justify-between gap-4">

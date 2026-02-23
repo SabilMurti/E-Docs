@@ -23,7 +23,7 @@ class PageResource extends JsonResource
             'branch_name' => $this->whenLoaded('branch', fn() => $this->branch->name, $this->branch?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'children' => PageResource::collection($this->whenLoaded('children')),
+            'children' => PageResource::collection($this->whenLoaded('allChildren')),
             'excerpt' => $this->when($this->content, function () {
                 return null;
             }),

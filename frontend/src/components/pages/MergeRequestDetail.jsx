@@ -21,7 +21,7 @@ import DiffViewer from "./DiffViewer";
 import { toast } from "sonner";
 
 function MergeRequestDetailPage() {
-    const { siteId, requestId } = useParams();
+    const { siteSlug, requestId } = useParams();
     const navigate = useNavigate();
     const { currentSite, fetchSite } = useSiteStore();
     const { user } = useAuthStore();
@@ -35,23 +35,23 @@ function MergeRequestDetailPage() {
         const fetchMr = async () => {
             try {
                 const response = await client.get(
-                    `/sites/${siteId}/merge-requests/${requestId}`,
+                    `/sites/${siteSlug}/merge-requests/${requestId}`,
                 );
                 setMr(response.data.mr);
                 setChanges(response.data.changes || []);
             } catch (error) {
                 toast.error("Failed to load MR");
-                navigate(`/sites/${siteId}/merge-requests`);
+                navigate(`/sites/${siteSlug}/merge-requests`);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        if (siteId && requestId) {
-            if (!currentSite) fetchSite(siteId);
+        if (siteSlug && requestId) {
+            if (!currentSite) fetchSite(siteSlug);
             fetchMr();
         }
-    }, [siteId, requestId, currentSite, fetchSite, navigate]);
+    }, [siteSlug, requestId, currentSite, fetchSite, navigate]);
 
     const handleMerge = async () => {
         if (
@@ -64,12 +64,12 @@ function MergeRequestDetailPage() {
         setIsMerge(true);
         try {
             await client.post(
-                `/sites/${siteId}/merge-requests/${requestId}/merge`,
+                `/sites/${siteSlug}/merge-requests/${requestId}/merge`,
             );
             toast.success("Merged successfully!");
             // Refresh
             const response = await client.get(
-                `/sites/${siteId}/merge-requests/${requestId}`,
+                `/sites/${siteSlug}/merge-requests/${requestId}`,
             );
             setMr(response.data.mr);
         } catch (error) {
@@ -84,9 +84,9 @@ function MergeRequestDetailPage() {
 
     const handleDelete = async () => {
         try {
-            await client.delete(`/sites/${siteId}/merge-requests/${requestId}`);
+            await client.delete(`/sites/${siteSlug}/merge-requests/${requestId}`);
             toast.success("Merge request deleted successfully!");
-            navigate(`/sites/${siteId}/merge-requests`);
+            navigate(`/sites/${siteSlug}/merge-requests`);
         } catch (error) {
             toast.error(
                 "Delete failed: " +
@@ -117,7 +117,7 @@ function MergeRequestDetailPage() {
             <div className="mb-6">
                 <Button
                     size="sm"
-                    onClick={() => navigate(`/sites/${siteId}/merge-requests`)}
+                    onClick={() => navigate(`/sites/${siteSlug}/merge-requests`)}
                     className="bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] p-0 mb-4 flex items-center gap-2"
                 >
                     <ArrowLeft size={14} />

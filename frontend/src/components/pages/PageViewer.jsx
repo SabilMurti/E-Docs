@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Layers } from 'lucide-react';
+import { resolveImageUrl } from '../../api/client';
 
 function ViewerTabs({ node, renderContent }) {
   const [activeTab, setActiveTab] = useState(node.attrs?.activeTab || 0);
@@ -83,7 +84,26 @@ function PageViewer({ content }) {
           }
           return (
             <p key={i} className="mb-4 leading-7 text-[var(--color-text-primary)]">
-              {node.content.map((c, j) => renderText(c, j))}
+              {node.content.map((c, j) => {
+                if (c.type === 'text') return renderText(c, j);
+                if (c.type === 'image') {
+                  const imgSrc = resolveImageUrl(c.attrs?.src);
+                  return (
+                    <img 
+                      key={j}
+                      src={imgSrc} 
+                      alt={c.attrs?.alt || ''} 
+                      className="inline-block rounded-lg shadow-sm"
+                      style={{ 
+                        maxWidth: '100%', 
+                        width: c.attrs?.width || 'auto',
+                        height: 'auto'
+                      }}
+                    />
+                  );
+                }
+                return null;
+              })}
             </p>
           );
           
@@ -175,20 +195,31 @@ function PageViewer({ content }) {
             </blockquote>
           );
 
-        case 'image':
+        case 'image': {
+           const imgSrc = resolveImageUrl(node.attrs?.src);
            return (
              <figure key={i} className="my-8 text-center">
                <div className="inline-block relative overflow-hidden rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)]"
                     style={{ width: node.attrs?.width ? (typeof node.attrs.width === 'number' ? `${node.attrs.width}px` : node.attrs.width) : '100%', maxWidth: '100%' }}>
                  <img 
-                   src={node.attrs?.src} 
+                   src={imgSrc} 
                    alt={node.attrs?.alt || ''} 
                    className="w-full h-auto object-cover"
                    loading="lazy"
+                   onError={(e) => {
+                     // Show broken image placeholder if URL fails
+                     e.currentTarget.style.opacity = '0.3';
+                   }}
                  />
                </div>
+               {node.attrs?.caption && (
+                 <figcaption className="mt-2 text-sm text-[var(--color-text-muted)] italic">
+                   {node.attrs.caption}
+                 </figcaption>
+               )}
              </figure>
            );
+        }
 
         case 'youtube':
            return (
@@ -393,68 +424,75 @@ function PageViewer({ content }) {
   const renderText = (node, key) => {
     if (node.type !== 'text') return null;
     
-    let text = node.text;
+    let content = node.text;
+    let hasMarks = node.marks && node.marks.length > 0;
     
-    if (node.marks) {
-      node.marks.forEach(mark => {
+    if (hasMarks) {
+      node.marks.forEach((mark, mIdx) => {
+        const mKey = `${key}-${mIdx}`;
         switch (mark.type) {
           case 'bold':
-            text = <strong key={key} className="font-bold text-[var(--color-text-primary)]">{text}</strong>;
+            content = <strong key={mKey} className="font-bold text-[var(--color-text-primary)]">{content}</strong>;
             break;
           case 'italic':
-            text = <em key={key} className="italic">{text}</em>;
+            content = <em key={mKey} className="italic">{content}</em>;
             break;
           case 'strike':
-            text = <s key={key} className="line-through decoration-[var(--color-text-muted)]">{text}</s>;
+            content = <s key={mKey} className="line-through decoration-[var(--color-text-muted)]">{content}</s>;
             break;
           case 'underline':
-             text = <u key={key} className="decoration-[var(--color-accent)] underline-offset-2">{text}</u>;
-             break;
+            content = <u key={mKey} className="decoration-[var(--color-accent)] underline-offset-2">{content}</u>;
+            break;
           case 'code':
-            text = <code key={key} className="bg-[var(--color-bg-tertiary)] px-1.5 py-0.5 rounded text-[0.9em] font-mono text-[var(--color-accent)] border border-[var(--color-border-primary)]">{text}</code>;
+            content = <code key={mKey} className="bg-[var(--color-bg-tertiary)] px-1.5 py-0.5 rounded text-[0.9em] font-mono text-[var(--color-accent)] border border-[var(--color-border-primary)]">{content}</code>;
             break;
           case 'link':
-            text = (
+            content = (
               <a 
-                key={key}
+                key={mKey}
                 href={mark.attrs?.href} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-[var(--color-accent)] hover:underline inline-flex items-center gap-0.5 font-medium transition-colors hover:text-[var(--color-accent-hover)] cursor-pointer"
               >
-                {text}
+                {content}
                 <ExternalLink size={10} className="mb-1 opacity-50" />
               </a>
             );
             break;
           case 'highlight':
-             text = <mark key={key} className="bg-yellow-500/20 text-yellow-200 rounded px-0.5">{text}</mark>;
-             break;
-          case 'textStyle':
-             const style = {};
-             if (mark.attrs.color) style.color = mark.attrs.color;
-             if (mark.attrs.fontSize) {
-                 let fs = mark.attrs.fontSize;
-                 // Ensure px unit
-                 if (typeof fs === 'number' || (typeof fs === 'string' && /^\d+$/.test(fs))) {
-                     fs += 'px';
-                 }
-                 style.fontSize = fs;
-             }
-             if (Object.keys(style).length > 0) {
-                 text = <span style={style}>{text}</span>;
-             }
-             break;
+            content = <mark key={mKey} className="bg-yellow-500/20 text-yellow-200 rounded px-0.5">{content}</mark>;
+            break;
+          case 'textStyle': {
+            const style = {};
+            if (mark.attrs?.color) style.color = mark.attrs.color;
+            if (mark.attrs?.fontSize) {
+              let fs = mark.attrs.fontSize;
+              if (typeof fs === 'number' || (typeof fs === 'string' && /^\d+$/.test(fs))) {
+                fs += 'px';
+              }
+              style.fontSize = fs;
+            }
+            if (Object.keys(style).length > 0) {
+              content = <span key={mKey} style={style}>{content}</span>;
+            }
+            break;
+          }
+          default:
+            break;
         }
       });
+      // Return the marked content directly (already has a key from the last mark)
+      return content;
     }
     
-    return <span key={key}>{text}</span>;
+    // Plain text — no extra span wrapper needed
+    return <span key={key}>{content}</span>;
   };
 
   try {
     const doc = typeof content === 'string' ? JSON.parse(content) : content;
-    return <div className="prose prose-invert max-w-none">{renderContent(doc)}</div>;
+    return <div className="page-viewer">{renderContent(doc)}</div>;
   } catch (e) {
     return <div className="text-[var(--color-text-secondary)] whitespace-pre-wrap">{String(content)}</div>;
   }

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Search, X, FileText } from "lucide-react";
 import client from "../../api/client";
 
-export default function PublicSearchBar({ siteIdentifier, isOpen, onClose }) {
+export default function PublicSearchBar({ siteSlug, isOpen, onClose }) {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +49,7 @@ export default function PublicSearchBar({ siteIdentifier, isOpen, onClose }) {
 
             try {
                 const response = await client.get(
-                    `/public/sites/${siteIdentifier}/search?q=${encodeURIComponent(query)}`
+                    `/public/sites/${siteSlug}/search?q=${encodeURIComponent(query)}`
                 );
                 setResults(response.data.data || []);
             } catch (error) {
@@ -65,7 +65,7 @@ export default function PublicSearchBar({ siteIdentifier, isOpen, onClose }) {
                 clearTimeout(debounceRef.current);
             }
         };
-    }, [query, siteIdentifier]);
+    }, [query, siteSlug]);
 
     const handleResultClick = (result) => {
         onClose();

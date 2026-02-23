@@ -51,6 +51,11 @@ class Site extends Model
         });
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
     /**
      * Owner of this site
      */

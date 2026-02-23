@@ -93,7 +93,7 @@ function PageTreeItem({ page, allPages, currentPageId, onSelect, depth = 0 }) {
 }
 
 export default function PublicSitePage() {
-    const { identifier, pageSlug } = useParams();
+    const { siteSlug, pageSlug } = useParams();
     const navigate = useNavigate();
 
     const [site, setSite] = useState(null);
@@ -108,7 +108,7 @@ export default function PublicSitePage() {
 
     useEffect(() => {
         fetchSiteAndPages();
-    }, [identifier]);
+    }, [siteSlug]);
 
     // Keyboard shortcut for search (Ctrl/Cmd + K)
     useEffect(() => {
@@ -154,7 +154,7 @@ export default function PublicSitePage() {
         setError(null);
         try {
             // 1. Get Site & Flat Pages List
-            const res = await client.get(`/public/sites/${identifier}`);
+            const res = await client.get(`/public/sites/${siteSlug}`);
             const siteData = res.data.data;
 
             setSite(siteData);
@@ -175,7 +175,7 @@ export default function PublicSitePage() {
             // Use slug or ID for URL. Route supports /pages/:pageId
             // Let's use ID to be safe
             const res = await client.get(
-                `/public/sites/${identifier}/pages/${page.id}`,
+                `/public/sites/${siteSlug}/pages/${page.id}`,
             );
             const fullPage = res.data.data;
             setCurrentPage(fullPage);
@@ -188,7 +188,7 @@ export default function PublicSitePage() {
         setSidebarOpen(false);
         // Update URL
         // Use slug if available, else ID
-        navigate(`/public/${identifier}/${page.slug || page.id}`);
+        navigate(`/public/${siteSlug}/${page.slug || page.id}`);
     };
 
     if (isLoading && !site) {
@@ -375,7 +375,7 @@ export default function PublicSitePage() {
                                         )}
                                     </header>
 
-                                    <div className="prose dark:prose-invert prose-emerald max-w-none">
+                                    <div>
                                         <PageViewer
                                             content={currentPage.content}
                                         />
@@ -453,7 +453,7 @@ export default function PublicSitePage() {
 
             {/* Search Bar */}
             <PublicSearchBar
-                siteIdentifier={identifier}
+                siteSlug={siteSlug}
                 isOpen={searchOpen}
                 onClose={() => setSearchOpen(false)}
             />

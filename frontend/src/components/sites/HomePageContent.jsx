@@ -46,7 +46,7 @@ function SitesSection({ sites, isLoading, onNavigate, onCreateSite }) {
         <SiteCard
           key={site.id}
           site={site}
-          onClick={() => onNavigate(`/sites/${site.id}`)}
+          onClick={() => onNavigate(`/sites/${site.slug}`)}
           delay={300 + index * 100}
         />
       ))}
@@ -129,8 +129,8 @@ export default function HomePageContent() {
   const handleCreateSite = useCallback(async (data) => {
     try {
       const result = await createSite(data);
-      if (result.success && result.data?.id) {
-        navigate(`/sites/${result.data.id}`);
+      if (result.success && result.data?.slug) {
+        navigate(`/sites/${result.data.slug}`);
       }
     } catch (error) {
       console.error('Error creating site:', error);

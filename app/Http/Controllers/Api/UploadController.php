@@ -89,11 +89,12 @@ class UploadController extends Controller
                 // Store file with secure name
                 $path = $file->storeAs($directory, $filename, 'public');
 
-                // Generate full URL
-                $url = Storage::url($path);
+                // Generate relative path (e.g. /storage/uploads/images/xxx.png)
+                // Using relative path so frontend resolves against the correct backend origin
+                $relativePath = Storage::disk('public')->url($path);
 
                 return response()->json([
-                    'url' => asset($url),
+                    'url' => $relativePath,
                     'filename' => $file->getClientOriginalName(),
                     'size' => $file->getSize(),
                     'type' => $mimeType,

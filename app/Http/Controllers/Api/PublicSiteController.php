@@ -161,16 +161,16 @@ class PublicSiteController extends Controller
     /**
      * View single page content
      */
-    public function page($identifier, $pageId)
+    public function page($identifier, $pageSlug)
     {
         $site = $this->findSite($identifier);
 
         $defaultBranch = $site->branches()->where('is_default', true)->first();
 
         $pageQuery = Page::where('site_id', $site->id)
-            ->where(function ($query) use ($pageId) {
-                $query->where('id', $pageId)
-                    ->orWhere('slug', $pageId);
+            ->where(function ($query) use ($pageSlug) {
+                $query->where('id', $pageSlug)
+                    ->orWhere('slug', $pageSlug);
             });
 
         if ($defaultBranch) {

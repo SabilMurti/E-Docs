@@ -40,11 +40,12 @@ class PageController extends Controller
              return response()->json(['data' => []]);
         }
 
-        // Get pages for this branch
+        // Get pages for this branch with recursive children
         $pages = $site->pages()
             ->where('branch_id', $branch->id)
             ->whereNull('parent_id')
-            ->with(['branch', 'children' => function($query) use ($branch) {
+            ->with(['branch', 'allChildren' => function($query) use ($branch) {
+                // Ensure recursive children also respect the branch
                 $query->where('branch_id', $branch->id)->orderBy('order');
             }])
             ->orderBy('order')
@@ -71,6 +72,23 @@ class PageController extends Controller
         // Resolve branch
         $branchName = $validated['branch'] ?? 'main';
         $branch = $site->branches()->where('name', $branchName)->firstOrFail();
+
+        // Calculate depth and validate max 5 levels
+        $parentId = $validated['parent_id'] ?? null;
+        if ($parentId) {
+            $parent = Page::findOrFail($parentId);
+            $depth = 1;
+            $currentParent = $parent;
+            while ($currentParent->parent_id) {
+                $depth++;
+                $currentParent = Page::findOrFail($currentParent->parent_id);
+                if ($depth >= 5) {
+                    return response()->json([
+                        'message' => 'Maximum nesting level (5) reached.'
+                    ], 422);
+                }
+            }
+        }
 
         // Calculate order (append to end)
         $order = Page::where('site_id', $site->id)

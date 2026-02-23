@@ -13,7 +13,7 @@ import Button from '../common/Button';
 import { toast } from 'sonner';
 
 function CreateMergeRequestPage() {
-  const { siteId } = useParams();
+  const { siteSlug } = useParams();
   const navigate = useNavigate();
   const { currentSite, fetchSite, fetchBranches, branches, currentBranch } = useSiteStore();
   
@@ -33,15 +33,15 @@ function CreateMergeRequestPage() {
 
   // Initial Load
   useEffect(() => {
-    if (siteId) {
+    if (siteSlug) {
       const init = async () => {
-        if (!currentSite) await fetchSite(siteId);
-        await fetchBranches(siteId);
+        if (!currentSite) await fetchSite(siteSlug);
+        await fetchBranches(siteSlug);
         setIsLoading(false);
       };
       init();
     }
-  }, [siteId, currentSite, fetchSite, fetchBranches]);
+  }, [siteSlug, currentSite, fetchSite, fetchBranches]);
 
   // Set default branches
   useEffect(() => {
@@ -81,7 +81,7 @@ function CreateMergeRequestPage() {
     setIsChecking(true);
     setMergeStatus('checking');
     try {
-        const data = await compareBranches(siteId, sourceId, targetId);
+        const data = await compareBranches(siteSlug, sourceId, targetId);
         setDiffData(data);
         if (data.can_merge) {
             setMergeStatus(data.status === 'identical' ? 'identical' : 'able');
@@ -100,7 +100,7 @@ function CreateMergeRequestPage() {
     } finally {
         setIsChecking(false);
     }
-  }, [siteId, sourceId, targetId, title, branches]);
+  }, [siteSlug, sourceId, targetId, title, branches]);
 
   // Debounce comparison or run on effect
   useEffect(() => {
@@ -118,14 +118,14 @@ function CreateMergeRequestPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await client.post(`/sites/${siteId}/merge-requests`, {
+      const response = await client.post(`/sites/${siteSlug}/merge-requests`, {
         source_branch_id: sourceId,
         target_branch_id: targetId,
         title,
         description,
       });
       toast.success('Merge Request created!');
-      navigate(`/sites/${siteId}/merge-requests/${response.data.id}`);
+      navigate(`/sites/${siteSlug}/merge-requests/${response.data.id}`);
     } catch (error) {
       toast.error('Failed to create MR: ' + (error.response?.data?.message || 'Unknown error'));
     } finally {
