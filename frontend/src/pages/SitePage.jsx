@@ -65,7 +65,7 @@ function SiteDashboard({ site, pages, onCreatePage, isCreating }) {
         {pages.map((page) => (
           <button
             key={page.id}
-            onClick={() => navigate(`/sites/${site.id}/pages/${page.id}`)}
+            onClick={() => navigate(`/sites/${site.slug}/pages/${page.slug}`)}
             className="group flex flex-col p-5 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent)]/30 hover:shadow-xl transition-all text-left relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -101,7 +101,7 @@ function SiteDashboard({ site, pages, onCreatePage, isCreating }) {
 }
 
 function SitePage() {
-  const { siteId, pageId } = useParams();
+  const { siteSlug, pageSlug } = useParams();
   const { currentSite, fetchSite, isLoading: siteLoading } = useSiteStore();
   const { pages, fetchPages, createPage } = usePageStore();
   const [isCreating, setIsCreating] = useState(false);
@@ -109,27 +109,27 @@ function SitePage() {
   const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (siteId && !hasFetched.current) {
+    if (siteSlug && !hasFetched.current) {
       hasFetched.current = true;
       Promise.all([
-        fetchSite(siteId),
-        fetchPages(siteId)
+        fetchSite(siteSlug),
+        fetchPages(siteSlug)
       ]).finally(() => {
         setInitialLoading(false);
       });
     }
-  }, [siteId, fetchSite, fetchPages]);
+  }, [siteSlug, fetchSite, fetchPages]);
 
-  // Reset when siteId changes
+  // Reset when siteSlug changes
   useEffect(() => {
     hasFetched.current = false;
     setInitialLoading(true);
-  }, [siteId]);
+  }, [siteSlug]);
 
   const handleCreatePage = async () => {
     setIsCreating(true);
     try {
-      await createPage(siteId, {
+      await createPage(siteSlug, {
         title: 'Untitled Page',
         content: {}
       });
@@ -139,7 +139,7 @@ function SitePage() {
   };
 
   // Only show loading on initial fetch, not when PageContent fetches a page
-  if (initialLoading && !pageId) {
+  if (initialLoading && !pageSlug) {
     return (
       <div className="flex items-center justify-center h-screen bg-[var(--color-bg-primary)]">
         <LoadingSpinner size="lg" />
@@ -147,8 +147,8 @@ function SitePage() {
     );
   }
 
-  // If pageId exists, render PageContent
-  if (pageId) {
+  // If pageSlug exists, render PageContent
+  if (pageSlug) {
     return (
       <div className="min-h-screen bg-[var(--color-bg-primary)]">
         <PageContent />

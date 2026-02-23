@@ -1,5 +1,6 @@
 import { NodeViewWrapper } from '@tiptap/react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { resolveImageUrl } from '../../../api/client';
 
 export default function ResizableImageNode(props) {
   const { node, updateAttributes, selected } = props;
@@ -56,6 +57,8 @@ export default function ResizableImageNode(props) {
     };
   }, [resizing, onMouseMove, onMouseUp]);
 
+  const imgSrc = resolveImageUrl(node.attrs.src);
+
   return (
     <NodeViewWrapper className={`image-node-view relative my-6 group select-none flex justify-center`}>
       <figure 
@@ -64,7 +67,7 @@ export default function ResizableImageNode(props) {
         style={{ width: getStyleWidth(), maxWidth: '100%', cursor: 'default' }}
       >
         <img
-          src={node.attrs.src}
+          src={imgSrc}
           alt={node.attrs.alt}
           ref={imgRef}
           className="rounded-lg w-full h-auto block pointer-events-none" 

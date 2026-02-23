@@ -7,7 +7,7 @@ export const Tabs = Node.create({
   group: 'block',
   content: 'tabItem+',
   defining: true,
-  isolating: true,
+  isolating: false,
 
   addAttributes() {
     return {
@@ -39,42 +39,86 @@ export const Tabs = Node.create({
             { 
               type: 'tabItem', 
               attrs: { title: 'Tab 1', isActive: true }, 
-              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Isi konten untuk Tab 1 di sini...' }] }] 
+              content: [{ type: 'paragraph' }] 
             },
             { 
               type: 'tabItem', 
               attrs: { title: 'Tab 2', isActive: false }, 
-              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Isi konten untuk Tab 2 di sini...' }] }] 
+              content: [{ type: 'paragraph' }] 
             }
           ]
         });
       },
-      addTab: () => ({ state, dispatch }) => {
+      addTab: () => ({ state, dispatch, tr }) => {
         const { selection } = state;
         let tabsPos = -1;
+        let tabsNode = null;
 
-        // Search upwards for the 'tabs' node
-        for (let d = selection.$from.depth; d >= 0; d--) {
-          const nodeAtDepth = state.doc.nodeAt(selection.$from.before(d));
-          if (nodeAtDepth?.type.name === 'tabs') {
-            tabsPos = selection.$from.before(d);
+        // Find the parent 'tabs' node - stop at depth 1 to avoid before(0) error
+        for (let d = selection.$from.depth; d >= 1; d--) {
+          const pos = selection.$from.before(d);
+          const node = state.doc.nodeAt(pos);
+          if (node?.type.name === 'tabs') {
+            tabsPos = pos;
+            tabsNode = node;
             break;
           }
         }
 
-        if (tabsPos === -1) return false;
+        if (tabsPos === -1 || !tabsNode) return false;
 
-        const tabsNode = state.doc.nodeAt(tabsPos);
         if (dispatch) {
           const insertPos = tabsPos + tabsNode.nodeSize - 1;
-          const tr = state.tr.insert(insertPos, state.schema.nodes.tabItem.create({
+          const newTab = state.schema.nodes.tabItem.create({
             title: `Tab ${tabsNode.childCount + 1}`,
             isActive: false
-          }, state.schema.nodes.paragraph.create()));
-          dispatch(tr);
+          }, state.schema.nodes.paragraph.create());
+          
+          const transaction = state.tr.insert(insertPos, newTab);
+          dispatch(transaction);
         }
         return true;
+      },
+      deleteTab: (index) => ({ state, dispatch, editor }) => {
+        // Find tabs node
+        const { selection } = state;
+        let tabsPos = -1;
+        let tabsNode = null;
+
+        for (let d = selection.$from.depth; d >= 1; d--) {
+          const pos = selection.$from.before(d);
+          const node = state.doc.nodeAt(pos);
+          if (node?.type.name === 'tabs') {
+            tabsPos = pos;
+            tabsNode = node;
+            break;
+          }
+        }
+
+        if (tabsPos === -1 || !tabsNode || tabsNode.childCount <= 1) return false;
+
+        if (dispatch) {
+          let tabPos = tabsPos + 1;
+          for (let i = 0; i < tabsNode.childCount; i++) {
+            const child = tabsNode.child(i);
+            if (i === index) {
+              const from = tabPos;
+              const to = tabPos + child.nodeSize;
+              const tr = state.tr.delete(from, to);
+              dispatch(tr);
+              return true;
+            }
+            tabPos += child.nodeSize;
+          }
+        }
+        return false;
       }
     }
-  }
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      'Mod-Shift-t': () => this.editor.commands.setTabs(),
+    };
+  },
 });

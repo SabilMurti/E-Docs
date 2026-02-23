@@ -24,7 +24,7 @@ const roleColors = {
   viewer: 'text-gray-600 bg-gray-50',
 };
 
-function MemberItem({ member, spaceId, currentUserId, isOwner, onUpdate }) {
+function MemberItem({ member, siteSlug, currentUserId, isOwner, onUpdate }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const RoleIcon = roleIcons[member.role] || User;
   const isCurrentUser = member.user?.id === currentUserId;
@@ -33,7 +33,7 @@ function MemberItem({ member, spaceId, currentUserId, isOwner, onUpdate }) {
   const handleRoleChange = async (newRole) => {
     setIsUpdating(true);
     try {
-      await updateMember(spaceId, member.id, { role: newRole });
+      await updateMember(siteSlug, member.id, { role: newRole });
       onUpdate();
     } catch (error) {
       console.error('Failed to update role:', error);
@@ -46,7 +46,7 @@ function MemberItem({ member, spaceId, currentUserId, isOwner, onUpdate }) {
     
     setIsUpdating(true);
     try {
-      await removeMember(spaceId, member.id);
+      await removeMember(siteSlug, member.id);
       onUpdate();
     } catch (error) {
       console.error('Failed to remove member:', error);
@@ -134,7 +134,7 @@ function MemberItem({ member, spaceId, currentUserId, isOwner, onUpdate }) {
   );
 }
 
-function MemberList({ spaceId, currentUserId }) {
+function MemberList({ siteSlug, currentUserId }) {
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
@@ -147,7 +147,7 @@ function MemberList({ spaceId, currentUserId }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getMembers(spaceId);
+      const response = await getMembers(siteSlug);
       setMembers(response.data || response);
     } catch (err) {
       setError('Failed to load members');
@@ -157,10 +157,10 @@ function MemberList({ spaceId, currentUserId }) {
   };
 
   useEffect(() => {
-    if (spaceId) {
+    if (siteSlug) {
       fetchMembers();
     }
-  }, [spaceId]);
+  }, [siteSlug]);
 
   if (isLoading) {
     return (
@@ -204,7 +204,7 @@ function MemberList({ spaceId, currentUserId }) {
             <MemberItem
               key={member.id}
               member={member}
-              spaceId={spaceId}
+              siteSlug={siteSlug}
               currentUserId={currentUserId}
               isOwner={isOwner}
               onUpdate={fetchMembers}
@@ -217,7 +217,7 @@ function MemberList({ spaceId, currentUserId }) {
       <InviteModal
         isOpen={showInvite}
         onClose={() => setShowInvite(false)}
-        spaceId={spaceId}
+        siteSlug={siteSlug}
         onInvited={fetchMembers}
       />
     </div>

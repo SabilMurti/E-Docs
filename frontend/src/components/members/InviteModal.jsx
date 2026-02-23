@@ -5,7 +5,7 @@ import Modal from '../common/Modal';
 import Input from '../common/Input';
 import Button from '../common/Button';
 
-function InviteModal({ isOpen, onClose, spaceId, onInvited }) {
+function InviteModal({ isOpen, onClose, siteSlug, onInvited }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('viewer');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +18,7 @@ function InviteModal({ isOpen, onClose, spaceId, onInvited }) {
     setIsLoading(true);
 
     try {
-      await inviteMember(spaceId, { email, role });
+      await inviteMember(siteSlug, { email, role });
       setSuccess(true);
       setEmail('');
       setRole('viewer');

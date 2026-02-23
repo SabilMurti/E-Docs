@@ -7,7 +7,7 @@ export const TabItem = Node.create({
   group: 'block',
   content: 'block+',
   defining: true,
-  isolating: true,
+  isolating: false,
 
   addAttributes() {
     return {
@@ -38,5 +38,35 @@ export const TabItem = Node.create({
 
   addNodeView() {
     return ReactNodeViewRenderer(TabItemView);
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      // Allow backspace to work inside tab content
+      Backspace: () => {
+        const { selection, doc } = this.editor.state;
+        const { $from, $to } = selection;
+
+        // Check if we're at the start of a tabItem
+        if (!$from.parent.isTextblock) return false;
+        
+        const parentDepth = $from.depth - 1;
+        if (parentDepth < 0) return false;
+        
+        const parentNode = $from.node(parentDepth);
+        if (parentNode?.type.name !== 'tabItem') return false;
+
+        // If selection is not empty, allow default backspace
+        if (!$from.pos === $to.pos) return false;
+
+        // Check if we're at the start of the textblock
+        const startPos = $from.start();
+        if ($from.pos > startPos) return false;
+
+        // At start of textblock inside tabItem - don't delete the tab
+        // Just return false to let default behavior continue
+        return false;
+      },
+    };
   },
 });

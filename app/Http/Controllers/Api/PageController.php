@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreatePageRequest;
+use App\Http\Requests\UpdatePageRequest;
 use App\Http\Resources\PageResource;
 use App\Models\Page;
 use App\Models\Site;
@@ -25,40 +27,27 @@ class PageController extends Controller
         $branch = $site->branches()->where('name', $branchName)->first();
 
         if (!$branch) {
-            // Fallback to default if not found, or error?
-            // If explicit query param given and not found -> 404
-            // If default 'main' not found (shouldn't happen) -> 404
             if ($branchName !== 'main') {
                  return response()->json(['message' => "Branch '{$branchName}' not found."], 404);
             }
-            // If main doesn't exist (legacy/error), try finding any default branch
             $branch = $site->branches()->where('is_default', true)->first();
             if (!$branch) {
-                 // Absolute fail-safe: any branch
                  $branch = $site->branches()->first();
             }
         }
 
         if (!$branch) {
-             return response()->json(['data' => []]); // No branches? Empty site.
+             return response()->json(['data' => []]);
         }
 
-        // Get pages for this branch
+        // Get pages for this branch with recursive children
         $pages = $site->pages()
             ->where('branch_id', $branch->id)
             ->whereNull('parent_id')
-            ->with(['branch', 'children' => function($query) use ($branch) {
-                // Ensure children are also from the same branch
-                // Note: The `children` relation in model is simplified. 
-                // We might need to adjust the relation or filter recursively.
-                // Standard Eloquent `with` doesn't easily filter recursive relations unless we use package.
-                // However, since `parent_id` points to a page ID, and that page ID is specific to a branch, 
-                // the children relationship `parent_id` foreign key should naturally point to pages in the same branch
-                // (assuming we handle copying correctly).
-                // So filtering shouldn't be strictly necessary if integrity is maintained, 
-                // but adding `where('branch_id', $branch->id)` is safer.
+            ->with(['branch', 'allChildren' => function($query) use ($branch) {
+                // Ensure recursive children also respect the branch
                 $query->where('branch_id', $branch->id)->orderBy('order');
-            }]) 
+            }])
             ->orderBy('order')
             ->get();
 
@@ -76,28 +65,28 @@ class PageController extends Controller
     /**
      * Create new page
      */
-    public function store(Request $request, Site $site)
+    public function store(CreatePageRequest $request, Site $site)
     {
-        if (!$site->canEdit($request->user())) {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:pages,id',
-            'content' => 'nullable|array', // Tiptap JSON
-            'branch' => 'nullable|string', // Optional branch name, defaults to main
-        ]);
+        $validated = $request->validated();
 
         // Resolve branch
         $branchName = $validated['branch'] ?? 'main';
         $branch = $site->branches()->where('name', $branchName)->firstOrFail();
-        
-        // Verify parent belongs to same site AND branch
-        if (!empty($validated['parent_id'])) {
-            $parent = Page::find($validated['parent_id']);
-            if ($parent->site_id !== $site->id || $parent->branch_id !== $branch->id) {
-                return response()->json(['message' => 'Parent page must belong to the same site and branch.'], 422);
+
+        // Calculate depth and validate max 5 levels
+        $parentId = $validated['parent_id'] ?? null;
+        if ($parentId) {
+            $parent = Page::findOrFail($parentId);
+            $depth = 1;
+            $currentParent = $parent;
+            while ($currentParent->parent_id) {
+                $depth++;
+                $currentParent = Page::findOrFail($currentParent->parent_id);
+                if ($depth >= 5) {
+                    return response()->json([
+                        'message' => 'Maximum nesting level (5) reached.'
+                    ], 422);
+                }
             }
         }
 
@@ -110,7 +99,7 @@ class PageController extends Controller
         $page = $site->pages()->create([
             'title' => $validated['title'],
             'branch_id' => $branch->id,
-            'logical_id' => \Illuminate\Support\Str::uuid(), // New page gets new logical ID
+            'logical_id' => \Illuminate\Support\Str::uuid(),
             'parent_id' => $validated['parent_id'] ?? null,
             'content' => $validated['content'] ?? null,
             'order' => $order,
@@ -141,20 +130,9 @@ class PageController extends Controller
     /**
      * Update page
      */
-    public function update(Request $request, Site $site, Page $page)
+    public function update(UpdatePageRequest $request, Site $site, Page $page)
     {
-        if (!$site->canEdit($request->user())) {
-            abort(403);
-        }
-
-        if ($page->site_id !== $site->id) {
-            abort(404);
-        }
-
-        $validated = $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'content' => 'nullable|array',
-        ]);
+        $validated = $request->validated();
 
         $page->update($validated);
         $page->load('branch');

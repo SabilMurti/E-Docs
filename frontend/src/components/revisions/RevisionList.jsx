@@ -5,7 +5,7 @@ import { getRevisions, getRevision, restoreRevision } from '../../api/revisions'
 import { formatRelativeTime, formatDate, extractTiptapText } from '../../utils/helpers';
 import LoadingSpinner from '../common/LoadingSpinner';
 
-function RevisionItem({ revision, previousRevision, spaceId, pageId, isFirst, onRestored }) {
+function RevisionItem({ revision, previousRevision, siteSlug, pageSlug, isFirst, onRestored }) {
   const [isExpanded, setIsExpanded] = useState(isFirst);
   const [isRestoring, setIsRestoring] = useState(false);
   const [fullDiffTexts, setFullDiffTexts] = useState({ oldText: '', newText: '' });
@@ -23,13 +23,13 @@ function RevisionItem({ revision, previousRevision, spaceId, pageId, isFirst, on
 
         // Fetch previous revision content if missing and it exists
         if (previousRevision && !oldContent && previousRevision.id !== 'current') {
-           const res = await getRevision(spaceId, pageId, previousRevision.id);
+           const res = await getRevision(siteSlug, pageSlug, previousRevision.id);
            oldContent = res.data?.content || res.content;
         }
 
         // Fetch current revision content if missing (unlikely for 'current' but possible for others)
         if (!newContent && revision.id !== 'current') {
-           const res = await getRevision(spaceId, pageId, revision.id);
+           const res = await getRevision(siteSlug, pageSlug, revision.id);
            newContent = res.data?.content || res.content;
         }
 
@@ -48,7 +48,7 @@ function RevisionItem({ revision, previousRevision, spaceId, pageId, isFirst, on
     };
 
     loadContent();
-  }, [isExpanded, revision.id, previousRevision?.id, spaceId, pageId]);
+  }, [isExpanded, revision.id, previousRevision?.id, siteSlug, pageSlug]);
 
   const diffParts = useMemo(() => {
     if (!isExpanded || isLoadingDiff) return [];
@@ -60,7 +60,7 @@ function RevisionItem({ revision, previousRevision, spaceId, pageId, isFirst, on
     
     setIsRestoring(true);
     try {
-      await restoreRevision(spaceId, pageId, revision.id);
+      await restoreRevision(siteSlug, pageSlug, revision.id);
       if (onRestored) onRestored();
     } catch (error) {
       console.error('Failed to restore:', error);
@@ -206,7 +206,7 @@ function RevisionItem({ revision, previousRevision, spaceId, pageId, isFirst, on
   );
 }
 
-function RevisionList({ spaceId, pageId, currentPage, onRestoreSuccess }) {
+function RevisionList({ siteSlug, pageSlug, currentPage, onRestoreSuccess }) {
   const [revisions, setRevisions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -215,7 +215,7 @@ function RevisionList({ spaceId, pageId, currentPage, onRestoreSuccess }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getRevisions(spaceId, pageId);
+      const response = await getRevisions(siteSlug, pageSlug);
       setRevisions(response.data || response);
     } catch (err) {
       setError('Failed to load revision history');
@@ -225,10 +225,10 @@ function RevisionList({ spaceId, pageId, currentPage, onRestoreSuccess }) {
   };
 
   useEffect(() => {
-    if (spaceId && pageId) {
+    if (siteSlug && pageSlug) {
       fetchRevisions();
     }
-  }, [spaceId, pageId, currentPage?.updated_at]);
+  }, [siteSlug, pageSlug, currentPage?.updated_at]);
 
   const handleRestored = () => {
     fetchRevisions();
@@ -297,8 +297,8 @@ function RevisionList({ spaceId, pageId, currentPage, onRestoreSuccess }) {
             key={revision.id}
             revision={revision}
             previousRevision={allRevisions[index + 1]}
-            spaceId={spaceId}
-            pageId={pageId}
+            siteSlug={siteSlug}
+            pageSlug={pageSlug}
             isFirst={index === 0}
             onRestored={handleRestored}
           />

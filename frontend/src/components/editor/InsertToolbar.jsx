@@ -1,108 +1,22 @@
 /**
  * InsertToolbar - Fixed toolbar for inserting block types
- * 
+ *
  * Provides quick access to insert various content blocks,
  * undo/redo, and block transformation.
  */
 
 import { useState, useRef, useEffect } from 'react';
 import {
-  Plus,
-  Type,
-  Heading1,
-  Heading2,
-  Heading3,
-  List,
-  ListOrdered,
-  CheckSquare,
-  Quote,
-  Code,
-  Table,
-  Image as ImageIcon,
-  Minus,
-  AlertCircle,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
+  Undo2, Redo2, ArrowRightLeft, Plus,
+  Type, Heading1, Heading2, Heading3,
+  List, ListOrdered, CheckSquare, Quote, Code,
   ChevronDown,
-  ChevronRight,
-  Youtube,
-  Square,
-  Columns as ColumnsIcon,
-  LayoutGrid,
-  PanelLeft,
-  PanelRight,
-  Undo2,
-  Redo2,
-  ArrowRightLeft,
-  PenTool,
-  Layers,
 } from 'lucide-react';
-import { TableCreationModal } from './TablePlus';
-
-// Block categories and definitions
-const BLOCK_CATEGORIES = [
-  {
-    name: 'Text',
-    blocks: [
-      { id: 'paragraph', label: 'Paragraph', icon: Type, shortcut: '⌘+Alt+0' },
-      { id: 'h1', label: 'Heading 1', icon: Heading1, shortcut: '⌘+Alt+1' },
-      { id: 'h2', label: 'Heading 2', icon: Heading2, shortcut: '⌘+Alt+2' },
-      { id: 'h3', label: 'Heading 3', icon: Heading3, shortcut: '⌘+Alt+3' },
-    ]
-  },
-  {
-    name: 'Lists',
-    blocks: [
-      { id: 'bullet', label: 'Bullet List', icon: List },
-      { id: 'numbered', label: 'Numbered List', icon: ListOrdered },
-      { id: 'task', label: 'Task List', icon: CheckSquare },
-    ]
-  },
-  {
-    name: 'Blocks',
-    blocks: [
-      { id: 'quote', label: 'Quote', icon: Quote },
-      { id: 'code', label: 'Code Block', icon: Code },
-      { id: 'divider', label: 'Divider', icon: Minus },
-      { id: 'toggle', label: 'Toggle', icon: ChevronRight },
-      { id: 'card', label: 'Card', icon: Square },
-    ]
-  },
-  {
-    name: 'Callouts',
-    blocks: [
-      { id: 'callout-info', label: 'Info', icon: AlertCircle, color: 'text-blue-500' },
-      { id: 'callout-success', label: 'Success', icon: CheckCircle2, color: 'text-emerald-500' },
-      { id: 'callout-warning', label: 'Warning', icon: AlertTriangle, color: 'text-amber-500' },
-      { id: 'callout-danger', label: 'Danger', icon: XCircle, color: 'text-red-500' },
-    ]
-  },
-  {
-    name: 'Media',
-    blocks: [
-      { id: 'image', label: 'Image', icon: ImageIcon },
-      { id: 'youtube', label: 'YouTube', icon: Youtube },
-      { id: 'table', label: 'Table', icon: Table },
-      { id: 'flowchart', label: 'Flowchart', icon: PenTool },
-    ]
-  },
-  {
-    name: 'Layout',
-    blocks: [
-        { id: '2col', label: '2 Columns', icon: ColumnsIcon },
-        { id: '3col', label: '3 Columns', icon: LayoutGrid },
-        { id: 'left-sidebar', label: 'Sidebar Left', icon: PanelLeft },
-        { id: 'right-sidebar', label: 'Sidebar Right', icon: PanelRight },
-        { id: 'tabs', label: 'Tabs', icon: Layers },
-    ]
-  },
-];
+import { BLOCK_DEFINITIONS, getAllBlocks } from './BlockDefinitions';
 
 function InsertToolbar({ editor }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showTurnInto, setShowTurnInto] = useState(false);
-  const [showTableModal, setShowTableModal] = useState(false);
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -126,105 +40,20 @@ function InsertToolbar({ editor }) {
   if (!editor) return null;
 
   const insertBlock = (blockId) => {
-    switch (blockId) {
-      // Text blocks
-      case 'paragraph':
-        editor.chain().focus().setParagraph().run();
-        break;
-      case 'h1':
-        editor.chain().focus().toggleHeading({ level: 1 }).run();
-        break;
-      case 'h2':
-        editor.chain().focus().toggleHeading({ level: 2 }).run();
-        break;
-      case 'h3':
-        editor.chain().focus().toggleHeading({ level: 3 }).run();
-        break;
+    // Find the block definition
+    const allBlocks = getAllBlocks();
+    const block = allBlocks.find(b => b.id === blockId);
+    
+    if (!block || !block.action) {
+      console.warn('Unknown block type:', blockId);
+      return;
+    }
 
-      // Lists
-      case 'bullet':
-        editor.chain().focus().toggleBulletList().run();
-        break;
-      case 'numbered':
-        editor.chain().focus().toggleOrderedList().run();
-        break;
-      case 'task':
-        editor.chain().focus().toggleTaskList().run();
-        break;
-
-      // Blocks
-      case 'quote':
-        editor.chain().focus().toggleBlockquote().run();
-        break;
-      case 'code':
-        editor.chain().focus().setCodeBlock({ language: 'javascript' }).run();
-        break;
-      case 'divider':
-        editor.chain().focus().setHorizontalRule().run();
-        break;
-      case 'toggle':
-        editor.chain().focus().setToggle().run();
-        break;
-      case 'card':
-        editor.chain().focus().setCard().run();
-        break;
-
-      // Callouts
-      case 'callout-info':
-        editor.chain().focus().setCallout({ type: 'info' }).run();
-        break;
-      case 'callout-success':
-        editor.chain().focus().setCallout({ type: 'success' }).run();
-        break;
-      case 'callout-warning':
-        editor.chain().focus().setCallout({ type: 'warning' }).run();
-        break;
-      case 'callout-danger':
-        editor.chain().focus().setCallout({ type: 'danger' }).run();
-        break;
-
-      // Media
-      case 'image':
-        editor.chain().focus().triggerImageUpload().run();
-        break;
-      case 'youtube': {
-        const url = window.prompt('Enter YouTube URL:');
-        if (url) {
-          editor.chain().focus().setYoutubeVideo({ src: url }).run();
-        }
-        break;
-      }
-      case 'flowchart':
-        editor.chain().focus().setExcalidraw().run();
-        break;
-      case '2col':
-        editor.chain().focus().setColumns({ layout: 'two-columns' }).run();
-        break;
-      case '3col':
-        editor.chain().focus().setColumns({ layout: 'three-columns' }).run();
-        break;
-      case 'left-sidebar':
-        editor.chain().focus().setColumns({ layout: 'sidebar-left' }).run();
-        break;
-      case 'right-sidebar':
-        editor.chain().focus().setColumns({ layout: 'sidebar-right' }).run();
-        break;
-      case 'tabs':
-        editor.chain().focus().insertContent({
-          type: 'tabs',
-          attrs: { activeTab: 0 },
-          content: [
-            { type: 'tabItem', attrs: { title: 'First Tab' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Content for the first tab...' }] }] },
-            { type: 'tabItem', attrs: { title: 'Second Tab' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Content for the second tab...' }] }] }
-          ]
-        }).run();
-        break;
-      case 'table':
-        setShowTableModal(true);
-        break;
-
-      default:
-        console.warn('Unknown block type:', blockId);
+    // Execute the block action
+    try {
+      block.action(editor);
+    } catch (err) {
+      console.warn('Block action failed:', err);
     }
 
     setIsOpen(false);
@@ -342,17 +171,17 @@ function InsertToolbar({ editor }) {
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-64 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-150">
           <div className="max-h-[400px] overflow-y-auto py-2">
-            {BLOCK_CATEGORIES.map((category, catIndex) => (
-              <div key={category.name}>
+            {BLOCK_DEFINITIONS.map((category, catIndex) => (
+              <div key={category.category}>
                 {catIndex > 0 && (
                   <div className="h-px bg-[var(--color-border-secondary)] my-1 mx-3" />
                 )}
                 <div className="px-3 py-1.5">
                   <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                    {category.name}
+                    {category.category}
                   </span>
                 </div>
-                {category.blocks.map((block) => (
+                {category.items.map((block) => (
                   <button
                     key={block.id}
                     onClick={() => insertBlock(block.id)}
@@ -362,10 +191,7 @@ function InsertToolbar({ editor }) {
                       <block.icon size={16} className={block.color || 'text-[var(--color-text-muted)] group-hover:text-[var(--color-accent)]'} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm text-[var(--color-text-primary)]">{block.label}</span>
-                      {block.shortcut && (
-                        <span className="ml-2 text-[10px] text-[var(--color-text-muted)]">{block.shortcut}</span>
-                      )}
+                      <span className="text-sm text-[var(--color-text-primary)]">{block.name}</span>
                     </div>
                   </button>
                 ))}
@@ -374,20 +200,6 @@ function InsertToolbar({ editor }) {
           </div>
         </div>
       )}
-      
-      {/* Table Creation Modal */}
-      <TableCreationModal
-        isOpen={showTableModal}
-        onClose={() => setShowTableModal(false)}
-        onInsert={(options) => {
-          editor.chain().focus().insertTable({
-            rows: options.rows,
-            cols: options.cols,
-            withHeaderRow: options.withHeaderRow,
-          }).run();
-          setShowTableModal(false);
-        }}
-      />
     </div>
   );
 }

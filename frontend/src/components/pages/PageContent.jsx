@@ -8,7 +8,6 @@ import {
     CloudUpload,
     Image as ImageIcon,
     ChevronRight,
-    MoreHorizontal,
     GitPullRequest,
     GitBranch,
     ArrowDownCircle,
@@ -22,11 +21,14 @@ import { toast } from "sonner";
 import usePageStore from "../../stores/pageStore";
 import useSiteStore from "../../stores/siteStore";
 import RichEditor from "../editor/RichEditor";
+import PageEditor from "../editor/PageEditor";
 import LoadingSpinner from "../common/LoadingSpinner";
 import InputModal from "../common/InputModal";
 import ConfirmModal from "../common/ConfirmModal";
 import Modal from "../common/Modal";
 import PageViewer from "./PageViewer";
+import PageMenu from "./PageMenu";
+import PageSettingsModal from "./PageSettingsModal";
 import client from "../../api/client";
 import { createChangeRequest, syncChangeRequest } from "../../api/pages";
 
@@ -34,7 +36,7 @@ const AUTO_SAVE_KEY = "edocs-autosave-enabled";
 const AUTO_SAVE_DELAY = 3000; // 3 seconds debounce
 
 export default function PageContent() {
-    const { pageId, siteId } = useParams();
+    const { pageSlug, siteSlug } = useParams();
     const rawNavigate = useNavigate();
 
     const { currentPage, fetchPage, saveDraft, isLoading, isSaving } =
@@ -63,6 +65,10 @@ export default function PageContent() {
     const [targetBranchId, setTargetBranchId] = useState("");
     const [prTitle, setPrTitle] = useState("");
     const [prDescription, setPrDescription] = useState("");
+
+    // Page settings state
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Navigation guard state (replaces useBlocker)
     const [pendingNavigation, setPendingNavigation] = useState(null);
@@ -101,10 +107,10 @@ export default function PageContent() {
 
     // Fetch page on mount
     useEffect(() => {
-        if (siteId && pageId) {
-            fetchPage(siteId, pageId);
+        if (siteSlug && pageSlug) {
+            fetchPage(siteSlug, pageSlug);
         }
-    }, [siteId, pageId, fetchPage]);
+    }, [siteSlug, pageSlug, fetchPage]);
 
     // Set local content when page loads
     useEffect(() => {
@@ -120,7 +126,7 @@ export default function PageContent() {
 
         setDraftSaving(true);
         try {
-            const result = await saveDraft(siteId, currentPage.id, {
+            const result = await saveDraft(siteSlug, currentPage.slug, {
                 content: localContent,
             });
 
@@ -137,7 +143,7 @@ export default function PageContent() {
         } finally {
             setDraftSaving(false);
         }
-    }, [currentPage, localContent, siteId, hasUnsavedChanges, saveDraft]);
+    }, [currentPage, localContent, siteSlug, hasUnsavedChanges, saveDraft]);
 
     useEffect(() => {
         if (!autoSaveEnabled || !currentPage) return;
@@ -155,7 +161,7 @@ export default function PageContent() {
 
                 setDraftSaving(true);
                 try {
-                    const result = await saveDraft(siteId, currentPage.id, {
+                    const result = await saveDraft(siteSlug, currentPage.slug, {
                         content,
                     });
 
@@ -177,28 +183,82 @@ export default function PageContent() {
                 clearTimeout(autoSaveTimerRef.current);
             }
 
-            // If creating a new navigation, this might run.
-            // We need to check the ref because state might be stale in cleanup?
-            // Actually, refs are best here.
             if (hasUnsavedRef.current && autoSaveEnabled) {
-                // We can't await here, but we can trigger the promise
-                // Note: strict mode or rapid navigation might cancel this request
-                // if not handled carefully (e.g. using fetch keepalive),
-                // but standard axios/fetch usually completes if initiated.
                 const content = localContentRef.current;
                 if (content) {
-                    saveDraft(siteId, currentPage.id, { content }).catch((e) =>
+                    saveDraft(siteSlug, currentPage.slug, { content }).catch((e) =>
                         console.error("Unmount save failed", e),
                     );
                 }
             }
         };
-    }, [autoSaveEnabled, hasUnsavedChanges, currentPage, siteId, saveDraft]);
+    }, [autoSaveEnabled, hasUnsavedChanges, currentPage, siteSlug, saveDraft]);
 
     // --- CONTENT CHANGE ---
     const handleContentChange = useCallback((newContent) => {
         setLocalContent(newContent);
         setHasUnsavedChanges(true);
+    }, []);
+
+    // --- PAGE SETTINGS ---
+    const handlePageSettings = useCallback(() => {
+        setShowSettingsModal(true);
+    }, []);
+
+    const handleSaveSettings = useCallback(async (settings) => {
+        if (!currentPage?.id) {
+            toast.error('Page not found');
+            return;
+        }
+
+        try {
+            const result = await usePageStore.getState().updatePage(
+                siteSlug,
+                currentPage.slug,
+                settings
+            );
+
+            if (result.success) {
+                toast.success('Page settings updated');
+                setShowSettingsModal(false);
+                // Refetch to get updated page
+                await fetchPage(siteSlug, pageSlug);
+            } else {
+                toast.error(result.error || 'Failed to update page settings');
+            }
+        } catch (error) {
+            console.error('Settings error:', error);
+            toast.error('Failed to update page settings');
+        }
+    }, [siteSlug, pageSlug, currentPage, fetchPage]);
+
+    const handleDeletePage = useCallback(() => {
+        setShowDeleteConfirm(true);
+    }, []);
+
+    const handleConfirmDelete = useCallback(async () => {
+        try {
+            const result = await usePageStore.getState().deletePage(
+                siteSlug,
+                currentPage.slug
+            );
+
+            if (result.success) {
+                toast.success('Page deleted');
+                rawNavigate(`/sites/${siteSlug}`);
+            } else {
+                toast.error(result.error || 'Failed to delete page');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            toast.error('Failed to delete page');
+        } finally {
+            setShowDeleteConfirm(false);
+        }
+    }, [siteSlug, pageSlug, rawNavigate]);
+
+    const handleDuplicatePage = useCallback(() => {
+        toast.info('Duplicate functionality coming soon');
     }, []);
 
     // --- COMMIT ---
@@ -212,7 +272,7 @@ export default function PageContent() {
         try {
             const result = await usePageStore
                 .getState()
-                .commitChange(siteId, currentPage.id, {
+                .commitChange(siteSlug, currentPage.slug, {
                     content: localContent,
                     title: currentPage.title,
                     message: commitMessage || "Update content",
@@ -233,14 +293,14 @@ export default function PageContent() {
         } finally {
             setDraftSaving(false);
         }
-    }, [currentPage, localContent, siteId, commitMessage]);
+    }, [currentPage, localContent, siteSlug, commitMessage]);
 
     // --- SYNC/PULL ---
     const { currentRequest, fetchRequestDetails } = usePageStore();
 
     useEffect(() => {
-        if (pageId) fetchRequestDetails(pageId);
-    }, [pageId, fetchRequestDetails]);
+        if (currentPage?.slug) fetchRequestDetails(currentPage.slug);
+    }, [currentPage?.slug, fetchRequestDetails]);
 
     const isOutOfSync = useMemo(() => {
         if (!currentRequest || !currentPage) return false;
@@ -255,7 +315,7 @@ export default function PageContent() {
         setDraftSaving(true);
         try {
             await syncChangeRequest(currentRequest.id);
-            await fetchRequestDetails(pageId);
+            await fetchRequestDetails(currentPage.slug);
             toast.success("Synced with latest live version");
         } catch (error) {
             toast.error("Failed to sync changes");
@@ -267,7 +327,7 @@ export default function PageContent() {
     // --- REQUEST REVIEW ---
     const handleFetchBranches = useCallback(async () => {
         try {
-            const res = await client.get(`/sites/${siteId}/branches`);
+            const res = await client.get(`/sites/${siteSlug}/branches`);
             setSiteBranches(res.data.data);
 
             // Auto-select first main/master branch if we are on a feature branch
@@ -284,7 +344,7 @@ export default function PageContent() {
         } catch (error) {
             console.error("Failed to fetch branches:", error);
         }
-    }, [siteId, currentPage, client]);
+    }, [siteSlug, currentPage, client]);
 
     const handleRequestReview = useCallback(async () => {
         if (!currentPage) return;
@@ -306,7 +366,7 @@ export default function PageContent() {
 
         setDraftSaving(true);
         try {
-            const result = await createChangeRequest(currentPage.id, {
+            const result = await createChangeRequest(currentPage.slug, {
                 status: "open",
                 title: prTitle,
                 description: prDescription,
@@ -318,7 +378,7 @@ export default function PageContent() {
                 setHasUnsavedChanges(false);
                 toast.success("Pull Request created successfully!");
                 setShowPRModal(false);
-                navigate(`/sites/${siteId}/pulls/${result.data.id}`);
+                navigate(`/sites/${siteSlug}/pulls/${result.data.id}`);
             }
         } catch (error) {
             console.error("Failed to create PR:", error);
@@ -338,7 +398,7 @@ export default function PageContent() {
         try {
             const sourceBranch =
                 currentPage.branch_name || currentBranch || "main";
-            const res = await client.post(`/sites/${siteId}/branches`, {
+            const res = await client.post(`/sites/${siteSlug}/branches`, {
                 name: name.toLowerCase().replace(/\s+/g, "-"),
                 source_branch: sourceBranch,
             });
@@ -347,7 +407,7 @@ export default function PageContent() {
             setShowBranchModal(false);
 
             // Find the page in the new branch and navigate to it
-            const pagesRes = await client.get(`/sites/${siteId}/pages`, {
+            const pagesRes = await client.get(`/sites/${siteSlug}/pages`, {
                 params: { branch: res.data.data.name },
             });
             const allPages = pagesRes.data.data || [];
@@ -356,9 +416,9 @@ export default function PageContent() {
             );
 
             if (matchingPage) {
-                navigate(`/sites/${siteId}/pages/${matchingPage.id}`);
+                navigate(`/sites/${siteSlug}/pages/${matchingPage.slug}`);
             } else {
-                navigate(`/sites/${siteId}`);
+                navigate(`/sites/${siteSlug}`);
             }
         } catch (error) {
             toast.error(
@@ -404,7 +464,7 @@ export default function PageContent() {
         if (currentSite) {
             items.push({
                 label: currentSite.name,
-                href: `/sites/${currentSite.id}`,
+                href: `/sites/${currentSite.slug}`,
             });
         }
         if (currentPage) {
@@ -724,7 +784,7 @@ export default function PageContent() {
                         <button
                             onClick={() =>
                                 navigate(
-                                    `/sites/${siteId}/pages/${pageId}/requests`,
+                                    `/sites/${siteSlug}/pages/${pageSlug}/requests`,
                                 )
                             }
                             className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
@@ -737,7 +797,7 @@ export default function PageContent() {
                         <button
                             onClick={() =>
                                 navigate(
-                                    `/sites/${siteId}/pages/${pageId}/history`,
+                                    `/sites/${siteSlug}/pages/${pageSlug}/history`,
                                 )
                             }
                             className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
@@ -749,7 +809,7 @@ export default function PageContent() {
                         {/* Branches */}
                         <button
                             onClick={() =>
-                                navigate(`/sites/${siteId}/branches`)
+                                navigate(`/sites/${siteSlug}/branches`)
                             }
                             className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
                             title="Manage Branches"
@@ -757,13 +817,12 @@ export default function PageContent() {
                             <GitBranch size={16} />
                         </button>
 
-                        {/* More Options */}
-                        <button
-                            className="p-1.5 rounded-lg text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-bg-hover)] transition-colors"
-                            title="More Options"
-                        >
-                            <MoreHorizontal size={16} />
-                        </button>
+                        {/* Page Menu (Settings, Delete, Duplicate) */}
+                        <PageMenu
+                            onSettings={handlePageSettings}
+                            onDelete={handleDeletePage}
+                            onDuplicate={handleDuplicatePage}
+                        />
                     </div>
                 </div>
             </header>
@@ -771,9 +830,13 @@ export default function PageContent() {
             {/* Page Title & Icon */}
             <div className="px-4 py-6 md:px-16 lg:px-24 xl:px-32 border-b border-[color:var(--color-border-secondary)]">
                 <div className="max-w-3xl mx-auto">
-                    {/* Page Icon */}
+                    {/* Page Icon - Clickable to open settings */}
                     <div className="mb-4">
-                        <button className="w-12 h-12 rounded-xl bg-[color:var(--color-bg-secondary)] border border-[color:var(--color-border-primary)] hover:border-[color:var(--color-border-hover)] transition-colors flex items-center justify-center group">
+                        <button
+                            onClick={handlePageSettings}
+                            className="w-12 h-12 rounded-xl bg-[color:var(--color-bg-secondary)] border border-[color:var(--color-border-primary)] hover:border-[color:var(--color-accent)] transition-colors flex items-center justify-center group"
+                            title="Click to change icon"
+                        >
                             {currentPage.icon ? (
                                 <span className="text-2xl">
                                     {currentPage.icon}
@@ -781,16 +844,23 @@ export default function PageContent() {
                             ) : (
                                 <ImageIcon
                                     size={20}
-                                    className="text-[color:var(--color-text-muted)] group-hover:text-[color:var(--color-text-secondary)]"
+                                    className="text-[color:var(--color-text-muted)] group-hover:text-[color:var(--color-accent)]"
                                 />
                             )}
                         </button>
                     </div>
 
-                    {/* Page Title */}
-                    <h1 className="text-3xl font-bold text-[color:var(--color-text-primary)]">
+                    {/* Page Title - Clickable to edit */}
+                    <button
+                        onClick={handlePageSettings}
+                        className="text-3xl font-bold text-[color:var(--color-text-primary)] hover:text-[color:var(--color-accent)] transition-colors flex items-center gap-2 group"
+                        title="Click to edit title"
+                    >
                         {currentPage.title}
-                    </h1>
+                        <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                    </button>
                 </div>
             </div>
 
@@ -799,7 +869,7 @@ export default function PageContent() {
                 <div className="px-4 py-6 md:px-16 lg:px-24 xl:px-32">
                     <div className="max-w-3xl mx-auto">
                         {mode === "edit" ? (
-                            <RichEditor
+                            <PageEditor
                                 content={localContent}
                                 onChange={handleContentChange}
                                 editable={true}
@@ -921,6 +991,26 @@ export default function PageContent() {
                     </div>
                 </div>
             </Modal>
+
+            {/* Page Settings Modal */}
+            <PageSettingsModal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                onSave={handleSaveSettings}
+                page={currentPage}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Page"
+                message={`Are you sure you want to delete "${currentPage?.title}"? This action cannot be undone.`}
+                confirmText="Delete"
+                variant="danger"
+                isLoading={false}
+            />
         </div>
     );
 }

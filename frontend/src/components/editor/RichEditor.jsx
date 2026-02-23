@@ -17,9 +17,9 @@ import { Tabs, TabItem } from './extensions/Tabs';
 
 // UI Components
 import SlashMenu from './menus/SlashMenu';
-import BubbleToolbar from './BubbleToolbar';
 import InsertToolbar from './InsertToolbar';
-import { TableToolbar, useTableCreation } from './TablePlus';
+import MathSymbolsDropdown from './menus/MathSymbolsDropdown';
+import MediaInsertModal from './MediaInsertModal';
 
 /**
  * RichEditor Component
@@ -29,19 +29,49 @@ import { TableToolbar, useTableCreation } from './TablePlus';
  * @param {boolean} editable - Whether editor is editable
  * @param {string} placeholder - Placeholder text
  */
-export default function RichEditor({ 
-  content, 
-  onChange, 
+export default function RichEditor({
+  content,
+  onChange,
   editable = true,
-  placeholder = null 
+  placeholder = null
 }) {
   const wrapperRef = useRef(null);
-  
+
   const [slashMenu, setSlashMenu] = useState({
     visible: false,
     query: '',
     position: { top: 0, left: 0 }
   });
+
+  // Media insert modal state
+  const [mediaModal, setMediaModal] = useState({
+    isOpen: false,
+    type: 'image'
+  });
+
+  // Handle media insertion
+  const handleMediaInsert = useCallback((media) => {
+    // Editor will be accessed when the function is called, not when defined
+    setTimeout(() => {
+      if (!editor) return;
+      
+      if (media.type === 'image') {
+        editor.chain().focus().setImage({ src: media.src, alt: media.alt }).run();
+      }
+      
+      setMediaModal({ isOpen: false, type: 'image' });
+    }, 0);
+  }, []);
+
+  // Listen for image upload triggers from extensions
+  useEffect(() => {
+    const handleOpenModal = (e) => {
+      setMediaModal({ isOpen: true, type: e.detail?.type || 'image' });
+    };
+
+    window.addEventListener('openMediaModal', handleOpenModal);
+    return () => window.removeEventListener('openMediaModal', handleOpenModal);
+  }, []);
   
   const extensions = useMemo(() => [
     ...getExtensions(placeholder),
@@ -61,32 +91,36 @@ export default function RichEditor({
     },
   });
   
-  // Slash command detection - Standard Logic
+  // Slash command detection
   useEffect(() => {
     if (!editor) return;
-    
+
     const handleTransaction = () => {
       const { selection } = editor.state;
       const { $from } = selection;
-      
+
+      // Hide menu if there's a selection
       if (!selection.empty) {
         if (slashMenu.visible) {
           setSlashMenu(prev => ({ ...prev, visible: false }));
         }
         return;
       }
-      
+
+      // Get text before cursor
       const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
-      const match = textBefore.match(/(?:^|\s)\/([a-zA-Z0-9]*)$/);
       
+      // Match slash command - must be at start of line or after whitespace
+      const match = textBefore.match(/(?:^|\s)\/([a-zA-Z0-9]*)$/);
+
       if (match) {
         const query = match[1];
         const matchIndex = textBefore.lastIndexOf(match[0]);
         const slashOffset = match[0].indexOf('/');
         const startPos = $from.pos - (textBefore.length - matchIndex - slashOffset);
-        
+
         const coords = editor.view.coordsAtPos(startPos);
-        
+
         setSlashMenu({
           visible: true,
           query,
@@ -101,7 +135,7 @@ export default function RichEditor({
         }
       }
     };
-    
+
     editor.on('transaction', handleTransaction);
     return () => editor.off('transaction', handleTransaction);
   }, [editor, slashMenu.visible]);
@@ -142,29 +176,31 @@ export default function RichEditor({
       {editable && (
         <div className="editor-toolbar sticky top-0 z-20 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-secondary)] px-4 py-2 flex items-center gap-2">
           <InsertToolbar editor={editor} />
+
+          {/* Math Symbols Dropdown */}
+          <MathSymbolsDropdown editor={editor} />
+
           <div className="ml-auto flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
             <span>Type <kbd className="px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono">/</kbd> for commands</span>
           </div>
         </div>
       )}
-      
-      {/* Bubble Menu */}
-      {editable && <BubbleToolbar editor={editor} />}
-      
-      {/* Table Toolbar */}
-      {editable && editor?.isActive('table') && (
-        <div className="table-toolbar-container sticky top-12 z-10 flex justify-center py-2">
-          <TableToolbar editor={editor} />
-        </div>
-      )}
 
-      {/* Main Content Area - Single Column, Centered */}
-      <div className="max-w-4xl mx-auto w-full px-4 md:px-6">
-         <div className="rich-editor-prose">
+      {/* Editor Container - Proper positioning for bubble menus */}
+      <div className="rich-editor-container relative">
+        {/* Main Content Area - Single Column, Centered */}
+        <div className="max-w-4xl mx-auto w-full px-4 md:px-6">
+          <div className="rich-editor-prose">
             <EditorContent editor={editor} />
-         </div>
+          </div>
+        </div>
+
+        {/* Bubble Menus - Inside container for proper positioning */}
+        {editable && (
+          <EditorBubbleMenu editor={editor} />
+        )}
       </div>
-      
+
       {/* Slash Menu */}
       {editable && slashMenu.visible && (
         <SlashMenu
@@ -174,6 +210,14 @@ export default function RichEditor({
           onClose={() => setSlashMenu(prev => ({ ...prev, visible: false }))}
         />
       )}
+
+      {/* Media Insert Modal */}
+      <MediaInsertModal
+        isOpen={mediaModal.isOpen}
+        onClose={() => setMediaModal({ isOpen: false, type: 'image' })}
+        onInsert={handleMediaInsert}
+        type={mediaModal.type}
+      />
     </div>
   );
 }

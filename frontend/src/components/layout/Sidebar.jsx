@@ -31,7 +31,7 @@ function PageTreeItem({
     const { pageId } = useParams();
     const navigate = useNavigate();
     const hasChildren = page.children && page.children.length > 0;
-    const isActive = pageId === page.id;
+    const isActive = pageId === page.slug;
 
     // Compact indentation: 16px per level
     const paddingLeft = level * 16 + 8;
@@ -49,7 +49,7 @@ function PageTreeItem({
           }
         `}
                 style={{ paddingLeft: `${paddingLeft}px` }}
-                onClick={() => navigate(`/sites/${siteId}/pages/${page.id}`)}
+                onClick={() => navigate(`/sites/${siteId}/pages/${page.slug}`)}
             >
                 {/* Expand/Collapse */}
                 <button
@@ -177,7 +177,7 @@ function Sidebar({ siteId, isOpen, onClose }) {
         if (!pageToDelete) return;
         setIsSubmitting(true);
         try {
-            await deletePage(siteId, pageToDelete.id);
+            await deletePage(siteId, pageToDelete.slug);
             setShowDeleteModal(false);
             setPageToDelete(null);
         } finally {

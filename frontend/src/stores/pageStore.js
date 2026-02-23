@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as pagesApi from '../api/pages';
+import useAuthStore from './authStore';
 
 const usePageStore = create((set, get) => ({
   pages: [],          // Tree structure
@@ -75,7 +76,7 @@ const usePageStore = create((set, get) => ({
       const response = await pagesApi.updatePage(siteId, pageId, data);
       const updatedPage = response.data || response;
       set((state) => ({ 
-        currentPage: state.currentPage?.id === pageId ? updatedPage : state.currentPage,
+        currentPage: state.currentPage?.slug === pageId ? updatedPage : state.currentPage,
         isSaving: false 
       }));
       // Refetch tree if title changed — pass current branch!
@@ -100,7 +101,7 @@ const usePageStore = create((set, get) => ({
       // Refetch tree — pass current branch!
       await get().fetchPages(siteId, branchName);
       set((state) => ({ 
-        currentPage: state.currentPage?.id === pageId ? null : state.currentPage,
+        currentPage: state.currentPage?.slug === pageId ? null : state.currentPage,
         isLoading: false 
       }));
       return { success: true };

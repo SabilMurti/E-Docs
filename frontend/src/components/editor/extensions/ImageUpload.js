@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { uploadFile } from '../../../api/upload';
+import { resolveImageUrl } from '../../../api/client';
 import { toast } from 'sonner';
 
 /**
@@ -11,10 +12,12 @@ export const performUpload = (view, file, pos) => {
 
   uploadFile(file).then(data => {
     const { schema } = view.state;
+    // Resolve to absolute URL — backend may return a relative /storage/ path
+    const absoluteUrl = resolveImageUrl(data.url);
     let node;
 
     if (data.is_image) {
-      // Create image node
+      // Create image node with relative path
       node = schema.nodes.image.create({ 
         src: data.url, 
         alt: data.filename 
@@ -60,18 +63,18 @@ export const ImageUpload = Extension.create({
 
   addCommands() {
     return {
-      triggerImageUpload: () => ({ view }) => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = (e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            performUpload(view, file);
-          }
-        };
-        input.click();
+      triggerImageUpload: () => ({ view, chain }) => {
+        // Open modal instead of file input
+        const event = new CustomEvent('openMediaModal', { detail: { type: 'image' } });
+        window.dispatchEvent(event);
         return true;
+      },
+      insertImageFromURL: () => ({ commands }) => {
+        const url = window.prompt('Enter image URL:');
+        if (url) {
+          return commands.setImage({ src: url, alt: 'Image' });
+        }
+        return false;
       },
       triggerFileUpload: () => ({ view }) => {
         const input = document.createElement('input');

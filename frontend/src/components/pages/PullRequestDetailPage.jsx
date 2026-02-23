@@ -51,7 +51,7 @@ function extractTextFromTiptap(node) {
 }
 
 function PullRequestDetailPage() {
-    const { siteId, prId } = useParams();
+    const { siteSlug, prId } = useParams();
     const navigate = useNavigate();
     const [pr, setPr] = useState(null);
     const [changes, setChanges] = useState([]);
@@ -67,7 +67,7 @@ function PullRequestDetailPage() {
 
     useEffect(() => {
         fetchPR();
-    }, [siteId, prId]);
+    }, [siteSlug, prId]);
 
     // Auto-expand all files when changes load
     useEffect(() => {
@@ -83,7 +83,7 @@ function PullRequestDetailPage() {
     const fetchPR = async () => {
         setLoading(true);
         try {
-            const res = await getPullRequest(siteId, prId);
+            const res = await getPullRequest(siteSlug, prId);
             setPr(res.pull_request);
             setChanges(res.changes || []);
             return res; // Return fresh data so callers can use it immediately
@@ -99,7 +99,7 @@ function PullRequestDetailPage() {
     const handleMerge = async () => {
         setMerging(true);
         try {
-            await mergePullRequest(siteId, prId);
+            await mergePullRequest(siteSlug, prId);
             toast.success("Pull request merged successfully!");
             fetchPR();
         } catch (err) {
@@ -112,7 +112,7 @@ function PullRequestDetailPage() {
     const handleClose = async () => {
         setClosing(true);
         try {
-            await closePullRequest(siteId, prId);
+            await closePullRequest(siteSlug, prId);
             toast.success("Pull request closed");
             fetchPR();
         } catch (err) {
@@ -124,9 +124,9 @@ function PullRequestDetailPage() {
 
     const handleDelete = async () => {
         try {
-            await deletePullRequest(siteId, prId);
+            await deletePullRequest(siteSlug, prId);
             toast.success("Pull request deleted");
-            navigate(`/sites/${siteId}/pulls`);
+            navigate(`/sites/${siteSlug}/pulls`);
         } catch (err) {
             toast.error(err.response?.data?.message || "Failed to delete");
         }
@@ -135,7 +135,7 @@ function PullRequestDetailPage() {
     const handleReview = async (status) => {
         setSubmittingReview(true);
         try {
-            await submitReview(siteId, prId, {
+            await submitReview(siteSlug, prId, {
                 status,
                 body: reviewBody || null,
             });
@@ -234,7 +234,7 @@ function PullRequestDetailPage() {
             <div className="max-w-5xl mx-auto px-6 py-8">
                 {/* Back */}
                 <button
-                    onClick={() => navigate(`/sites/${siteId}/pulls`)}
+                    onClick={() => navigate(`/sites/${siteSlug}/pulls`)}
                     className="flex items-center gap-2 mb-6 text-sm transition-colors hover:opacity-80"
                     style={{ color: "var(--color-text-muted)" }}
                 >
@@ -626,7 +626,7 @@ function PullRequestDetailPage() {
                 {/* Resolve Tab */}
                 {activeTab === "resolve" && (
                     <ConflictResolver
-                        siteId={siteId}
+                        siteSlug={siteSlug}
                         prId={prId}
                         conflicts={changes.filter((c) => c.has_conflict)}
                         onResolved={async () => {

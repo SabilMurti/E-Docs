@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -35,9 +36,24 @@ class Site extends Model
     {
         static::creating(function (Site $site) {
             if (empty($site->slug)) {
-                $site->slug = Str::slug($site->name) . '-' . Str::random(6);
+                $baseSlug = Str::slug($site->name);
+                $slug = $baseSlug;
+                $counter = 1;
+
+                // Check if slug exists, if so append number
+                while (Site::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $counter;
+                    $counter++;
+                }
+
+                $site->slug = $slug;
             }
         });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
     }
 
     /**
@@ -144,7 +160,7 @@ class Site extends Model
 
         return $this->members()
             ->where('user_id', $user->id)
-            ->whereIn('role', ['admin', 'maintain', 'write'])
+            ->whereIn('role', UserRole::writeRoles())
             ->exists();
     }
 
@@ -168,7 +184,7 @@ class Site extends Model
 
         return $this->members()
             ->where('user_id', $user->id)
-            ->whereIn('role', ['admin', 'maintain'])
+            ->whereIn('role', UserRole::maintainRoles())
             ->exists();
     }
 
@@ -184,7 +200,7 @@ class Site extends Model
 
         return $this->members()
             ->where('user_id', $user->id)
-            ->where('role', 'admin')
+            ->whereIn('role', UserRole::adminRoles())
             ->exists();
     }
 

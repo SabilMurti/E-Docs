@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { 
-  Plus, 
-  FileText, 
-  Users, 
+import {
+  Plus,
+  FileText,
+  Users,
   ArrowRight,
   Zap,
   Compass,
@@ -19,6 +19,7 @@ import useAuthStore from '../stores/authStore';
 import useSiteStore from '../stores/siteStore';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import { CardSkeleton } from '../components/common/Skeleton';
 
 // Action Card Component
 function ActionCard({ icon: Icon, title, subtitle, onClick, delay = 0, featured = false }) {
@@ -121,7 +122,7 @@ function SiteCard({ site, onClick, delay = 0 }) {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/sites/${site.id}/settings`);
+              navigate(`/sites/${site.slug}/settings`);
             }}
             className="p-1.5 rounded-md hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
@@ -223,6 +224,7 @@ function CreateSiteModal({ isOpen, onClose, onSubmit }) {
             <button
               type="button"
               onClick={onClose}
+              aria-label="Cancel creating site"
               className="flex-1 px-4 py-2.5 rounded-lg border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors text-sm"
             >
               Cancel
@@ -230,6 +232,7 @@ function CreateSiteModal({ isOpen, onClose, onSubmit }) {
             <button
               type="submit"
               disabled={!name.trim() || isLoading}
+              aria-label={isLoading ? 'Creating site' : 'Create new site'}
               className="flex-1 px-4 py-2.5 rounded-lg bg-[var(--color-accent)] text-white font-medium hover:bg-[var(--color-accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
             >
               {isLoading ? 'Creating...' : 'Create Site'}
@@ -251,13 +254,13 @@ function HomePage() {
     fetchSites();
   }, [fetchSites]);
 
-  const handleCreateSite = async (data) => {
+  const handleCreateSite = useCallback(async (data) => {
     console.log('Creating site with data:', data);
     try {
       const result = await createSite(data);
       console.log('Create site result:', result);
-      if (result.success && result.data?.id) {
-        navigate(`/sites/${result.data.id}`);
+      if (result.success && result.data?.slug) {
+        navigate(`/sites/${result.data.slug}`);
       } else {
         console.error('Create site failed:', result.error);
         toast.error('Failed to create site: ' + (result.error || 'Unknown error'));
@@ -266,17 +269,17 @@ function HomePage() {
       console.error('Create site exception:', error);
       toast.error('Error creating site: ' + error.message);
     }
-  };
+  }, [createSite, navigate]);
 
   // Get greeting based on time
-  const getGreeting = () => {
+  const getGreeting = useCallback(() => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
-  };
+  }, []);
 
-  const firstName = user?.name?.split(' ')[0] || 'there';
+  const firstName = useMemo(() => user?.name?.split(' ')[0] || 'there', [user?.name]);
 
   if (isLoading && sites.length === 0) {
     return (
@@ -339,7 +342,11 @@ function HomePage() {
                 </button>
               </div>
 
-              {sites.length === 0 ? (
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <CardSkeleton count={2} />
+                </div>
+              ) : sites.length === 0 ? (
                 <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border-primary)] p-10 text-center">
                   <div className="w-14 h-14 mx-auto mb-3 rounded-xl bg-[var(--color-bg-tertiary)] flex items-center justify-center">
                     <Layers size={28} className="text-[var(--color-text-muted)]" />
@@ -355,14 +362,14 @@ function HomePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {sites.map((site, index) => (
-                    <SiteCard
-                      key={site.id}
-                      site={site}
-                      onClick={() => navigate(`/sites/${site.id}`)}
-                      delay={300 + index * 100}
-                    />
-                  ))}
+                    {sites.map((site, index) => (
+                      <SiteCard
+                        key={site.id}
+                        site={site}
+                        onClick={() => navigate(`/sites/${site.slug}`)}
+                        delay={300 + index * 100}
+                      />
+                    ))}
                 </div>
               )}
             </div>

@@ -611,7 +611,7 @@ function PageConflictEditor({ conflict, resolution, onResolve }) {
 
 // ─── Main ConflictResolver ────────────────────────────────────────────────────
 export default function ConflictResolver({
-    siteId,
+    siteSlug,
     prId,
     conflicts,
     onResolved,
@@ -648,7 +648,7 @@ export default function ConflictResolver({
                 title: r.title,
                 content: r.content,
             }));
-            await resolvePullRequestConflicts(siteId, prId, payload);
+            await resolvePullRequestConflicts(siteSlug, prId, payload);
             toast.success(
                 "All conflicts resolved! You can now merge the pull request.",
             );

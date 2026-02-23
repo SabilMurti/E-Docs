@@ -19,6 +19,7 @@ class Page extends Model
         'branch_id',
         'parent_id',
         'title',
+        'icon',
         'slug',
         'content',
         'order',
@@ -34,9 +35,27 @@ class Page extends Model
     {
         static::creating(function (Page $page) {
             if (empty($page->slug)) {
-                $page->slug = Str::slug($page->title);
+                $baseSlug = Str::slug($page->title);
+                $slug = $baseSlug;
+                $counter = 1;
+
+                // Unique slug per site and branch
+                while (Page::where('site_id', $page->site_id)
+                    ->where('branch_id', $page->branch_id)
+                    ->where('slug', $slug)
+                    ->exists()) {
+                    $slug = $baseSlug . '-' . $counter;
+                    $counter++;
+                }
+
+                $page->slug = $slug;
             }
         });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
     }
 
     /**
@@ -66,6 +85,14 @@ class Page extends Model
     public function children(): HasMany
     {
         return $this->hasMany(Page::class, 'parent_id')->orderBy('order');
+    }
+
+    /**
+     * Recursive relationship for children's children
+     */
+    public function allChildren(): HasMany
+    {
+        return $this->children()->with('allChildren');
     }
 
     /**

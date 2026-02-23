@@ -5,7 +5,7 @@ import { getChangeRequests } from "../../api/pages";
 import LoadingSpinner from "../common/LoadingSpinner";
 
 export default function ChangeRequestsList() {
-    const { siteId, pageId } = useParams();
+    const { siteSlug, pageSlug } = useParams();
     const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +13,7 @@ export default function ChangeRequestsList() {
     useEffect(() => {
         const fetchRequests = async () => {
             try {
-                const data = await getChangeRequests(pageId);
+                const data = await getChangeRequests(pageSlug);
                 setRequests(data);
             } catch (error) {
                 console.error("Failed to fetch requests:", error);
@@ -22,8 +22,8 @@ export default function ChangeRequestsList() {
             }
         };
 
-        if (pageId) fetchRequests();
-    }, [pageId]);
+        if (pageSlug) fetchRequests();
+    }, [pageSlug]);
 
     if (isLoading) {
         return (
@@ -36,7 +36,7 @@ export default function ChangeRequestsList() {
     return (
         <div className="max-w-4xl mx-auto px-6 py-8">
             <button
-                onClick={() => navigate(`/sites/${siteId}/pages/${pageId}`)}
+                onClick={() => navigate(`/sites/${siteSlug}/pages/${pageSlug}`)}
                 className="flex items-center gap-2 text-gray-500 hover:text-white mb-6 transition-colors"
             >
                 <ArrowLeft size={16} />
@@ -69,7 +69,7 @@ export default function ChangeRequestsList() {
                         <div
                             key={request.id}
                             onClick={() =>
-                                navigate(`/sites/${siteId}/pulls/${request.id}`)
+                                navigate(`/sites/${siteSlug}/pulls/${request.id}`)
                             }
                             className="bg-[#161b22] border border-white/10 rounded-xl p-5 hover:border-emerald-500/50 transition-all cursor-pointer group"
                         >

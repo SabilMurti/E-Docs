@@ -19,7 +19,7 @@ import InputModal from "../common/InputModal";
 import { toast } from "sonner";
 
 function BranchesPage() {
-    const { siteId } = useParams();
+    const { siteSlug } = useParams();
     const navigate = useNavigate();
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ function BranchesPage() {
     const fetchBranches = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await getBranches(siteId);
+            const data = await getBranches(siteSlug);
             setBranches(data.data || []);
         } catch (err) {
             toast.error("Failed to load branches");
@@ -42,7 +42,7 @@ function BranchesPage() {
         } finally {
             setLoading(false);
         }
-    }, [siteId]);
+    }, [siteSlug]);
 
     useEffect(() => {
         fetchBranches();
@@ -54,7 +54,7 @@ function BranchesPage() {
         try {
             // Find default branch to use as source
             const defaultBranch = branches.find((b) => b.is_default);
-            await createBranch(siteId, {
+            await createBranch(siteSlug, {
                 name: name.toLowerCase().replace(/\s+/g, "-"),
                 source_branch: defaultBranch?.name || "main",
             });
@@ -74,7 +74,7 @@ function BranchesPage() {
         if (!branchToDelete) return;
         setIsSubmitting(true);
         try {
-            await deleteBranch(siteId, branchToDelete.id);
+            await deleteBranch(siteSlug, branchToDelete.id);
             toast.success(`Branch "${branchToDelete.name}" deleted`);
             setShowDeleteModal(false);
             setBranchToDelete(null);
@@ -116,7 +116,7 @@ function BranchesPage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
                         <button
-                            onClick={() => navigate(`/sites/${siteId}`)}
+                            onClick={() => navigate(`/sites/${siteSlug}`)}
                             className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors mb-4"
                         >
                             <ArrowLeft size={16} />
@@ -208,7 +208,7 @@ function BranchesPage() {
                                                         <button
                                                             onClick={() =>
                                                                 navigate(
-                                                                    `/sites/${siteId}?branch=${branch.name}`,
+                                                                    `/sites/${siteSlug}?branch=${branch.name}`,
                                                                 )
                                                             }
                                                             className="text-[10px] text-[var(--color-accent)] hover:underline flex items-center gap-0.5"

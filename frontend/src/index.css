@@ -204,6 +204,135 @@ body {
 }
 
 /* =============================================
+   Page Viewer - Published Page Styles
+   Mirrors ProseMirror typography for public view
+   ============================================= */
+.page-viewer {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-text-primary);
+}
+
+.page-viewer > * + * {
+  margin-top: 0.75em;
+}
+
+.page-viewer p {
+  margin: 0.75em 0;
+  color: var(--color-text-primary);
+  line-height: 1.75;
+}
+
+.page-viewer h1,
+.page-viewer h2,
+.page-viewer h3,
+.page-viewer h4 {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.page-viewer h1 {
+  font-size: 2.25rem;
+  letter-spacing: -0.025em;
+}
+
+.page-viewer h2 {
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.page-viewer h3 {
+  font-size: 1.375rem;
+  letter-spacing: -0.015em;
+}
+
+.page-viewer h4 {
+  font-size: 1.125rem;
+}
+
+.page-viewer a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition-fast);
+}
+
+.page-viewer a:hover {
+  color: var(--color-accent-hover);
+}
+
+.page-viewer strong {
+  font-weight: 600;
+}
+
+.page-viewer ul,
+.page-viewer ol {
+  padding-left: 1.5rem;
+  margin: 1em 0;
+}
+
+.page-viewer ul {
+  list-style-type: disc;
+}
+
+.page-viewer ol {
+  list-style-type: decimal;
+}
+
+.page-viewer li {
+  margin: 0.375em 0;
+}
+
+.page-viewer li p {
+  margin: 0;
+}
+
+.page-viewer blockquote {
+  border-left: 4px solid var(--color-accent);
+  background: linear-gradient(to right, var(--color-accent-light), transparent);
+  margin: 1.5em 0;
+  padding: 1rem 1.25rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+
+.page-viewer blockquote p {
+  margin: 0;
+}
+
+.page-viewer blockquote p + p {
+  margin-top: 0.5em;
+}
+
+.page-viewer hr {
+  border: none;
+  height: 1px;
+  background: var(--color-border-primary);
+  margin: 2em 0;
+}
+
+.page-viewer code {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-error);
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.2em 0.4em;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-primary);
+}
+
+.dark .page-viewer code {
+  background-color: var(--color-neutral-800);
+  color: #f472b6;
+}
+
+/* =============================================
    TipTap Editor - Core Styles
    ============================================= */
 .ProseMirror {
@@ -242,13 +371,14 @@ body {
   content: none !important;
 }
 
-/* Hide placeholder inside table cells */
-.ProseMirror table td .is-empty::before,
-.ProseMirror table th .is-empty::before,
+/* Specific styling for placeholder inside table cells */
 .ProseMirror table td p.is-empty::before,
 .ProseMirror table th p.is-empty::before {
-  content: none !important;
-  display: none !important;
+  content: attr(data-placeholder);
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  pointer-events: none;
+  font-weight: normal;
 }
 
 /* Specific fix for Task List to ensure alignment */
@@ -517,51 +647,40 @@ body {
 }
 
 /* =============================================
-   Tables - GitBook Style
+   Tables
    ============================================= */
 .ProseMirror table {
   border-collapse: collapse;
-  margin: 1.5em 0;
-  width: 100%;
   table-layout: fixed;
-  border-radius: var(--radius-lg);
+  width: 100%;
+  margin: 1.5rem 0;
   overflow: hidden;
-  box-shadow: 0 0 0 1px var(--color-border-primary);
+  border: 1px solid #e2e8f0;
 }
 
 .ProseMirror table td,
 .ProseMirror table th {
-  min-width: 100px;
-  border: 1px solid var(--color-border-primary);
-  padding: 0.75rem 1rem;
+  min-width: 1em;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
   vertical-align: top;
-  text-align: left;
+  box-sizing: border-box;
   position: relative;
+  background-clip: padding-box; /* fix overlapping backgrounds */
 }
 
 .ProseMirror table th {
-  font-weight: 600;
+  font-weight: bold;
+  text-align: left;
   background-color: var(--color-bg-secondary);
-  color: var(--color-text-primary);
 }
 
-.ProseMirror table td {
-  background-color: var(--color-bg-primary);
-}
-
-.ProseMirror table tr:hover td {
-  background-color: var(--color-bg-hover);
-}
-
-.ProseMirror .selectedCell::after {
+.ProseMirror table .selectedCell::after {
   z-index: 2;
   position: absolute;
   content: "";
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  background: var(--color-accent-muted);
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(45, 126, 231, 0.1);
   pointer-events: none;
 }
 
@@ -571,13 +690,48 @@ body {
   top: 0;
   bottom: -2px;
   width: 4px;
-  background-color: var(--color-accent);
-  pointer-events: none;
+  background-color: #3b82f6;
+  pointer-events: auto;
+  cursor: col-resize;
 }
 
 .tableWrapper {
   overflow-x: auto;
   margin: 1.5em 0;
+}
+
+/* =============================================
+   Table Themes
+   ============================================= */
+/* Striped Style */
+.ProseMirror table[data-theme="striped"] tr:nth-child(even) td {
+  background-color: var(--color-bg-secondary) !important;
+}
+
+/* Bordered Style */
+.ProseMirror table[data-theme="bordered"] {
+  border: 2px solid var(--color-border-primary) !important;
+}
+.ProseMirror table[data-theme="bordered"] td,
+.ProseMirror table[data-theme="bordered"] th {
+  border: 2px solid var(--color-border-primary) !important;
+}
+
+/* Minimal Style */
+.ProseMirror table[data-theme="minimal"] {
+  border: none !important;
+  box-shadow: none !important;
+}
+.ProseMirror table[data-theme="minimal"] th,
+.ProseMirror table[data-theme="minimal"] td {
+  border: none !important;
+}
+.ProseMirror table[data-theme="minimal"] th {
+  border-bottom: 2px solid var(--color-border-primary) !important;
+  background: transparent !important;
+}
+.ProseMirror table[data-theme="minimal"] td {
+  border-bottom: 1px solid var(--color-border-secondary) !important;
 }
 
 /* =============================================
@@ -1722,17 +1876,21 @@ body {
   -moz-tab-size: 2;
 }
 
-/* Syntax Highlighting Colors (One Dark Pro / Bloom Style) */
+/* Syntax Highlighting Colors - Theme Connected */
 .code-block-plus .hljs-comment,
 .code-block-plus .hljs-quote {
-  color: #7f848e !important;
+  color: var(--color-text-muted) !important;
   font-style: italic;
 }
 
 .code-block-plus .hljs-doctag,
 .code-block-plus .hljs-keyword,
 .code-block-plus .hljs-formula {
-  color: #c678dd !important;
+  color: var(--color-accent-600) !important;
+}
+
+.dark .code-block-plus .hljs-keyword {
+  color: var(--color-accent-400) !important;
 }
 
 .code-block-plus .hljs-section,
@@ -1740,11 +1898,11 @@ body {
 .code-block-plus .hljs-selector-tag,
 .code-block-plus .hljs-deletion,
 .code-block-plus .hljs-subst {
-  color: #e06c75 !important;
+  color: var(--color-error) !important;
 }
 
 .code-block-plus .hljs-literal {
-  color: #56b6c2 !important;
+  color: var(--color-info) !important;
 }
 
 .code-block-plus .hljs-string,
@@ -1752,7 +1910,7 @@ body {
 .code-block-plus .hljs-addition,
 .code-block-plus .hljs-attribute,
 .code-block-plus .hljs-meta .hljs-string {
-  color: #98c379 !important;
+  color: var(--color-success) !important;
 }
 
 .code-block-plus .hljs-attr,
@@ -1763,7 +1921,7 @@ body {
 .code-block-plus .hljs-selector-attr,
 .code-block-plus .hljs-selector-pseudo,
 .code-block-plus .hljs-number {
-  color: #d19a66 !important;
+  color: var(--color-warning) !important;
 }
 
 .code-block-plus .hljs-symbol,
@@ -1772,13 +1930,18 @@ body {
 .code-block-plus .hljs-meta,
 .code-block-plus .hljs-selector-id,
 .code-block-plus .hljs-title {
-  color: #61aeee !important;
+  color: var(--color-info) !important;
 }
 
 .code-block-plus .hljs-built_in,
 .code-block-plus .hljs-title.class_,
 .code-block-plus .hljs-class .hljs-title {
-  color: #e5c07b !important;
+  color: var(--color-accent-600) !important;
+}
+
+.dark .code-block-plus .hljs-built_in,
+.dark .code-block-plus .hljs-title.class_ {
+  color: var(--color-accent-300) !important;
 }
 
 .code-block-plus .hljs-emphasis {
@@ -1789,10 +1952,9 @@ body {
   font-weight: bold;
 }
 
-/* Ensure text color is bright enough */
+/* Ensure text color adapts to theme */
 .code-block-plus code {
-  color: #abb2bf !important;
-  text-shadow: 0 0 1px rgba(0,0,0,0.3);
+  color: var(--color-text-primary) !important;
 }
 
 /* =============================================
@@ -1952,65 +2114,6 @@ body {
   color: #569CD6 !important;
 }
 
-
-/* =============================================
-   Advanced Table Styles (Phase 5 - Consolidated)
-   ============================================= */
-
-/* Base Table Stability */
-.ProseMirror table {
-  border-collapse: collapse;
-  margin: 1.5em 0;
-  width: 100%;
-  table-layout: fixed; /* Necessary for resizing */
-  overflow: hidden;
-  position: relative;
-}
-
-.ProseMirror td,
-.ProseMirror th {
-  min-width: 1em;
-  border: 1px solid var(--color-border-primary);
-  padding: 8px 10px;
-  vertical-align: top;
-  box-sizing: border-box;
-  position: relative;
-  white-space: normal; /* Allow wrap */
-  word-wrap: break-word; /* distinct from word-break */
-}
-
-/* Cell content stability */
-.ProseMirror td > p,
-.ProseMirror th > p {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Striped Style */
-.ProseMirror table[data-style="striped"] tr:nth-child(even) td {
-  background-color: var(--color-bg-secondary);
-}
-
-/* Bordered Style */
-.ProseMirror table[data-style="bordered"] td,
-.ProseMirror table[data-style="bordered"] th {
-  border-width: 2px;
-}
-
-/* Minimal Style */
-.ProseMirror table[data-style="minimal"] {
-  border: none;
-}
-.ProseMirror table[data-style="minimal"] th {
-  border: none;
-  border-bottom: 2px solid var(--color-border-primary);
-  background: transparent;
-}
-.ProseMirror table[data-style="minimal"] td {
-  border: none;
-  border-bottom: 1px solid var(--color-border-secondary);
-}
-
 /* =============================================
    Auto-Save Toggle & Save Status
    ============================================= */
@@ -2041,4 +2144,239 @@ body {
 @keyframes savePulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.2); }
+}
+
+/* =============================================
+   Steps / Timeline Styles
+   ============================================= */
+
+/* Main Container */
+.steps-container {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  margin: 2rem 0;
+  transition: all 0.3s ease;
+}
+.steps-container:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+}
+
+/* Header */
+.steps-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background-color: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.steps-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.steps-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-accent);
+  color: white;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 4px rgba(var(--color-accent-rgb), 0.2);
+}
+
+.steps-header-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.steps-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+}
+
+.steps-progress-text {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.steps-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Progress Bar */
+.steps-progress-bar-container {
+  width: 120px;
+  height: 6px;
+  background-color: var(--color-bg-tertiary);
+  border-radius: 999px;
+  overflow: hidden;
+  display: none;
+}
+@media (min-width: 640px) {
+  .steps-progress-bar-container {
+    display: block;
+  }
+}
+
+.steps-progress-bar {
+  height: 100%;
+  background-color: var(--color-accent);
+  border-radius: 999px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Header Actions */
+.steps-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.steps-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.steps-action-btn:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+/* Steps Content Area */
+.steps-content {
+  padding: 1.5rem 1.25rem 0.5rem 1.25rem;
+}
+
+/* Individual Step */
+.step-item {
+  display: flex;
+  position: relative;
+  min-height: 48px;
+  margin-bottom: 0.5rem;
+  padding-bottom: 1.5rem;
+}
+/* Last step doesn't need bottom padding */
+.step-item:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+/* Timeline (Left side) */
+.step-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 36px;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+.step-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-primary);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.step-checkbox:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: scale(1.1);
+}
+
+.step-checkbox.completed {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+.step-checkbox.completed:hover {
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  transform: scale(1.05); /* Slight bounce instead of huge scale */
+}
+
+/* Connecting Line */
+.step-connector {
+  flex-grow: 1;
+  width: 2px;
+  background-color: var(--color-border-secondary);
+  margin-top: 4px;
+  margin-bottom: -16px; /* Overlap with next item */
+  transition: background-color 0.3s;
+}
+
+/* Content Area (Right side) */
+.step-content {
+  flex-grow: 1;
+  padding-top: 2px; /* Align text with circle */
+  transition: opacity 0.3s;
+}
+
+.step-content.completed {
+  opacity: 0.6;
+}
+.step-content.completed:hover {
+  opacity: 1;
+}
+
+.step-content-inner > p:first-child {
+  margin-top: 0;
+}
+.step-content-inner > p:last-child {
+  margin-bottom: 0;
+}
+
+/* Hover Actions (Delete) */
+.step-actions {
+  position: absolute;
+  right: -10px;
+  top: 0;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.2s ease;
+}
+.step-item:hover .step-actions.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.step-delete-btn {
+  color: var(--color-text-muted);
+}
+.step-delete-btn:hover {
+  color: #ef4444; /* Red */
+  background-color: #fef2f2;
+}
+
+.dark .step-delete-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
 }
