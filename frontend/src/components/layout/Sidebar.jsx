@@ -12,6 +12,7 @@ import {
     Grid,
     Book,
     X,
+    Minus,
     GitBranch,
 } from "lucide-react";
 import usePageStore from "../../stores/pageStore";
@@ -51,15 +52,16 @@ function PageTreeItem({
                 style={{ paddingLeft: `${paddingLeft}px` }}
                 onClick={() => navigate(`/sites/${siteId}/pages/${page.slug}`)}
             >
-                {/* Expand/Collapse */}
+                {/* Expand/Collapse chevron — hidden on hover if expanded (replaced by minus) */}
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
                         setIsExpanded(!isExpanded);
                     }}
                     className={`
-            p-0.5 rounded hover:bg-[var(--color-bg-hover)] transition-colors
+            p-0.5 rounded hover:bg-[var(--color-bg-hover)] transition-colors shrink-0
             ${hasChildren ? "" : "invisible"}
+            ${hasChildren && isExpanded ? "group-hover:hidden" : ""}
           `}
                 >
                     {isExpanded ? (
@@ -68,6 +70,24 @@ function PageTreeItem({
                         <ChevronRight size={12} strokeWidth={2.5} />
                     )}
                 </button>
+
+                {/* Minus button — shown on hover only when expanded & has children */}
+                {hasChildren && isExpanded && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsExpanded(false);
+                        }}
+                        title="Collapse subpages"
+                        className="
+              hidden group-hover:flex p-0.5 rounded shrink-0
+              hover:bg-[var(--color-bg-hover)] transition-colors
+              text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]
+            "
+                    >
+                        <Minus size={12} strokeWidth={2.5} />
+                    </button>
+                )}
 
                 {/* Icon */}
                 {page.icon && (

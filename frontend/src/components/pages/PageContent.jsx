@@ -257,9 +257,27 @@ export default function PageContent() {
         }
     }, [siteSlug, pageSlug, rawNavigate]);
 
-    const handleDuplicatePage = useCallback(() => {
-        toast.info('Duplicate functionality coming soon');
-    }, []);
+    const handleDuplicatePage = useCallback(async () => {
+        if (!currentPage) return;
+        try {
+            const branchName = currentPage.branch_name || 'main';
+            const result = await usePageStore.getState().duplicatePage(
+                siteSlug,
+                currentPage.slug,
+                branchName
+            );
+
+            if (result.success && result.page?.slug) {
+                toast.success(`"${result.page.title}" created`);
+                rawNavigate(`/sites/${siteSlug}/pages/${result.page.slug}`);
+            } else {
+                toast.error(result.error || 'Failed to duplicate page');
+            }
+        } catch (error) {
+            console.error('Duplicate error:', error);
+            toast.error('Failed to duplicate page');
+        }
+    }, [currentPage, siteSlug, rawNavigate]);
 
     // --- COMMIT ---
     const handleCommit = useCallback(async () => {

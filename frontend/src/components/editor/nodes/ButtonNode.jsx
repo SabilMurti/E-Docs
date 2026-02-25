@@ -1,6 +1,7 @@
 import { NodeViewWrapper, NodeViewContent } from "@tiptap/react";
 import { useState, useEffect } from "react";
-import { ExternalLink, Link2, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ExternalLink, Link2, X, ChevronRight } from "lucide-react";
 
 /**
  * ButtonBlock Component
@@ -44,9 +45,9 @@ export default function ButtonBlock({
     };
 
     const variantStyles = {
-        primary: "bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] no-underline",
+        primary: "bg-[var(--color-accent)] !text-white hover:bg-[var(--color-accent-hover)] no-underline shadow-sm",
         secondary:
-            "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:border-[var(--color-accent)]/50 no-underline",
+            "bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:border-[var(--color-accent)] shadow-sm hover:shadow-md transition-all no-underline w-full justify-between",
         outline:
             "bg-transparent text-[var(--color-accent)] border-2 border-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 no-underline",
     };
@@ -170,22 +171,26 @@ export default function ButtonBlock({
     return (
         <NodeViewWrapper className="button-block my-4">
             <div className="relative group">
-                <a
-                    href={node.attrs.url}
-                    target={
-                        node.attrs.url.startsWith("http") ? "_blank" : undefined
-                    }
-                    rel={
-                        node.attrs.url.startsWith("http")
-                            ? "noopener noreferrer"
-                            : undefined
-                    }
-                    data-variant={node.attrs.variant}
-                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all no-underline ${variantStyles[node.attrs.variant]} ${node.attrs.variant}`}
-                >
-                    <span>{node.attrs.text}</span>
-                    <ExternalLink size={16} />
-                </a>
+                {node.attrs.url.startsWith("http") ? (
+                    <a
+                        href={node.attrs.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-variant={node.attrs.variant}
+                        className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all no-underline ${variantStyles[node.attrs.variant]} ${node.attrs.variant}`}
+                    >
+                        <span className="flex-1 text-left">{node.attrs.text}</span>
+                        <ExternalLink size={16} />
+                    </a>
+                ) : (
+                    <Link
+                        to={node.attrs.url}
+                        className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all no-underline ${variantStyles[node.attrs.variant]} ${node.attrs.variant}`}
+                    >
+                        <span className="flex-1 text-left">{node.attrs.text}</span>
+                        <ChevronRight size={16} className="opacity-50" />
+                    </Link>
+                )}
 
                 {/* Edit Button (visible on hover) */}
                 <button

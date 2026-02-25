@@ -80,7 +80,12 @@ class SiteMemberController extends Controller
         ]);
 
         // Send notification to target user
-        $targetUser->notify(new SiteInvitationNotification($site, $currentUser));
+        try {
+            $targetUser->notify(new SiteInvitationNotification($site, auth()->user()));
+        } catch (\Exception $e) {
+            // Log error but don't fail the invite if notification fails
+            \Log::warning('Failed to send invite notification: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Member added successfully.',

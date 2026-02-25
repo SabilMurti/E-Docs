@@ -86,7 +86,7 @@ export default function RichEditor({
     },
     editorProps: {
       attributes: {
-        class: 'rich-editor-content focus:outline-none min-h-[400px] pl-12 pr-4 py-4',
+        class: 'rich-editor-content focus:outline-none min-h-[400px] px-4 py-4 text-left',
       },
     },
   });

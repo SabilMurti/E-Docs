@@ -3,11 +3,46 @@ import {
   FileText, ExternalLink, CheckSquare, Square, Download,
   FileAudio, FileVideo, FileImage, File,
   Info, CheckCircle2, AlertTriangle, XCircle,
-  ChevronRight, ChevronDown, List
+  ChevronRight, ChevronDown, List,
+  Copy, Check
 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, X, Layers } from 'lucide-react';
 import { resolveImageUrl } from '../../api/client';
+
+// Copy button with visual confirmation for code blocks
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback - silently fail
+    }
+  }, [text]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 text-xs px-2 py-1 rounded transition-all duration-150"
+      style={{
+        color: copied ? '#10b981' : '#6e7681',
+        background: copied ? 'rgba(16,185,129,0.1)' : 'transparent',
+      }}
+      title="Copy code"
+    >
+      {copied ? (
+        <><Check size={12} /><span>Copied!</span></>
+      ) : (
+        <><Copy size={12} /><span>Copy</span></>
+      )}
+    </button>
+  );
+}
+
 
 function ViewerTabs({ node, renderContent }) {
   const [activeTab, setActiveTab] = useState(node.attrs?.activeTab || 0);
@@ -172,17 +207,24 @@ function PageViewer({ content }) {
              </ul>
            );
 
-        case 'codeBlock':
+
+        case 'codeBlock': {
+          const codeText = node.content?.map(c => c.text).join('') || '';
+          const lang = node.attrs?.language || 'text';
           return (
-            <div key={i} className="relative group mb-6">
-              <pre className="bg-[#0d1117] border border-[var(--color-border-primary)] text-gray-200 rounded-lg p-4 overflow-x-auto font-mono text-sm leading-normal shadow-sm">
-                <code>{node.content?.map(c => c.text).join('') || ''}</code>
-              </pre>
-              <div className="absolute top-2 right-2 text-xs text-gray-500 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-                {node.attrs?.language || 'text'}
+            <div key={i} className="relative group mb-6 rounded-xl overflow-hidden shadow-sm" style={{ background: '#0d1117', border: '1px solid #30363d' }}>
+              {/* Code Block Header */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: '#21262d', background: '#161b22' }}>
+                <span className="text-xs font-mono font-medium" style={{ color: '#8b949e' }}>{lang}</span>
+                <CopyButton text={codeText} />
               </div>
+              <pre className="p-4 overflow-x-auto font-mono text-sm leading-relaxed" style={{ color: '#e6edf3', margin: 0, background: 'transparent' }}>
+                <code>{codeText}</code>
+              </pre>
             </div>
           );
+        }
+
 
         case 'blockquote':
           return (

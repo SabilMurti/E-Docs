@@ -65,7 +65,7 @@ export default function PageEditor({
         },
         editorProps: {
             attributes: {
-                class: "page-editor-content focus:outline-none min-h-[400px] px-4 py-4",
+                class: "page-editor-content focus:outline-none min-h-[400px] px-4 py-4 text-left",
             },
         },
         immediatelyRender: false,

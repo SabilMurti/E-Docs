@@ -89,6 +89,14 @@ export const getCommits = async (requestId) => {
   return response.data;
 };
 
+/**
+ * Duplicate a page
+ */
+export const duplicatePage = async (siteId, pageId) => {
+  const response = await client.post(`/sites/${siteId}/pages/${pageId}/duplicate`);
+  return response.data;
+};
+
 export default {
   getPages,
   getPage,
@@ -96,6 +104,7 @@ export default {
   updatePage,
   deletePage,
   reorderPages,
+  duplicatePage,
   createChangeRequest,
   getChangeRequests,
   mergeChangeRequest,

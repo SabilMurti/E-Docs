@@ -1,42 +1,34 @@
 import client from './client';
 
 /**
- * Get members of a space
+ * Get members of a site
  */
-export const getMembers = async (spaceId) => {
-  const response = await client.get(`/spaces/${spaceId}/members`);
+export const getMembers = async (siteSlug) => {
+  const response = await client.get(`/sites/${siteSlug}/members`);
   return response.data;
 };
 
 /**
- * Invite a member to a space
+ * Invite a member to a site
  */
-export const inviteMember = async (spaceId, data) => {
-  const response = await client.post(`/spaces/${spaceId}/members`, data);
+export const inviteMember = async (siteSlug, data) => {
+  const response = await client.post(`/sites/${siteSlug}/members`, data);
   return response.data;
 };
 
 /**
  * Update member role
  */
-export const updateMember = async (spaceId, memberId, data) => {
-  const response = await client.put(`/spaces/${spaceId}/members/${memberId}`, data);
+export const updateMember = async (siteSlug, memberId, data) => {
+  const response = await client.put(`/sites/${siteSlug}/members/${memberId}`, data);
   return response.data;
 };
 
 /**
- * Remove a member from space
+ * Remove a member from site
  */
-export const removeMember = async (spaceId, memberId) => {
-  const response = await client.delete(`/spaces/${spaceId}/members/${memberId}`);
-  return response.data;
-};
-
-/**
- * Accept an invitation
- */
-export const acceptInvite = async (spaceId, token) => {
-  const response = await client.post(`/spaces/${spaceId}/invites/${token}/accept`);
+export const removeMember = async (siteSlug, memberId) => {
+  const response = await client.delete(`/sites/${siteSlug}/members/${memberId}`);
   return response.data;
 };
 
@@ -45,5 +37,4 @@ export default {
   inviteMember,
   updateMember,
   removeMember,
-  acceptInvite,
 };

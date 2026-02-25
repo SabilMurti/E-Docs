@@ -7,7 +7,7 @@ import Button from '../common/Button';
 
 function InviteModal({ isOpen, onClose, siteSlug, onInvited }) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('viewer');
+  const [role, setRole] = useState('read');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -21,7 +21,7 @@ function InviteModal({ isOpen, onClose, siteSlug, onInvited }) {
       await inviteMember(siteSlug, { email, role });
       setSuccess(true);
       setEmail('');
-      setRole('viewer');
+      setRole('read');
       
       // Refresh member list
       if (onInvited) onInvited();
@@ -39,7 +39,7 @@ function InviteModal({ isOpen, onClose, siteSlug, onInvited }) {
 
   const handleClose = () => {
     setEmail('');
-    setRole('viewer');
+    setRole('read');
     setError(null);
     setSuccess(false);
     onClose();
@@ -94,20 +94,30 @@ function InviteModal({ isOpen, onClose, siteSlug, onInvited }) {
                   focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]
                 "
               >
-                <option value="viewer">Viewer - Can view content</option>
-                <option value="editor">Editor - Can edit content</option>
+                <option value="read">Viewer - Can view content</option>
+                <option value="write">Editor - Can edit content</option>
+                <option value="maintain">Maintainer - Can manage branches & PRs</option>
+                <option value="admin">Admin - Full access except delete site</option>
               </select>
             </div>
 
             {/* Role Description */}
             <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3 text-sm">
-              {role === 'viewer' ? (
+              {role === 'read' ? (
                 <p className="text-[var(--color-text-secondary)]">
                   <strong>Viewers</strong> can read all pages but cannot make changes.
                 </p>
+              ) : role === 'write' ? (
+                <p className="text-[var(--color-text-secondary)]">
+                  <strong>Editors</strong> can create, edit, and delete pages.
+                </p>
+              ) : role === 'maintain' ? (
+                <p className="text-[var(--color-text-secondary)]">
+                  <strong>Maintainers</strong> can manage branches and pull requests.
+                </p>
               ) : (
                 <p className="text-[var(--color-text-secondary)]">
-                  <strong>Editors</strong> can create, edit, and delete pages in this space.
+                  <strong>Admins</strong> have full access and can manage members.
                 </p>
               )}
             </div>

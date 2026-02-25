@@ -86,9 +86,9 @@ class CommitController extends Controller
                     $page->delete();
                 } else {
                     $page->update([
-                        'title' => $pageData['title'] ?? $page->title,
+                        'title'   => $pageData['title'] ?? $page->title,
                         'content' => $pageData['content'] ?? $page->content,
-                        'updated_by' => $request->user()->id,
+                        // Note: author info is stored in commits.user_id, not duplicated here
                     ]);
                 }
             }
@@ -135,11 +135,11 @@ class CommitController extends Controller
                 'previous_title' => $page->title,
             ]);
 
-            // Update the page content (Live content)
+            // Update the page content
             $page->update([
-                'title' => $validated['title'] ?? $page->title,
+                'title'   => $validated['title'] ?? $page->title,
                 'content' => $validated['content'] ?? $page->content,
-                'updated_by' => $request->user()->id,
+                // Note: author info is stored in commits.user_id, not duplicated here
             ]);
 
             return response()->json([

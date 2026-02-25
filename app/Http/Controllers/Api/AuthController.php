@@ -28,10 +28,18 @@ class AuthController extends Controller
 
     /**
      * Redirect to GitHub OAuth
+     * Requests user:email scope so GitHub always provides the user's email,
+     * even if they have set it to private in their GitHub profile settings.
      */
     public function redirectToGithub(): JsonResponse
     {
-        return $this->getOAuthRedirectUrl('github');
+        $url = Socialite::driver('github')
+            ->stateless()
+            ->scopes(['user:email'])
+            ->redirect()
+            ->getTargetUrl();
+
+        return response()->json(['url' => $url]);
     }
 
     /**
@@ -119,9 +127,14 @@ class AuthController extends Controller
         }
 
         // Create new user
+        // For GitHub with private email: use synthetic placeholder so the unique
+        // email constraint is not violated. With user:email scope this should rarely happen.
+        $email = $providerUser->getEmail()
+            ?? ($driver === 'github' ? 'github_' . $providerUser->getId() . '@noemail.edocs' : null);
+
         return User::create([
             'name' => $this->getUserName($providerUser, $driver),
-            'email' => $providerUser->getEmail(),
+            'email' => $email,
             $providerIdField => $providerUser->getId(),
             'avatar_url' => $providerUser->getAvatar(),
         ]);

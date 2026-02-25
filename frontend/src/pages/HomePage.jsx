@@ -72,7 +72,8 @@ function SiteCard({ site, onClick, delay = 0 }) {
     return () => clearTimeout(timer);
   }, [delay]);
 
-  const spacesCount = site.spaces_count || site.spaces?.length || 0;
+  // Backend sends pages_count via withCount('pages') in SiteController
+  const pagesCount = site.pages_count ?? 0;
 
   return (
     <div
@@ -114,8 +115,8 @@ function SiteCard({ site, onClick, delay = 0 }) {
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--color-border-secondary)]">
           <div className="flex items-center gap-3 text-[10px] text-[var(--color-text-muted)]">
             <span className="flex items-center gap-1">
-              <Layers size={11} />
-              {spacesCount} {spacesCount === 1 ? 'page' : 'pages'}
+              <FileText size={11} />
+              {pagesCount} {pagesCount === 1 ? 'page' : 'pages'}
             </span>
           </div>
           

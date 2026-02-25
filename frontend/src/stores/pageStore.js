@@ -115,12 +115,28 @@ const usePageStore = create((set, get) => ({
   },
 
   // Reorder pages
-  reorderPages: async (siteId, pageUpdates) => {
+  reorderPages: async (siteId, pageUpdates, branchName = 'main') => {
     try {
       await pagesApi.reorderPages(siteId, pageUpdates);
-      await get().fetchPages(siteId);
+      await get().fetchPages(siteId, branchName);
       return { success: true };
     } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Duplicate page
+  duplicatePage: async (siteId, pageSlug, branchName = 'main') => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await pagesApi.duplicatePage(siteId, pageSlug);
+      const newPage = response.data;
+      // Refresh tree so duplicate appears in sidebar
+      await get().fetchPages(siteId, branchName);
+      set({ isLoading: false });
+      return { success: true, page: newPage };
+    } catch (error) {
+      set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
   },
@@ -141,7 +157,8 @@ const usePageStore = create((set, get) => ({
       const response = await pagesApi.updatePage(siteId, pageId, data);
       const updatedPage = response.data || response;
       set((state) => ({
-        currentPage: state.currentPage?.id === pageId ? updatedPage : state.currentPage,
+        // Use slug (same as pageId from URL) — consistent with updatePage & deletePage
+        currentPage: state.currentPage?.slug === pageId ? updatedPage : state.currentPage,
         isSaving: false,
       }));
       return { success: true, page: updatedPage };

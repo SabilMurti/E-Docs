@@ -22,7 +22,25 @@ import {
     Search,
     GitPullRequest,
     GitBranch,
+    GripVertical,
+    Minus,
 } from "lucide-react";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from "@dnd-kit/core";
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import useAuthStore from "../../stores/authStore";
 import useSiteStore from "../../stores/siteStore";
 import usePageStore from "../../stores/pageStore";
@@ -41,11 +59,30 @@ function PageTreeItem({
     level = 0,
     onDeleteRequest,
     onAddSubpageRequest,
+    onReorder,
+    sensors,
+    collapseKey = 0,
 }) {
     const { pageSlug } = useParams();
     const navigate = useNavigate();
     const isActive = pageSlug === page.slug || pageSlug === page.id;
     const hasChildren = page.children && page.children.length > 0;
+
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: page.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : "auto",
+        position: "relative",
+    };
 
     // Keep expanded if it has children and one of them is active, otherwise default to false
     const [isExpanded, setIsExpanded] = useState(() => {
@@ -63,6 +100,7 @@ function PageTreeItem({
     // Padding based on level (slightly tighter for deep nesting)
     const paddingLeft = level === 0 ? 8 : level * 12 + 12;
 
+    // Auto-expand if a child is active
     useEffect(() => {
         if (hasChildren) {
             const checkActive = (children) => {
@@ -78,11 +116,20 @@ function PageTreeItem({
         }
     }, [pageSlug, page.children, hasChildren]);
 
+    // Collapse all when collapseKey changes (triggered from parent)
+    useEffect(() => {
+        if (collapseKey > 0) setIsExpanded(false);
+    }, [collapseKey]);
+
     // Limit nesting to 5 levels in UI
     const canAddSubpage = level < 4; // 0-indexed, 4 = level 5
 
     return (
-        <div className="relative">
+        <div 
+            ref={setNodeRef} 
+            style={style} 
+            className={`relative ${isDragging ? "opacity-50" : ""}`}
+        >
             {/* Vertical line for hierarchy (only for subpages) */}
             {level > 0 && (
                 <div
@@ -93,7 +140,7 @@ function PageTreeItem({
 
             <div
                 className={`
-          group flex items-center gap-1.5 py-1 pr-1.5 rounded-md
+          group flex items-center gap-1 py-1 pr-1.5 rounded-md
           cursor-pointer transition-all text-[13px] select-none relative
           ${
               isActive
@@ -104,6 +151,16 @@ function PageTreeItem({
                 style={{ paddingLeft: `${paddingLeft}px` }}
                 onClick={() => navigate(`/sites/${siteSlug}/pages/${page.slug}`)}
             >
+                {/* Drag Handle */}
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="w-4 h-5 flex items-center justify-center cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <GripVertical size={12} />
+                </div>
+
                 {/* Toggle Expander Area */}
                 <div className="w-5 h-5 flex items-center justify-center shrink-0">
                     {hasChildren && (
@@ -195,16 +252,30 @@ function PageTreeItem({
             {/* Recursive Children Display */}
             {hasChildren && isExpanded && (
                 <div className="mt-0.5">
-                    {page.children.map((child) => (
-                        <PageTreeItem
-                            key={child.id}
-                            page={child}
-                            siteSlug={siteSlug}
-                            level={level + 1}
-                            onDeleteRequest={onDeleteRequest}
-                            onAddSubpageRequest={onAddSubpageRequest}
-                        />
-                    ))}
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => onReorder(event, page.children)}
+                    >
+                        <SortableContext
+                            items={page.children.map((c) => c.id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {page.children.map((child) => (
+                                <PageTreeItem
+                                    key={child.id}
+                                    page={child}
+                                    siteSlug={siteSlug}
+                                    level={level + 1}
+                                    onDeleteRequest={onDeleteRequest}
+                                    onAddSubpageRequest={onAddSubpageRequest}
+                                    onReorder={onReorder}
+                                    sensors={sensors}
+                                    collapseKey={collapseKey}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
                 </div>
             )}
             {/* Create Branch Modal Removed */}
@@ -268,8 +339,20 @@ function UnifiedSidebar({ isOpen, onClose }) {
         fetchPages,
         createPage,
         deletePage,
+        reorderPages,
         isLoading: pagesLoading,
     } = usePageStore();
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5, // Prevent accidental drags when clicking
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
+    );
     const { theme, toggleTheme } = useTheme();
 
     const isDark = theme === "dark";
@@ -284,6 +367,9 @@ function UnifiedSidebar({ isOpen, onClose }) {
     const [parentIdForNewPage, setParentIdForNewPage] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [newBranchName, setNewBranchName] = useState("");
+
+    // Collapse All: increment this key to trigger all PageTreeItems to collapse
+    const [collapseKey, setCollapseKey] = useState(0);
 
     // Site creation modal state
     const [showCreateSiteModal, setShowCreateSiteModal] = useState(false);
@@ -447,6 +533,34 @@ function UnifiedSidebar({ isOpen, onClose }) {
         }
     };
 
+    // Handle site reordering
+    const handleReorder = async (event, currentPages) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            const oldIndex = currentPages.findIndex((p) => p.id === active.id);
+            const newIndex = currentPages.findIndex((p) => p.id === over.id);
+
+            const newOrder = arrayMove(currentPages, oldIndex, newIndex);
+
+            // Optimistic update
+            // We need to update the store's pages tree. 
+            // For simplicity, we refetch after update, but let's prepare the payload
+            const pageUpdates = newOrder.map((page, index) => ({
+                id: page.id,
+                order: index + 1,
+                parent_id: page.parent_id
+            }));
+
+            try {
+                await reorderPages(siteSlug, pageUpdates, currentBranch);
+                toast.success("Page order updated");
+            } catch (error) {
+                toast.error("Failed to reorder pages");
+            }
+        }
+    };
+
     // Handle create new site
     const handleCreateSite = async (name) => {
         setIsSubmitting(true);
@@ -603,9 +717,17 @@ function UnifiedSidebar({ isOpen, onClose }) {
                                                 `/sites/${siteSlug}/settings`,
                                             )
                                         }
-                                        className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
+                                        className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                                        title="Site Settings"
                                     >
                                         <Settings size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => setCollapseKey((k) => k + 1)}
+                                        className="p-1 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                                        title="Collapse all pages"
+                                    >
+                                        <Minus size={14} />
                                     </button>
                                 </div>
                             </div>
@@ -719,43 +841,57 @@ function UnifiedSidebar({ isOpen, onClose }) {
                                     </button>
                                 </div>
                             ) : (
-                                <div className="space-y-0.5">
-                                    {pages
-                                        .filter(
-                                            (p) =>
-                                                !searchQuery ||
+                                <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(e) => handleReorder(e, pages)}
+                                >
+                                    <div className="space-y-0.5">
+                                        <SortableContext
+                                            items={pages.map((p) => p.id)}
+                                            strategy={verticalListSortingStrategy}
+                                        >
+                                            {pages
+                                                .filter(
+                                                    (p) =>
+                                                        !searchQuery ||
+                                                        p.title
+                                                            .toLowerCase()
+                                                            .includes(
+                                                                searchQuery.toLowerCase(),
+                                                            ),
+                                                )
+                                                .map((page) => (
+                                                    <PageTreeItem
+                                                        key={page.id}
+                                                        page={page}
+                                                        siteSlug={siteSlug}
+                                                        onDeleteRequest={
+                                                            handleDeleteRequest
+                                                        }
+                                                        onAddSubpageRequest={
+                                                            handleAddSubpage
+                                                        }
+                                                        onReorder={handleReorder}
+                                                        sensors={sensors}
+                                                        collapseKey={collapseKey}
+                                                    />
+                                                ))}
+                                        </SortableContext>
+                                        {searchQuery &&
+                                            pages.filter((p) =>
                                                 p.title
                                                     .toLowerCase()
                                                     .includes(
                                                         searchQuery.toLowerCase(),
                                                     ),
-                                        )
-                                        .map((page) => (
-                                            <PageTreeItem
-                                                key={page.id}
-                                                page={page}
-                                                siteSlug={siteSlug}
-                                                onDeleteRequest={
-                                                    handleDeleteRequest
-                                                }
-                                                onAddSubpageRequest={
-                                                    handleAddSubpage
-                                                }
-                                            />
-                                        ))}
-                                    {searchQuery &&
-                                        pages.filter((p) =>
-                                            p.title
-                                                .toLowerCase()
-                                                .includes(
-                                                    searchQuery.toLowerCase(),
-                                                ),
-                                        ).length === 0 && (
-                                            <p className="text-[10px] text-center text-[var(--color-text-muted)] py-4">
-                                                No pages match "{searchQuery}"
-                                            </p>
-                                        )}
-                                </div>
+                                            ).length === 0 && (
+                                                <p className="text-[10px] text-center text-[var(--color-text-muted)] py-4">
+                                                    No pages match "{searchQuery}"
+                                                </p>
+                                            )}
+                                    </div>
+                                </DndContext>
                             )}
 
                             {/* Other Sites Section - when in site view */}
