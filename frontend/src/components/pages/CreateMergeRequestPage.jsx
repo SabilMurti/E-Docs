@@ -6,7 +6,7 @@ import {
   GitCompare, FileText, FilePlus, FileMinus, FileDiff, ArrowRight
 } from 'lucide-react';
 import useSiteStore from '../../stores/siteStore';
-import { compareBranches } from '../../api/sites';
+import { compareBranches } from '../../api/pulls';
 import client from '../../api/client';
 import LoadingSpinner from '../common/LoadingSpinner';
 import Button from '../common/Button';

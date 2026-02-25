@@ -10,8 +10,9 @@ const useAuthStore = create(
       isLoading: false,
       isAuthenticated: false,
 
-      // Set user and token directly (used by callback page)
       setAuth: (user, token) => {
+        // Also persist to localStorage for the axios interceptor
+        if (token) localStorage.setItem('token', token);
         set({ 
           user, 
           token, 
@@ -38,13 +39,21 @@ const useAuthStore = create(
             isLoading: false 
           });
         } catch (error) {
-          set({ 
-            user: null, 
-            token: null, 
-            isAuthenticated: false, 
-            isLoading: false 
-          });
-          localStorage.removeItem('token');
+          // Only clear auth on 401 (truly unauthorized/expired token).
+          // Network errors, CORS errors, or server errors (5xx) should NOT log the user out.
+          const status = error?.response?.status;
+          if (status === 401) {
+            set({ 
+              user: null, 
+              token: null, 
+              isAuthenticated: false, 
+              isLoading: false 
+            });
+            localStorage.removeItem('token');
+          } else {
+            // Non-401 error (network/CORS/5xx): keep existing auth state, just stop loading
+            set({ isLoading: false });
+          }
         }
       },
 

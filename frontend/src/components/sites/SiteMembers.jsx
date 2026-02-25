@@ -7,11 +7,11 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import ConfirmModal from '../common/ConfirmModal';
 
 const ROLE_CONFIG = {
-  owner:    { label: 'Owner',    color: 'text-amber-500',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20',  icon: Crown },
-  admin:    { label: 'Admin',    color: 'text-red-500',    bg: 'bg-red-500/10',    border: 'border-red-500/20',    icon: Shield },
-  maintain: { label: 'Maintain', color: 'text-blue-500',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',   icon: Shield },
-  editor:   { label: 'Editor',   color: 'text-[var(--color-accent)]', bg: 'bg-[var(--color-accent)]/10', border: 'border-[var(--color-accent)]/20', icon: Shield },
-  viewer:   { label: 'Viewer',   color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-bg-hover)]', border: 'border-[var(--color-border-primary)]', icon: Shield },
+  owner:    { label: 'Owner',      color: 'text-amber-500',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20',  icon: Crown },
+  admin:    { label: 'Admin',      color: 'text-red-500',    bg: 'bg-red-500/10',    border: 'border-red-500/20',    icon: Shield },
+  maintain: { label: 'Maintainer', color: 'text-blue-500',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',   icon: Shield },
+  write:    { label: 'Editor',     color: 'text-[var(--color-accent)]', bg: 'bg-[var(--color-accent)]/10', border: 'border-[var(--color-accent)]/20', icon: Shield },
+  read:     { label: 'Viewer',     color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-bg-hover)]', border: 'border-[var(--color-border-primary)]', icon: Shield },
 };
 
 export default function SiteMembers({ siteSlug }) {
@@ -19,7 +19,7 @@ export default function SiteMembers({ siteSlug }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('editor');
+  const [inviteRole, setInviteRole] = useState('write');
   const [memberToRemove, setMemberToRemove] = useState(null);
 
   useEffect(() => { fetchMembers(); }, [siteSlug]);
@@ -108,9 +108,9 @@ export default function SiteMembers({ siteSlug }) {
             onChange={(e) => setInviteRole(e.target.value)}
             className="px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 focus:border-[var(--color-accent)]/50 transition-all"
           >
-            <option value="viewer">Viewer</option>
-            <option value="editor">Editor</option>
-            <option value="maintain">Maintain</option>
+            <option value="read">Viewer</option>
+            <option value="write">Editor</option>
+            <option value="maintain">Maintainer</option>
             <option value="admin">Admin</option>
           </select>
 
@@ -148,8 +148,8 @@ export default function SiteMembers({ siteSlug }) {
         ) : (
           <div className="space-y-2">
             {members.map(member => {
-              const roleKey = member.role?.toLowerCase() ?? 'viewer';
-              const role = ROLE_CONFIG[roleKey] ?? ROLE_CONFIG.viewer;
+              const roleKey = member.role?.toLowerCase() ?? 'read';
+              const role = ROLE_CONFIG[roleKey] ?? ROLE_CONFIG.read;
               const RoleIcon = role.icon;
               const isOwner = roleKey === 'owner';
 

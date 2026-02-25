@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SiteController;
 use App\Http\Controllers\Api\PageController;
-use App\Http\Controllers\Api\PageRevisionController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\PublicSiteController;
 use App\Http\Controllers\Api\SiteMemberController;
@@ -82,10 +81,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Pages
     Route::post('sites/{site}/pages', [PageController::class, 'store']);
     Route::get('sites/{site}/pages', [PageController::class, 'index']);
+    Route::post('sites/{site}/pages/reorder', [PageController::class, 'reorder']);
     Route::get('sites/{site}/pages/{page}', [PageController::class, 'show']);
     Route::put('sites/{site}/pages/{page}', [PageController::class, 'update']);
     Route::delete('sites/{site}/pages/{page}', [PageController::class, 'destroy']);
-    Route::post('sites/{site}/pages/reorder', [PageController::class, 'reorder']);
+    Route::post('sites/{site}/pages/{page}/duplicate', [PageController::class, 'duplicate']);
 
     // Notifications
     Route::get('notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);

@@ -81,38 +81,6 @@ export async function removeSiteMember(id, userId) {
 }
 
 /**
- * Add space to site
- */
-export const addSpaceToSite = async (siteId, data) => {
-  const response = await client.post(`/sites/${siteId}/spaces`, data);
-  return response.data;
-};
-
-/**
- * Update space in site
- */
-export const updateSpaceInSite = async (siteId, spaceId, data) => {
-  const response = await client.put(`/sites/${siteId}/spaces/${spaceId}`, data);
-  return response.data;
-};
-
-/**
- * Remove space from site
- */
-export const removeSpaceFromSite = async (siteId, spaceId) => {
-  const response = await client.delete(`/sites/${siteId}/spaces/${spaceId}`);
-  return response.data;
-};
-
-/**
- * Reorder spaces in site
- */
-export const reorderSpacesInSite = async (siteId, spaces) => {
-  const response = await client.post(`/sites/${siteId}/spaces/reorder`, { spaces });
-  return response.data;
-};
-
-/**
  * Get branches for site
  */
 export const getBranches = async (siteId) => {
@@ -136,15 +104,6 @@ export const deleteBranch = async (siteId, branchId) => {
   return response.data;
 };
 
-/**
- * Compare branches
- */
-export const compareBranches = async (siteId, sourceId, targetId) => {
-  const response = await client.get(`/sites/${siteId}/compare`, {
-    params: { source: sourceId, target: targetId }
-  });
-  return response.data;
-};
 
 export default {
   getSites,
@@ -154,8 +113,10 @@ export default {
   deleteSite,
   publishSite,
   unpublishSite,
-  addSpaceToSite,
-  updateSpaceInSite,
-  removeSpaceFromSite,
-  reorderSpacesInSite,
+  getSiteMembers,
+  addSiteMember,
+  removeSiteMember,
+  getBranches,
+  createBranch,
+  deleteBranch,
 };

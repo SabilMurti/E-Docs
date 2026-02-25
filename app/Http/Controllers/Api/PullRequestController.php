@@ -194,19 +194,73 @@ class PullRequestController extends Controller
     }
 
     /**
-     * Placeholder for PR commits
+     * Get commits on source branch that are not yet in target branch
      */
     public function commits(Request $request, PullRequest $pullRequest)
     {
-        return response()->json([]);
+        if (!$pullRequest->site->canView($request->user())) {
+            abort(403);
+        }
+
+        // Commits on source branch, ordered by newest first
+        $sourceCommits = Commit::where('branch_id', $pullRequest->source_branch_id)
+            ->with('user', 'pages')
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Commits also on target branch (to exclude them)
+        $targetCommitIds = Commit::where('branch_id', $pullRequest->target_branch_id)
+            ->pluck('id');
+
+        // Only return commits unique to the source branch
+        $uniqueCommits = $sourceCommits->whereNotIn('id', $targetCommitIds)->values();
+
+        return response()->json(['data' => $uniqueCommits]);
     }
 
     /**
-     * Placeholder for branch sync
+     * Sync target branch content into the PR's source branch (git pull equivalent)
      */
     public function sync(Request $request, PullRequest $pullRequest)
     {
-        return response()->json(['message' => 'Synced.']);
+        if (!$pullRequest->site->canWrite($request->user())) {
+            abort(403, 'Write access required to sync.');
+        }
+
+        if ($pullRequest->status !== 'open') {
+            return response()->json(['message' => 'Only open PRs can be synced.'], 422);
+        }
+
+        $targetPages = Page::where('branch_id', $pullRequest->target_branch_id)->get();
+        $sourcePages = Page::where('branch_id', $pullRequest->source_branch_id)
+            ->pluck('logical_id')
+            ->flip(); // logical_id => index map for fast lookup
+
+        $synced = 0;
+        DB::transaction(function () use ($targetPages, $pullRequest, $sourcePages, &$synced) {
+            foreach ($targetPages as $targetPage) {
+                // Update existing source page if it exists in source branch
+                $sourcePage = Page::where('branch_id', $pullRequest->source_branch_id)
+                    ->where('logical_id', $targetPage->logical_id)
+                    ->first();
+
+                if ($sourcePage) {
+                    $sourcePage->update([
+                        'title'   => $targetPage->title,
+                        'content' => $targetPage->content,
+                        'order'   => $targetPage->order,
+                    ]);
+                    $synced++;
+                }
+                // Pages only in target (new pages added after PR opened) are not auto-created
+                // to avoid overwriting source-branch-only changes
+            }
+        });
+
+        return response()->json([
+            'message' => "Synced {$synced} page(s) from target branch.",
+            'synced'  => $synced,
+        ]);
     }
 
     /**

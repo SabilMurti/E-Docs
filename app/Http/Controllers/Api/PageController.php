@@ -159,6 +159,43 @@ class PageController extends Controller
     }
 
     /**
+     * Duplicate a page (create a copy with same content)
+     */
+    public function duplicate(Request $request, Site $site, Page $page): \Illuminate\Http\JsonResponse
+    {
+        if (!$site->canEdit($request->user())) {
+            abort(403);
+        }
+
+        if ($page->site_id !== $site->id) {
+            abort(404);
+        }
+
+        // Calculate order — place copy right after the original
+        $order = Page::where('site_id', $site->id)
+            ->where('branch_id', $page->branch_id)
+            ->where('parent_id', $page->parent_id)
+            ->max('order') + 1;
+
+        $duplicate = $site->pages()->create([
+            'title'      => 'Copy of ' . $page->title,
+            'branch_id'  => $page->branch_id,
+            'logical_id' => \Illuminate\Support\Str::uuid(),
+            'parent_id'  => $page->parent_id,
+            'content'    => $page->content,
+            'icon'       => $page->icon,
+            'order'      => $order,
+        ]);
+
+        $duplicate->load('branch');
+
+        return response()->json([
+            'message' => 'Page duplicated successfully.',
+            'data'    => new PageResource($duplicate),
+        ], 201);
+    }
+
+    /**
      * Reorder pages
      */
     public function reorder(Request $request, Site $site): JsonResponse

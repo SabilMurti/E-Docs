@@ -94,13 +94,14 @@ const useSiteStore = create((set, get) => ({
   },
 
   // Publish site
-  publishSite: async (id) => {
+  publishSite: async (siteSlug) => {
     try {
-      const response = await sitesApi.publishSite(id);
+      const response = await sitesApi.publishSite(siteSlug);
       const updatedSite = response.data;
       set((state) => ({
-        sites: state.sites.map((s) => (s.id === id ? updatedSite : s)),
-        currentSite: state.currentSite?.id === id ? updatedSite : state.currentSite,
+        // Site list is keyed by slug, not UUID
+        sites: state.sites.map((s) => (s.slug === siteSlug ? updatedSite : s)),
+        currentSite: state.currentSite?.slug === siteSlug ? updatedSite : state.currentSite,
       }));
       return { success: true, data: updatedSite, publicUrl: response.public_url };
     } catch (error) {
@@ -109,77 +110,18 @@ const useSiteStore = create((set, get) => ({
   },
 
   // Unpublish site
-  unpublishSite: async (id) => {
+  unpublishSite: async (siteSlug) => {
     try {
-      const response = await sitesApi.unpublishSite(id);
+      const response = await sitesApi.unpublishSite(siteSlug);
       const updatedSite = response.data;
       set((state) => ({
-        sites: state.sites.map((s) => (s.id === id ? updatedSite : s)),
-        currentSite: state.currentSite?.id === id ? updatedSite : state.currentSite,
+        // Site list is keyed by slug, not UUID
+        sites: state.sites.map((s) => (s.slug === siteSlug ? updatedSite : s)),
+        currentSite: state.currentSite?.slug === siteSlug ? updatedSite : state.currentSite,
       }));
       return { success: true, data: updatedSite };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to unpublish' };
-    }
-  },
-
-  // Add space to site
-  addSpace: async (siteId, data) => {
-    try {
-      const response = await sitesApi.addSpaceToSite(siteId, data);
-      const updatedSite = response.data;
-      set((state) => ({
-        sites: state.sites.map((s) => (s.id === siteId ? updatedSite : s)),
-        currentSite: state.currentSite?.id === siteId ? updatedSite : state.currentSite,
-      }));
-      return { success: true, data: updatedSite };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Failed to add space' };
-    }
-  },
-
-  // Update space in site
-  updateSpace: async (siteId, spaceId, data) => {
-    try {
-      const response = await sitesApi.updateSpaceInSite(siteId, spaceId, data);
-      const updatedSite = response.data;
-      set((state) => ({
-        sites: state.sites.map((s) => (s.id === siteId ? updatedSite : s)),
-        currentSite: state.currentSite?.id === siteId ? updatedSite : state.currentSite,
-      }));
-      return { success: true, data: updatedSite };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Failed to update space' };
-    }
-  },
-
-  // Remove space from site
-  removeSpace: async (siteId, spaceId) => {
-    try {
-      const response = await sitesApi.removeSpaceFromSite(siteId, spaceId);
-      const updatedSite = response.data;
-      set((state) => ({
-        sites: state.sites.map((s) => (s.id === siteId ? updatedSite : s)),
-        currentSite: state.currentSite?.id === siteId ? updatedSite : state.currentSite,
-      }));
-      return { success: true, data: updatedSite };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Failed to remove space' };
-    }
-  },
-
-  // Reorder spaces
-  reorderSpaces: async (siteId, spaces) => {
-    try {
-      const response = await sitesApi.reorderSpacesInSite(siteId, spaces);
-      const updatedSite = response.data;
-      set((state) => ({
-        sites: state.sites.map((s) => (s.id === siteId ? updatedSite : s)),
-        currentSite: state.currentSite?.id === siteId ? updatedSite : state.currentSite,
-      }));
-      return { success: true, data: updatedSite };
-    } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Failed to reorder' };
     }
   },
 

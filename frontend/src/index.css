@@ -98,6 +98,21 @@
   --transition-fast: 150ms ease;
   --transition-normal: 200ms ease;
   --transition-slow: 300ms ease;
+
+  /* =============================================
+     Public Documentation Page - GitBook Style
+     Light mode: warm off-white, clear sidebar depth
+     ============================================= */
+  --public-bg:            #f7f7f8;
+  --public-header-bg:     rgba(247, 247, 248, 0.85);
+  --public-sidebar-bg:    #f0f0f2;
+  --public-border:        #e4e4e7;
+  --public-card-bg:       #ffffff;
+  --public-input-bg:      #ffffff;
+  --public-text-primary:  #18181b;
+  --public-text-secondary:#3f3f46;
+  --public-text-muted:    #71717a;
+  --sidebar-active-text:  #065f46;
 }
 
 /* =============================================
@@ -141,6 +156,25 @@
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4);
+
+  /* Public Documentation Page - Dark Mode */
+  --public-bg:            #09090b;
+  --public-header-bg:     rgba(9, 9, 11, 0.85);
+  --public-sidebar-bg:    #111113;
+  --public-border:        #27272a;
+  --public-card-bg:       #18181b;
+  --public-input-bg:      #18181b;
+  --public-text-primary:  #fafafa;
+  --public-text-secondary:#a1a1aa;
+  --public-text-muted:    #52525b;
+  --sidebar-active-text:  #6ee7b7;
+}
+
+/* Fallback for pasted dark text in Dark Mode */
+.dark .ProseMirror p,
+.dark .ProseMirror span,
+.dark .ProseMirror li {
+  color: var(--color-text-primary);
 }
 
 /* =============================================
@@ -201,6 +235,69 @@ body {
 ::selection {
   background-color: var(--color-accent-muted);
   color: var(--color-text-primary);
+}
+
+/* =============================================
+   Public Documentation Page Content
+   GitBook-style typography for published pages
+   ============================================= */
+.public-page-content {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--public-text-secondary);
+}
+
+.public-page-content .page-viewer p {
+  color: var(--public-text-secondary);
+  line-height: 1.8;
+  margin: 0 0 1rem 0;
+}
+
+.public-page-content .page-viewer h1,
+.public-page-content .page-viewer h2,
+.public-page-content .page-viewer h3,
+.public-page-content .page-viewer h4 {
+  color: var(--public-text-primary);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.public-page-content .page-viewer h2 {
+  border-bottom: 1px solid var(--public-border);
+  padding-bottom: 0.5rem;
+}
+
+.public-page-content .page-viewer a {
+  color: #10b981;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+
+.public-page-content .page-viewer a:hover {
+  color: #059669;
+}
+
+.public-page-content .page-viewer blockquote {
+  border-left: 3px solid #10b981;
+  background: rgba(16, 185, 129, 0.05);
+  color: var(--public-text-secondary);
+  border-radius: 0 6px 6px 0;
+}
+
+.public-page-content .page-viewer code {
+  background-color: var(--public-sidebar-bg);
+  border: 1px solid var(--public-border);
+  color: #ef4444;
+  font-size: 0.875em;
+}
+
+.dark .public-page-content .page-viewer code {
+  color: #f472b6;
+}
+
+.public-page-content .page-viewer pre {
+  background-color: #1a1a2e !important;
 }
 
 /* =============================================
