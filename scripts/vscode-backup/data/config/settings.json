@@ -1,0 +1,13 @@
+{
+    "vscode_custom_css.imports": [
+        "file:///c:/Users/Administrator/.vscode/extensions/brandonkirbyson.vscode-animations-2.0.7/dist/updateHandler.js"
+    ],
+    "animations.Active": "Indent",
+    "workbench.colorTheme": "Ayu Dark Bordered",
+    "animations.Enabled": true,
+    "animations.Install-Method": "Custom CSS and JS",
+    "security.allowedUNCHosts": [
+        "wsl.localhost"
+    ],
+    "liveServer.settings.donotVerifyTags": true
+}
