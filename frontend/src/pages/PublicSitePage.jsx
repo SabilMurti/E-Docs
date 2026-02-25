@@ -373,7 +373,7 @@ export default function PublicSitePage() {
                     backdropFilter: 'blur(12px)',
                 }}
             >
-                <div className="h-full px-4 max-w-[1400px] mx-auto flex items-center justify-between">
+                <div className="h-full w-full px-4 lg:px-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button
                             className="lg:hidden p-2 -ml-2 rounded-md transition-colors"
@@ -442,7 +442,7 @@ export default function PublicSitePage() {
                 </div>
             </header>
 
-            <div className="flex flex-1 max-w-[1400px] mx-auto w-full">
+            <div className="flex flex-1 w-full relative">
                 {/* Sidebar - GitBook style */}
                 <aside
                     className={`
@@ -452,7 +452,7 @@ export default function PublicSitePage() {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
                     style={{
-                        width: '256px',
+                        width: '280px',
                         backgroundColor: 'var(--public-sidebar-bg)',
                         borderRight: '1px solid var(--public-border)',
                     }}
@@ -501,10 +501,10 @@ export default function PublicSitePage() {
 
                 {/* Content Area */}
                 <main className="flex-1 min-w-0" style={{ backgroundColor: 'var(--public-bg)' }}>
-                    <div className="flex">
+                    <div className="flex justify-center xl:justify-start">
                         {/* Main Content */}
-                        <div className="flex-1 min-w-0">
-                            <div className="max-w-[750px] mx-auto px-8 py-10">
+                        <div className="flex-1 min-w-0 max-w-full">
+                            <div className="max-w-[850px] xl:max-w-[960px] mx-auto px-6 md:px-10 lg:px-16 py-10">
                                 {currentPage ? (
                                     <article className="animate-in fade-in slide-in-from-bottom-2 duration-400">
                                         {/* Breadcrumb */}
@@ -632,8 +632,8 @@ export default function PublicSitePage() {
                         </div>
 
                         {/* Right Sidebar - ToC */}
-                        <aside className="hidden xl:block w-56 shrink-0">
-                            <div className="sticky top-24 pt-10 pr-6">
+                        <aside className="hidden xl:block w-64 shrink-0 border-l border-[var(--public-border)]/50 bg-[var(--public-bg)]">
+                            <div className="sticky top-14 pt-10 px-6 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
                                 <TableOfContents content={currentPage?.content} />
                             </div>
                         </aside>

@@ -39,7 +39,7 @@ export default function PageContent() {
     const { pageSlug, siteSlug } = useParams();
     const rawNavigate = useNavigate();
 
-    const { currentPage, fetchPage, saveDraft, isLoading, isSaving } =
+    const { currentPage, fetchPage, saveDraft, isLoading, isSaving, error } =
         usePageStore();
     const { currentSite, currentBranch } = useSiteStore();
 
@@ -513,10 +513,31 @@ export default function PageContent() {
         return () => clearInterval(interval);
     }, [lastSaved]);
 
-    if (isLoading || !currentPage) {
+    if (isLoading) {
         return (
             <div className="h-full flex items-center justify-center">
                 <LoadingSpinner size="lg" />
+            </div>
+        );
+    }
+
+    if (error === 'Page not found' || !currentPage) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-center px-4 animate-in fade-in duration-300">
+                <div className="w-16 h-16 rounded-3xl bg-red-500/10 flex items-center justify-center mb-6 shadow-inner">
+                    <CloudOff className="text-red-500" size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">Page Not Found</h2>
+                <p className="text-[var(--color-text-muted)] max-w-sm mb-8">
+                    The page you're looking for doesn't exist, has been deleted, or you don't have permission to view it.
+                </p>
+                <Link 
+                    to={`/sites/${siteSlug}`}
+                    className="px-5 py-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl text-sm font-medium hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-accent)]/30 hover:text-[var(--color-accent)] transition-all shadow-sm flex items-center gap-2"
+                >
+                    <ChevronRight className="rotate-180" size={16} />
+                    Back to Dashboard
+                </Link>
             </div>
         );
     }

@@ -116,9 +116,10 @@ export default function PageEditor({
             const { $from } = selection;
 
             if (!selection.empty) {
-                if (slashMenu.visible) {
-                    setSlashMenu((prev) => ({ ...prev, visible: false }));
-                }
+                setSlashMenu((prev) => {
+                    if (prev.visible) return { ...prev, visible: false };
+                    return prev;
+                });
                 return;
             }
 
@@ -137,18 +138,20 @@ export default function PageEditor({
 
                 const coords = editor.view.coordsAtPos(startPos);
 
-                setSlashMenu({
+                setSlashMenu((prev) => ({
+                    ...prev,
                     visible: true,
                     query,
                     position: {
                         top: coords.bottom + 4,
                         left: coords.left,
                     },
-                });
+                }));
             } else {
-                if (slashMenu.visible) {
-                    setSlashMenu((prev) => ({ ...prev, visible: false }));
-                }
+                setSlashMenu((prev) => {
+                    if (prev.visible) return { ...prev, visible: false };
+                    return prev;
+                });
             }
         };
 
@@ -156,7 +159,7 @@ export default function PageEditor({
         return () => {
             editor.off("transaction", handleTransaction);
         };
-    }, [editor, slashMenu.visible]);
+    }, [editor]);
 
     // Close slash menu on click outside
     useEffect(() => {

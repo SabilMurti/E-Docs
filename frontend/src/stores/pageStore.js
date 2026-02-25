@@ -10,22 +10,24 @@ const usePageStore = create((set, get) => ({
   error: null,
 
   // Fetch page tree for a site
-  fetchPages: async (siteId, branchName = 'main') => {
-    set({ isLoading: true, error: null });
+  fetchPages: async (siteId, branchName = 'main', silent = false) => {
+    if (!silent) set({ isLoading: true, error: null });
     try {
       // Pass branch as query param
       const response = await pagesApi.getPages(siteId, { branch: branchName });
       const data = response.data || response;
-      set({ 
+      set((state) => ({ 
         pages: data,
-        isLoading: false 
-      });
+        ...(!silent && { isLoading: false })
+      }));
       return data;
     } catch (error) {
-      set({ 
-        error: error.message, 
-        isLoading: false 
-      });
+      if (!silent) {
+        set({ 
+          error: error.message, 
+          isLoading: false 
+        });
+      }
       return null;
     }
   },
@@ -43,7 +45,8 @@ const usePageStore = create((set, get) => ({
       return page;
     } catch (error) {
       set({ 
-        error: error.message, 
+        error: error.response?.status === 404 ? 'Page not found' : error.message,
+        currentPage: null,
         isLoading: false 
       });
       return null;
@@ -51,14 +54,15 @@ const usePageStore = create((set, get) => ({
   },
 
   // Create page
-  createPage: async (siteId, data, branchName = 'main') => {
-    set({ isLoading: true, error: null });
+  createPage: async (siteId, data, branchName = 'main', silent = false) => {
+    if (!silent) set({ isLoading: true, error: null });
     try {
       const payload = { ...data, branch: branchName };
       const response = await pagesApi.createPage(siteId, payload);
       const page = response.data || response;
-      // Refetch the tree to get updated structure
-      await get().fetchPages(siteId, branchName);
+      // Refetch the tree to get updated structure silently
+      await get().fetchPages(siteId, branchName, true);
+      if (!silent) set({ isLoading: false });
       return { success: true, page };
     } catch (error) {
       set({ 
@@ -79,9 +83,9 @@ const usePageStore = create((set, get) => ({
         currentPage: state.currentPage?.slug === pageId ? updatedPage : state.currentPage,
         isSaving: false 
       }));
-      // Refetch tree if title changed — pass current branch!
+      // Refetch tree if title changed — pass current branch silently!
       if (data.title) {
-        await get().fetchPages(siteId, branchName);
+        await get().fetchPages(siteId, branchName, true);
       }
       return { success: true, page: updatedPage };
     } catch (error) {
@@ -95,20 +99,20 @@ const usePageStore = create((set, get) => ({
 
   // Delete page
   deletePage: async (siteId, pageId, branchName = 'main') => {
-    set({ isLoading: true, error: null });
+    set({ isSaving: true, error: null }); // Use isSaving instead of isLoading to not unmount modals
     try {
       await pagesApi.deletePage(siteId, pageId);
-      // Refetch tree — pass current branch!
-      await get().fetchPages(siteId, branchName);
+      // Refetch tree silently!
+      await get().fetchPages(siteId, branchName, true);
       set((state) => ({ 
         currentPage: state.currentPage?.slug === pageId ? null : state.currentPage,
-        isLoading: false 
+        isSaving: false 
       }));
       return { success: true };
     } catch (error) {
       set({ 
         error: error.message, 
-        isLoading: false 
+        isSaving: false 
       });
       return { success: false, error: error.message };
     }
@@ -118,7 +122,7 @@ const usePageStore = create((set, get) => ({
   reorderPages: async (siteId, pageUpdates, branchName = 'main') => {
     try {
       await pagesApi.reorderPages(siteId, pageUpdates);
-      await get().fetchPages(siteId, branchName);
+      await get().fetchPages(siteId, branchName, true);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -127,16 +131,16 @@ const usePageStore = create((set, get) => ({
 
   // Duplicate page
   duplicatePage: async (siteId, pageSlug, branchName = 'main') => {
-    set({ isLoading: true, error: null });
+    set({ isSaving: true, error: null }); // Avoid global isLoading
     try {
       const response = await pagesApi.duplicatePage(siteId, pageSlug);
       const newPage = response.data;
-      // Refresh tree so duplicate appears in sidebar
-      await get().fetchPages(siteId, branchName);
-      set({ isLoading: false });
+      // Refresh tree silhouette silently
+      await get().fetchPages(siteId, branchName, true);
+      set({ isSaving: false });
       return { success: true, page: newPage };
     } catch (error) {
-      set({ error: error.message, isLoading: false });
+      set({ error: error.message, isSaving: false });
       return { success: false, error: error.message };
     }
   },

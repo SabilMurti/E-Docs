@@ -112,15 +112,15 @@ class PageController extends Controller
     /**
      * Get page details
      */
-    public function show(Request $request, Site $site, Page $page)
+    public function show(Request $request, Site $site, $page)
     {
         if (!$site->canView($request->user())) {
             abort(403);
         }
 
-        if ($page->site_id !== $site->id) {
-            abort(404);
-        }
+        $page = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        })->firstOrFail();
 
         $page->load(['branch', 'parent']);
 
@@ -130,8 +130,12 @@ class PageController extends Controller
     /**
      * Update page
      */
-    public function update(UpdatePageRequest $request, Site $site, Page $page)
+    public function update(UpdatePageRequest $request, Site $site, $page)
     {
+        $page = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        })->firstOrFail();
+
         $validated = $request->validated();
 
         $page->update($validated);
@@ -143,15 +147,15 @@ class PageController extends Controller
     /**
      * Delete page
      */
-    public function destroy(Request $request, Site $site, Page $page): JsonResponse
+    public function destroy(Request $request, Site $site, $page): JsonResponse
     {
         if (!$site->canEdit($request->user())) {
             abort(403);
         }
 
-        if ($page->site_id !== $site->id) {
-            abort(404);
-        }
+        $page = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        })->firstOrFail();
 
         $page->delete();
 
@@ -161,15 +165,15 @@ class PageController extends Controller
     /**
      * Duplicate a page (create a copy with same content)
      */
-    public function duplicate(Request $request, Site $site, Page $page): \Illuminate\Http\JsonResponse
+    public function duplicate(Request $request, Site $site, $page): \Illuminate\Http\JsonResponse
     {
         if (!$site->canEdit($request->user())) {
             abort(403);
         }
 
-        if ($page->site_id !== $site->id) {
-            abort(404);
-        }
+        $page = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        })->firstOrFail();
 
         // Calculate order — place copy right after the original
         $order = Page::where('site_id', $site->id)
