@@ -225,8 +225,8 @@ class CommitTest extends TestCase
         $response = $this->getJson("/api/sites/{$site->id}/commits/{$commit->id}");
 
         $response->assertStatus(200)
-            ->assertJsonPath('message', 'Test commit')
-            ->assertJsonStructure(['id', 'message', 'pages']);
+            ->assertJsonPath('data.message', 'Test commit')
+            ->assertJsonStructure(['data' => ['id', 'message', 'pages']]);
     }
 
     public function test_commit_records_previous_content(): void

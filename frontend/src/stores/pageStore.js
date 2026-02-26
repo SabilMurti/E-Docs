@@ -33,10 +33,19 @@ const usePageStore = create((set, get) => ({
   },
 
   // Fetch single page
-  fetchPage: async (siteId, pageId) => {
-    set({ isLoading: true, error: null });
+  fetchPage: async (siteId, pageId, params = {}) => {
+    // If we're fetching a completely different page, clear the current one out
+    // so the UI knows to show a loading state instead of the old page's content
+    const current = get().currentPage;
+    const isNewPage = current && current.slug !== pageId && current.id !== pageId;
+
+    set({ 
+      isLoading: true, 
+      error: null,
+      ...(isNewPage ? { currentPage: null } : {})
+    });
     try {
-      const response = await pagesApi.getPage(siteId, pageId);
+      const response = await pagesApi.getPage(siteId, pageId, params);
       const page = response.data || response;
       set({ 
         currentPage: page,
@@ -155,10 +164,10 @@ const usePageStore = create((set, get) => ({
   clearError: () => set({ error: null }),
 
   // Save draft (lightweight save without commit)
-  saveDraft: async (siteId, pageId, data) => {
+  saveDraft: async (siteId, pageId, data, params = {}) => {
     set({ isSaving: true, error: null });
     try {
-      const response = await pagesApi.updatePage(siteId, pageId, data);
+      const response = await pagesApi.updatePage(siteId, pageId, data, params);
       const updatedPage = response.data || response;
       set((state) => ({
         // Use slug (same as pageId from URL) — consistent with updatePage & deletePage
@@ -176,10 +185,10 @@ const usePageStore = create((set, get) => ({
   currentRequest: null,
   commits: [],
 
-  commitChange: async (siteId, pageId, data) => {
+  commitChange: async (siteId, pageId, data, params = {}) => {
     set({ isSaving: true, error: null });
     try {
-      const response = await pagesApi.commitChange(siteId, pageId, data);
+      const response = await pagesApi.commitChange(siteId, pageId, data, params);
       set({ 
         currentRequest: response.request,
         isSaving: false 

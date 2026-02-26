@@ -45,12 +45,12 @@ class BranchController extends Controller
         if (BranchName::isReserved($validated['name'])) {
             return response()->json([
                 'message' => 'Branch name "' . $validated['name'] . '" is reserved.'
-            ], 400);
+            ], 422);
         }
 
         // Check if branch exists
         if ($site->branches()->where('name', $validated['name'])->exists()) {
-             return response()->json(['message' => 'Branch already exists.'], 409);
+             return response()->json(['message' => 'Branch already exists.'], 422);
         }
 
         $sourceBranch = $site->branches()->where('name', $validated['source_branch'])->firstOrFail();

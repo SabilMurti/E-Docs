@@ -11,8 +11,8 @@ export const getPages = async (siteId, params = {}) => {
 /**
  * Get a single page
  */
-export const getPage = async (siteId, pageId) => {
-  const response = await client.get(`/sites/${siteId}/pages/${pageId}`);
+export const getPage = async (siteId, pageId, params = {}) => {
+  const response = await client.get(`/sites/${siteId}/pages/${pageId}`, { params });
   return response.data;
 };
 
@@ -27,8 +27,10 @@ export const createPage = async (siteId, data) => {
 /**
  * Update a page
  */
-export const updatePage = async (siteId, pageId, data) => {
-  const response = await client.put(`/sites/${siteId}/pages/${pageId}`, data);
+export const updatePage = async (siteId, pageId, data, params = {}) => {
+  // If data doesn't have a branch_id but params does, it is usually query params.
+  // Laravel supports query parameters on PUT as well.
+  const response = await client.put(`/sites/${siteId}/pages/${pageId}`, data, { params });
   return response.data;
 };
 
@@ -79,8 +81,8 @@ export const syncChangeRequest = async (requestId) => {
 /**
  * Git-style commit (Save to self)
  */
-export const commitChange = async (siteId, pageId, data) => {
-  const response = await client.post(`/sites/${siteId}/pages/${pageId}/commits`, data);
+export const commitChange = async (siteId, pageId, data, params = {}) => {
+  const response = await client.post(`/sites/${siteId}/pages/${pageId}/commits`, data, { params });
   return response.data;
 };
 

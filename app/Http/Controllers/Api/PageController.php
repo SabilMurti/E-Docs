@@ -118,13 +118,35 @@ class PageController extends Controller
             abort(403);
         }
 
-        $page = $site->pages()->where(function ($q) use ($page) {
+        $query = $site->pages()->where(function ($q) use ($page) {
             $q->where('id', $page)->orWhere('slug', $page);
-        })->firstOrFail();
+        });
 
-        $page->load(['branch', 'parent']);
+        // Filter by branch — support both branch name (from URL query ?branch=main)
+        // and branch_id (from internal calls). This is the critical fix for content loss.
+        if ($request->has('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        } elseif ($request->has('branch')) {
+            $branchName = $request->branch;
+            $branch = $site->branches()->where('name', $branchName)->first();
+            if ($branch) {
+                $query->where('branch_id', $branch->id);
+            }
+        } else {
+            // No branch filter provided: default to the site's default branch
+            // to prevent accidentally returning a page from an unexpected branch.
+            $defaultBranch = $site->branches()->where('is_default', true)->first()
+                ?? $site->branches()->first();
+            if ($defaultBranch) {
+                $query->where('branch_id', $defaultBranch->id);
+            }
+        }
 
-        return new PageResource($page);
+        $pageModel = $query->firstOrFail();
+
+        $pageModel->load(['branch', 'parent']);
+
+        return new PageResource($pageModel);
     }
 
     /**
@@ -132,16 +154,36 @@ class PageController extends Controller
      */
     public function update(UpdatePageRequest $request, Site $site, $page)
     {
-        $page = $site->pages()->where(function ($q) use ($page) {
+        $query = $site->pages()->where(function ($q) use ($page) {
             $q->where('id', $page)->orWhere('slug', $page);
-        })->firstOrFail();
+        });
+
+        // Filter by branch — ensure we update the correct branch's page.
+        if ($request->has('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        } elseif ($request->has('branch')) {
+            $branchName = $request->branch;
+            $branch = $site->branches()->where('name', $branchName)->first();
+            if ($branch) {
+                $query->where('branch_id', $branch->id);
+            }
+        } else {
+            // Default to the site's default branch.
+            $defaultBranch = $site->branches()->where('is_default', true)->first()
+                ?? $site->branches()->first();
+            if ($defaultBranch) {
+                $query->where('branch_id', $defaultBranch->id);
+            }
+        }
+
+        $pageModel = $query->firstOrFail();
 
         $validated = $request->validated();
 
-        $page->update($validated);
-        $page->load('branch');
+        $pageModel->update($validated);
+        $pageModel->load('branch');
 
-        return new PageResource($page);
+        return new PageResource($pageModel);
     }
 
     /**

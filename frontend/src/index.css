@@ -177,6 +177,22 @@
   color: var(--color-text-primary);
 }
 
+/* Aggressive fix for unreadable pasted dark colors in Dark Mode */
+.dark .ProseMirror [style*="color: rgb(0, 0, 0)"],
+.dark .ProseMirror [style*="color: #000"],
+.dark .ProseMirror [style*="color: #111"],
+.dark .ProseMirror [style*="color: #222"],
+.dark .ProseMirror [style*="color: #333"],
+.dark .ProseMirror [style*="color: black"],
+.dark .page-viewer [style*="color: rgb(0, 0, 0)"],
+.dark .page-viewer [style*="color: #000"],
+.dark .page-viewer [style*="color: #111"],
+.dark .page-viewer [style*="color: #222"],
+.dark .page-viewer [style*="color: #333"],
+.dark .page-viewer [style*="color: black"] {
+  color: var(--color-text-primary) !important;
+}
+
 /* =============================================
    Global Styles
    ============================================= */

@@ -154,10 +154,14 @@ export default function RichEditor({
   }, [slashMenu.visible]);
   
   useEffect(() => {
-    if (editor && content && !editor.isFocused) {
+    if (editor && content !== undefined && content !== null && !editor.isFocused) {
       const currentContent = editor.getJSON();
       if (JSON.stringify(currentContent) !== JSON.stringify(content)) {
-        editor.commands.setContent(content);
+        if (content === '' || (content.type === 'doc' && (!content.content || content.content.length === 0))) {
+          editor.commands.clearContent();
+        } else {
+          editor.commands.setContent(content);
+        }
       }
     }
   }, [content, editor]);

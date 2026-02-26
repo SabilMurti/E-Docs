@@ -113,12 +113,14 @@ function PageViewer({ content }) {
     
     return doc.content.map((node, i) => {
       switch (node.type) {
-        case 'paragraph':
+        case 'paragraph': {
+          const textAlign = node.attrs?.textAlign || 'left';
+          
           if (!node.content || node.content.length === 0) {
-            return <div key={i} className="h-4" />;
+            return <div key={i} className="h-4" style={{ textAlign }} />;
           }
           return (
-            <p key={i} className="mb-4 leading-7 text-[var(--color-text-primary)]">
+            <p key={i} className="mb-4 leading-7 text-[var(--color-text-primary)]" style={{ textAlign }}>
               {node.content.map((c, j) => {
                 if (c.type === 'text') return renderText(c, j);
                 if (c.type === 'image') {
@@ -141,9 +143,11 @@ function PageViewer({ content }) {
               })}
             </p>
           );
+        }
           
         case 'heading': {
           const level = node.attrs?.level || 1;
+          const textAlign = node.attrs?.textAlign || 'left';
           const Tag = `h${level}`;
           const styles = {
             1: 'text-3xl font-extrabold mb-6 mt-10 pb-2 border-b border-[var(--color-border-secondary)]',
@@ -153,7 +157,12 @@ function PageViewer({ content }) {
           };
           
           return (
-            <Tag key={i} className={`${styles[level] || styles[1]} text-[var(--color-text-primary)] scroll-mt-20`} id={`heading-${i}`}>
+            <Tag 
+              key={i} 
+              className={`${styles[level] || styles[1]} text-[var(--color-text-primary)] scroll-mt-20`} 
+              id={`heading-${i}`}
+              style={{ textAlign }}
+            >
               {node.content?.map((c, j) => renderText(c, j)) || ''}
             </Tag>
           );

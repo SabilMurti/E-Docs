@@ -23,10 +23,30 @@ import { TableToolbar } from "./TablePlus";
 function normalizeContent(c) {
     if (!c) return '';
     if (Array.isArray(c)) return ''; // [] is not valid Tiptap content
+    
+    // Handle double-encoded JSON strings from backend
+    if (typeof c === 'string') {
+        try {
+            const parsed = JSON.parse(c);
+            if (parsed && typeof parsed === 'object' && parsed.type === 'doc') {
+                return parsed;
+            }
+        } catch (e) {
+            // Fallback: assume it's valid HTML string
+            return c;
+        }
+    }
+    
     if (typeof c === 'object') {
         if (c.type !== 'doc') return ''; // must be a Tiptap doc node
         return c;
     }
+    
+    // Convert empty values to empty string
+    if (c === undefined || c === null) {
+        return '';
+    }
+
     return c;
 }
 
@@ -179,10 +199,15 @@ export default function PageEditor({
     useEffect(() => {
         const currentEditor = editorRef.current;
         const normalized = normalizeContent(content);
-        if (currentEditor && normalized && !currentEditor.isFocused) {
+        if (currentEditor && normalized !== undefined && normalized !== null && !currentEditor.isFocused) {
             const currentContent = currentEditor.getJSON();
             if (JSON.stringify(currentContent) !== JSON.stringify(normalized)) {
-                currentEditor.commands.setContent(normalized);
+                // If the normalized content is completely empty, we clear the editor properly
+                if (normalized === '' || (normalized.type === 'doc' && (!normalized.content || normalized.content.length === 0))) {
+                    currentEditor.commands.clearContent();
+                } else {
+                    currentEditor.commands.setContent(normalized);
+                }
             }
         }
     }, [content]);

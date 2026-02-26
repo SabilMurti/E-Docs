@@ -57,6 +57,17 @@ class Site extends Model
     }
 
     /**
+     * Resolve the model by slug or UUID (id).
+     * This lets routes work whether the URL contains a slug or a UUID.
+     */
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        return $this->where('slug', $value)
+            ->orWhere('id', $value)
+            ->first();
+    }
+
+    /**
      * Owner of this site
      */
     public function owner(): BelongsTo

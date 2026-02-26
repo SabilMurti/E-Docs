@@ -105,20 +105,40 @@ export default function PageContent() {
         localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(autoSaveEnabled));
     }, [autoSaveEnabled]);
 
-    // Fetch page on mount
+    // Fetch page on mount or slug change
     useEffect(() => {
         if (siteSlug && pageSlug) {
-            fetchPage(siteSlug, pageSlug);
+            // Optimistically clear the local editor state if navigating to a new page
+            if (currentPage?.slug && currentPage.slug !== pageSlug) {
+                setLocalContent(null);
+                setHasUnsavedChanges(false);
+            }
+            fetchPage(siteSlug, pageSlug, { branch: currentBranch });
         }
-    }, [siteSlug, pageSlug, fetchPage]);
+    }, [siteSlug, pageSlug, fetchPage, currentBranch]);
 
-    // Set local content when page loads
+    const prevPageIdRef = useRef(null);
+
+    // Set local content when page loads or switches
     useEffect(() => {
-        if (currentPage?.content) {
-            setLocalContent(currentPage.content);
-            setHasUnsavedChanges(false);
+        if (currentPage !== null && currentPage !== undefined) {
+            // Provide a bare minimum valid tiptap doc for empty pages if needed,
+            // or just let PageEditor handle empty string/null
+            if (currentPage.id !== prevPageIdRef.current) {
+                setLocalContent(currentPage.content || '');
+                setHasUnsavedChanges(false);
+                prevPageIdRef.current = currentPage.id;
+            }
+        } else {
+            prevPageIdRef.current = null;
         }
     }, [currentPage]);
+
+    // Derive active branchId from currentPage (most reliable source)
+    const activeBranchId = currentPage?.branch_id ?? null;
+
+    // Helper: build params with branch_id if we know it
+    const branchParams = activeBranchId ? { branch_id: activeBranchId } : {};
 
     // --- SAVE DRAFT ---
     const handleSave = useCallback(async () => {
@@ -128,7 +148,7 @@ export default function PageContent() {
         try {
             const result = await saveDraft(siteSlug, currentPage.slug, {
                 content: localContent,
-            });
+            }, branchParams);
 
             if (result.success) {
                 setHasUnsavedChanges(false);
@@ -143,7 +163,7 @@ export default function PageContent() {
         } finally {
             setDraftSaving(false);
         }
-    }, [currentPage, localContent, siteSlug, hasUnsavedChanges, saveDraft]);
+    }, [currentPage, localContent, siteSlug, hasUnsavedChanges, saveDraft, branchParams]);
 
     useEffect(() => {
         if (!autoSaveEnabled || !currentPage) return;
@@ -157,13 +177,13 @@ export default function PageContent() {
 
             autoSaveTimerRef.current = setTimeout(async () => {
                 const content = localContentRef.current;
-                if (!content) return;
+                if (content === null || content === undefined) return;
 
                 setDraftSaving(true);
                 try {
                     const result = await saveDraft(siteSlug, currentPage.slug, {
                         content,
-                    });
+                    }, branchParams);
 
                     if (result.success) {
                         setHasUnsavedChanges(false);
@@ -186,7 +206,7 @@ export default function PageContent() {
             if (hasUnsavedRef.current && autoSaveEnabled) {
                 const content = localContentRef.current;
                 if (content) {
-                    saveDraft(siteSlug, currentPage.slug, { content }).catch((e) =>
+                    saveDraft(siteSlug, currentPage.slug, { content }, branchParams).catch((e) =>
                         console.error("Unmount save failed", e),
                     );
                 }
@@ -222,7 +242,7 @@ export default function PageContent() {
                 toast.success('Page settings updated');
                 setShowSettingsModal(false);
                 // Refetch to get updated page
-                await fetchPage(siteSlug, pageSlug);
+                await fetchPage(siteSlug, pageSlug, { branch: currentBranch });
             } else {
                 toast.error(result.error || 'Failed to update page settings');
             }
@@ -294,7 +314,7 @@ export default function PageContent() {
                     content: localContent,
                     title: currentPage.title,
                     message: commitMessage || "Update content",
-                });
+                }, branchParams);
 
             if (result.success) {
                 setHasUnsavedChanges(false);
