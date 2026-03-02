@@ -88,6 +88,13 @@ export default function PageContent() {
         hasUnsavedRef.current = hasUnsavedChanges;
     }, [hasUnsavedChanges]);
 
+    // Keep refs for currentPage and branchParams so unmount/cleanup always has fresh values
+    const currentPageRef = useRef(currentPage);
+    const branchParamsRef = useRef({});
+    useEffect(() => {
+        currentPageRef.current = currentPage;
+    }, [currentPage]);
+
     // Guarded navigate - intercepts navigation when unsaved changes exist
     const navigate = useCallback(
         (to, options) => {
@@ -121,17 +128,23 @@ export default function PageContent() {
 
     // Set local content when page loads or switches
     useEffect(() => {
-        if (currentPage !== null && currentPage !== undefined) {
-            // Provide a bare minimum valid tiptap doc for empty pages if needed,
-            // or just let PageEditor handle empty string/null
-            if (currentPage.id !== prevPageIdRef.current) {
-                setLocalContent(currentPage.content || '');
-                setHasUnsavedChanges(false);
-                prevPageIdRef.current = currentPage.id;
-            }
-        } else {
+        if (!currentPage) {
             prevPageIdRef.current = null;
+            return;
         }
+
+        const isNewPage =
+            currentPage.id !== prevPageIdRef.current &&  // different page id
+            currentPage.slug !== undefined;               // valid page
+
+        if (isNewPage) {
+            // Only reset content if we genuinely navigated to a different page
+            setLocalContent(currentPage.content || '');
+            setHasUnsavedChanges(false);
+            prevPageIdRef.current = currentPage.id;
+        }
+        // If it's the same page (e.g. after saveDraft), do NOT reset localContent
+        // — any content update from the server is irrelevant since the editor holds truth.
     }, [currentPage]);
 
     // Derive active branchId from currentPage (most reliable source)
@@ -139,6 +152,11 @@ export default function PageContent() {
 
     // Helper: build params with branch_id if we know it
     const branchParams = activeBranchId ? { branch_id: activeBranchId } : {};
+
+    // Keep branchParams ref in sync for use in cleanup/unmount
+    useEffect(() => {
+        branchParamsRef.current = branchParams;
+    }, [activeBranchId]);
 
     // --- SAVE DRAFT ---
     const handleSave = useCallback(async () => {
@@ -205,8 +223,10 @@ export default function PageContent() {
 
             if (hasUnsavedRef.current && autoSaveEnabled) {
                 const content = localContentRef.current;
-                if (content) {
-                    saveDraft(siteSlug, currentPage.slug, { content }, branchParams).catch((e) =>
+                const page = currentPageRef.current;
+                const params = branchParamsRef.current;
+                if (content && page?.slug) {
+                    saveDraft(siteSlug, page.slug, { content }, params).catch((e) =>
                         console.error("Unmount save failed", e),
                     );
                 }
@@ -607,7 +627,7 @@ export default function PageContent() {
                                     const nav = pendingNavigation;
                                     setHasUnsavedChanges(false);
                                     setPendingNavigation(null);
-                                    rawNavigate(nav.to, nav.options);
+                                    if (nav.to) rawNavigate(nav.to, nav.options);
                                 }}
                                 className="px-4 py-2 text-xs font-medium rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
                             >
@@ -618,7 +638,7 @@ export default function PageContent() {
                                     await handleSave();
                                     const nav = pendingNavigation;
                                     setPendingNavigation(null);
-                                    rawNavigate(nav.to, nav.options);
+                                    if (nav.to) rawNavigate(nav.to, nav.options);
                                 }}
                                 className="px-4 py-2 text-xs font-medium rounded-lg bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] transition-colors flex items-center gap-1.5"
                             >
@@ -629,6 +649,7 @@ export default function PageContent() {
                     </div>
                 </div>
             )}
+
 
             {/* Page Header */}
             <header className="sticky top-0 z-20 bg-[color:var(--color-bg-primary)] border-b border-[color:var(--color-border-primary)]">

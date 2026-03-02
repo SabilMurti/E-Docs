@@ -102,7 +102,7 @@ export default function StepBlock({ node, editor, getPos, deleteNode }) {
     >
       <div className="step-timeline" contentEditable={false}>
         <button
-          onClick={toggleComplete}
+          onMouseDown={toggleComplete}
           className={`step-checkbox ${isCompleted ? 'completed' : ''}`}
           title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
         >
@@ -121,7 +121,7 @@ export default function StepBlock({ node, editor, getPos, deleteNode }) {
 
       <div className={`step-actions ${showActions ? 'visible' : ''}`} contentEditable={false}>
         <button
-          onClick={handleDelete}
+          onMouseDown={handleDelete}
           className="step-action-btn step-delete-btn"
           title="Delete step"
         >

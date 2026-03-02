@@ -446,6 +446,23 @@ body {
 }
 
 /* =============================================
+   Highlight.js Syntax Highlighting (for Code Blocks & API Endpoints)
+   One Dark / Atom inspired scheme
+   ============================================= */
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section { color: #c678dd !important; }
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-attribute, .hljs-meta-string { color: #98c379 !important; }
+.hljs-number, .hljs-built_in, .hljs-builtin-name, .hljs-type, .hljs-params { color: #d19a66 !important; }
+.hljs-comment, .hljs-quote, .hljs-deletion { color: #abb2bf !important; font-style: italic; opacity: 0.7; }
+.hljs-variable, .hljs-template-variable, .hljs-class .hljs-title { color: #e06c75 !important; }
+.hljs-title.function_, .hljs-function, .hljs-title { color: #61afef !important; }
+.hljs-meta, .hljs-operator, .hljs-punctuation { color: #56b6c2 !important; }
+.hljs-property, .hljs-attr, .hljs-name { color: #e06c75 !important; }
+
+/* In Light Mode, we adjust some colors to remain visible on the dark #1e1e2e or #13131f background 
+   typically used for our code blocks regardless of theme. The above colors are optimized for dark 
+   backgrounds, so they work great! */
+
+/* =============================================
    TipTap Editor - Core Styles
    ============================================= */
 .ProseMirror {
@@ -454,7 +471,28 @@ body {
   padding-bottom: 50vh;
   font-size: 1rem;
   line-height: 1.75;
+  /* Visible dark cursor in light mode */
+  caret-color: #111111 !important;
 }
+
+/* Cursor stays light in dark mode */
+.dark .ProseMirror {
+  caret-color: #ffffff !important;
+}
+
+/* Also target all contenteditable in the editor area */
+.page-editor [contenteditable],
+.page-editor-content,
+[contenteditable].page-editor-content {
+  caret-color: #111111 !important;
+}
+
+.dark .page-editor [contenteditable],
+.dark .page-editor-content,
+.dark [contenteditable].page-editor-content {
+  caret-color: #ffffff !important;
+}
+
 
 .ProseMirror > * + * {
   margin-top: 0.75em;
@@ -523,8 +561,6 @@ body {
 .ProseMirror h2 {
   font-size: 1.75rem;
   letter-spacing: -0.02em;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border-primary);
 }
 
 .ProseMirror h3 {

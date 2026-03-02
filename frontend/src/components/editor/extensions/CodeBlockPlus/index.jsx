@@ -105,7 +105,7 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
         {/* Language Picker */}
         <div className="relative" ref={langPickerRef}>
           <button
-            onClick={() => setShowLangPicker(!showLangPicker)}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setShowLangPicker(!showLangPicker); }}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border-primary)] hover:border-[var(--color-border-secondary)] text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all shadow-lg"
             title="Change language"
           >
@@ -143,7 +143,9 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
                     {filteredLanguages.map(lang => (
                       <button
                         key={lang.id}
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           updateAttributes({ language: lang.id });
                           setShowLangPicker(false);
                           setSearchQuery('');
@@ -172,7 +174,7 @@ function CodeBlockView({ node, updateAttributes, editor, extension }) {
 
         {/* Copy Button */}
         <button
-          onClick={handleCopy}
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy(); }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border-primary)] hover:border-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all"
           title="Copy code"
         >

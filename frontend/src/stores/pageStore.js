@@ -168,13 +168,20 @@ const usePageStore = create((set, get) => ({
     set({ isSaving: true, error: null });
     try {
       const response = await pagesApi.updatePage(siteId, pageId, data, params);
-      const updatedPage = response.data || response;
+
+      // Guard: only use the response as page data if it looks like a real page object.
+      // If server returns {success:true} or similar, keep the existing currentPage.
+      const updatedPage = (response?.id || response?.data?.id)
+        ? (response.id ? response : response.data)
+        : null;
+
       set((state) => ({
-        // Use slug (same as pageId from URL) — consistent with updatePage & deletePage
-        currentPage: state.currentPage?.slug === pageId ? updatedPage : state.currentPage,
+        currentPage: updatedPage && state.currentPage?.slug === pageId
+          ? { ...state.currentPage, ...updatedPage }  // merge to preserve local fields
+          : state.currentPage,
         isSaving: false,
       }));
-      return { success: true, page: updatedPage };
+      return { success: true, page: updatedPage || response };
     } catch (error) {
       set({ error: error.message, isSaving: false });
       return { success: false, error: error.message };

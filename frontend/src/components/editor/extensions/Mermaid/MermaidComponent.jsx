@@ -49,7 +49,7 @@ export default function MermaidComponent({ node, updateAttributes, editor }) {
           
           {editor.isEditable && (
             <button
-              onClick={() => setIsEditing(!isEditing)}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(!isEditing); }}
               className={`p-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium ${
                 isEditing 
                   ? 'bg-[var(--color-accent)] text-white' 

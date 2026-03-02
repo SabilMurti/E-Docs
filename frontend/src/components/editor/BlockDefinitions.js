@@ -247,10 +247,12 @@ export const BLOCK_DEFINITIONS = [
         icon: YoutubeIcon,
         description: 'Embed YouTube video',
         action: (editor, extra) => {
-          const url = extra?.url || window.prompt('Enter YouTube URL:');
-          if (url) {
-            editor.chain().focus().setYoutubeVideo({ src: url }).run();
-          }
+          setTimeout(() => {
+            const url = extra?.url || window.prompt('Enter YouTube URL:');
+            if (url) {
+              editor.chain().focus().setYoutubeVideo({ src: url }).run();
+            }
+          }, 10);
         }
       },
       {
@@ -259,15 +261,17 @@ export const BLOCK_DEFINITIONS = [
         icon: Globe,
         description: 'Embed external content',
         action: (editor, extra) => {
-          const url = extra?.url || window.prompt('Enter URL to embed:');
-          if (url) {
-            // Check if YouTube
-            if (url.includes('youtube.com') || url.includes('youtu.be')) {
-              editor.chain().focus().setYoutubeVideo({ src: url }).run();
-            } else {
-              editor.chain().focus().setIframe({ src: url }).run();
+          setTimeout(() => {
+            const url = extra?.url || window.prompt('Enter URL to embed:');
+            if (url) {
+              // Check if YouTube
+              if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                editor.chain().focus().setYoutubeVideo({ src: url }).run();
+              } else {
+                editor.chain().focus().setIframe({ src: url }).run();
+              }
             }
-          }
+          }, 10);
         }
       },
       {
@@ -288,12 +292,14 @@ export const BLOCK_DEFINITIONS = [
         icon: Link2,
         description: 'Link to another page',
         action: (editor, extra) => {
-          const url = extra?.url || window.prompt('Enter page URL or slug:');
-          if (url) {
-            editor.chain().focus().insertContent(`
-              <p>📄 <a href="${url}" class="text-[var(--color-accent)] underline hover:opacity-80">${url}</a></p>
-            `).run();
-          }
+          setTimeout(() => {
+            const url = extra?.url || window.prompt('Enter page URL or slug:');
+            if (url) {
+              editor.chain().focus().insertContent(`
+                <p>📄 <a href="${url}" class="text-[var(--color-accent)] underline hover:opacity-80">${url}</a></p>
+              `).run();
+            }
+          }, 10);
         }
       },
       {

@@ -46,11 +46,11 @@ export default function FileNodeView(props) {
 
         <a
           href={src}
-          download
+          download={title || true}
           target="_blank"
           rel="noopener noreferrer"
           className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
-          title="Download File"
+          title={`Download ${title || 'File'}`}
           onClick={(e) => e.stopPropagation()}
         >
           <Download size={20} />
