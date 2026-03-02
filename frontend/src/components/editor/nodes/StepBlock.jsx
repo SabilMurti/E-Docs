@@ -9,27 +9,20 @@ export default function StepBlock({ node, editor, getPos, deleteNode }) {
   const [isLast, setIsLast] = useState(false);
 
   const updateStepInfo = useCallback(() => {
-    if (!getPos) return;
+    if (typeof getPos !== 'function') return;
     
     try {
       const pos = getPos();
-      const doc = editor.state.doc;
+      const $pos = editor.state.doc.resolve(pos);
+      const index = $pos.index();
+      const parentNode = $pos.parent;
       
-      doc.descendants((n, nPos) => {
-        if (n.type.name === 'steps') {
-          let idx = 0;
-          n.forEach((child, offset) => {
-            const childPos = nPos + offset + 1;
-            if (childPos === pos) {
-              setStepIndex(idx);
-              setIsLast(idx === n.childCount - 1);
-              const completedSteps = n.attrs.completedSteps || [];
-              setIsCompleted(!!completedSteps[idx]);
-            }
-            idx++;
-          });
-        }
-      });
+      if (parentNode && parentNode.type.name === 'steps') {
+        setStepIndex(index);
+        setIsLast(index === parentNode.childCount - 1);
+        const completedSteps = parentNode.attrs.completedSteps || [];
+        setIsCompleted(!!completedSteps[index]);
+      }
     } catch (e) {
       // Ignore errors during update
     }
@@ -37,43 +30,38 @@ export default function StepBlock({ node, editor, getPos, deleteNode }) {
 
   useEffect(() => {
     updateStepInfo();
-    const updateHandler = () => updateStepInfo();
-    editor.on('update', updateHandler);
-    return () => editor.off('update', updateHandler);
+    const handleUpdate = () => {
+      // Small timeout ensures Tiptap has finished layout
+      setTimeout(updateStepInfo, 0);
+    };
+    editor.on('transaction', handleUpdate);
+    return () => editor.off('transaction', handleUpdate);
   }, [editor, updateStepInfo]);
 
   const toggleComplete = (e) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!getPos) return;
+    if (typeof getPos !== 'function') return;
     
     try {
       const pos = getPos();
-      const doc = editor.state.doc;
+      const $pos = editor.state.doc.resolve(pos);
+      const index = $pos.index();
+      const parentPos = $pos.before();
+      const parentNode = $pos.parent;
       
-      doc.descendants((n, nPos) => {
-        if (n.type.name === 'steps' && nPos < pos) {
-          let idx = 0;
-          let found = false;
-          n.forEach((child, offset) => {
-            const childPos = nPos + offset + 1;
-            if (childPos === pos && !found) {
-              found = true;
-              const completedSteps = [...(n.attrs.completedSteps || [])];
-              completedSteps[idx] = !completedSteps[idx];
-              
-              const tr = editor.state.tr;
-              tr.setNodeMarkup(nPos, null, {
-                ...n.attrs,
-                completedSteps
-              });
-              editor.view.dispatch(tr);
-            }
-            idx++;
-          });
-        }
-      });
+      if (parentNode && parentNode.type.name === 'steps') {
+        const completedSteps = [...(parentNode.attrs.completedSteps || [])];
+        completedSteps[index] = !completedSteps[index];
+        
+        const tr = editor.state.tr;
+        tr.setNodeMarkup(parentPos, null, {
+          ...parentNode.attrs,
+          completedSteps
+        });
+        editor.view.dispatch(tr);
+      }
     } catch (err) {
       console.error('Toggle complete error:', err);
     }
@@ -83,21 +71,25 @@ export default function StepBlock({ node, editor, getPos, deleteNode }) {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!getPos) return;
+    if (typeof getPos !== 'function') return;
     
     try {
       const pos = getPos();
-      const doc = editor.state.doc;
+      const $pos = editor.state.doc.resolve(pos);
+      const parentNode = $pos.parent;
+      const parentPos = $pos.before();
       
-      doc.descendants((n, nPos) => {
-        if (n.type.name === 'steps' && nPos < pos) {
-          if (n.childCount <= 1) return;
-        }
-      });
+      if (parentNode && parentNode.type.name === 'steps' && parentNode.childCount <= 1) {
+        // If it's the last remaining step, delete the entire steps block to prevent schema errors
+        editor.commands.deleteRange({ from: parentPos, to: parentPos + parentNode.nodeSize });
+        return;
+      }
       
-      deleteNode();
+      // Delete just this step
+      editor.commands.deleteRange({ from: pos, to: pos + node.nodeSize });
     } catch (err) {
       console.error('Delete step error:', err);
+      if (typeof deleteNode === 'function') deleteNode();
     }
   };
 

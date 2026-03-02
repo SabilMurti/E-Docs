@@ -265,11 +265,7 @@ export const BLOCK_DEFINITIONS = [
             if (url.includes('youtube.com') || url.includes('youtu.be')) {
               editor.chain().focus().setYoutubeVideo({ src: url }).run();
             } else {
-              editor.chain().focus().insertContent(`
-                <div class="embed-container" style="position: relative; padding-bottom: 56.25%; margin: 1.5em 0;">
-                  <iframe src="${url}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;"></iframe>
-                </div>
-              `).run();
+              editor.chain().focus().setIframe({ src: url }).run();
             }
           }
         }

@@ -38,6 +38,7 @@ import { APIEndpoint } from './extensions/APIEndpointExtension';
 import { Steps } from './extensions/StepsExtension';
 import { Step } from './extensions/StepExtension';
 import { KeyboardHandler } from './extensions/KeyboardHandler';
+import { Iframe } from './extensions/IframeExtension';
 
 // Extension to clean up pasted content (removes colors, bg-colors, and font families)
 // This ensures pasted content respects the theme (especially in dark mode)
@@ -310,4 +311,5 @@ export const getExtensions = (placeholderText = 'Start typing...') => [
   Steps,
   Step,
   KeyboardHandler,
+  Iframe,
 ];

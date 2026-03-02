@@ -8,15 +8,41 @@ import RichEditor from './RichEditor';
 export default function BlockReviewer({ oldContent, newContent, onMerge }) {
   const [selectedBlocks, setSelectedBlocks] = useState([]);
   
+  const parseContent = (content) => {
+    if (!content) return null;
+    if (typeof content === 'string') {
+      try {
+        const parsed = JSON.parse(content);
+        // Handle double-encoded JSON if it occurs
+        if (typeof parsed === 'string') return JSON.parse(parsed);
+        return parsed;
+      } catch (e) {
+        return null;
+      }
+    }
+    return content;
+  };
+
   const blocks = useMemo(() => {
-    // Prosemirror structure is { type: 'doc', content: [...] }
-    // We need the inner 'content' array which contains the blocks
-    const oldArr = Array.isArray(oldContent?.content?.content) ? oldContent.content.content : [];
-    const newArr = Array.isArray(newContent?.content?.content) ? newContent.content.content : [];
+    // Robustly find the TipTap document object
+    const findDoc = (obj) => {
+      if (!obj) return null;
+      // If the object itself looks like a TipTap doc
+      if (obj.type === 'doc') return parseContent(obj);
+      // If it's a wrapper object (like PR or Page)
+      const content = obj.content || obj.pull_request?.content;
+      return parseContent(content);
+    };
+
+    const oldDoc = findDoc(oldContent);
+    const newDoc = findDoc(newContent);
     
-    // If newArr is empty but there is content, might be a different format or empty doc
-    if (newArr.length === 0 && newContent?.content) {
-       console.warn("BlockReviewer: newContent has content but it lacks a content array", newContent.content);
+    // We need the 'content' array from the parsed TipTap document { type: 'doc', content: [...] }
+    const oldArr = Array.isArray(oldDoc?.content) ? oldDoc.content : [];
+    const newArr = Array.isArray(newDoc?.content) ? newDoc.content : [];
+    
+    if (newArr.length === 0 && newDoc) {
+       console.warn("BlockReviewer: newDoc parsed but lacks content array", newDoc);
     }
     
     return newArr.map((node, index) => {
@@ -24,10 +50,10 @@ export default function BlockReviewer({ oldContent, newContent, onMerge }) {
       const isEqual = oldArr[index] && JSON.stringify(node) === JSON.stringify(oldArr[index]);
       
       return {
-        id: `block-${index}`,
+        id: `block-${index}-${Date.now()}`, // Unique enough for key
         node,
         isNew: !isEqual,
-        accepted: true // Default to accept proposed change
+        accepted: true
       };
     });
   }, [oldContent, newContent]);

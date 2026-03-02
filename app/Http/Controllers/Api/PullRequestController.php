@@ -19,7 +19,7 @@ class PullRequestController extends Controller
      */
     public function index(Request $request, Site $site)
     {
-        if (!$site->canView($request->user())) {
+        if (! $site->canView($request->user())) {
             abort(403);
         }
 
@@ -50,7 +50,7 @@ class PullRequestController extends Controller
     public function indexByPage(Request $request, Page $page)
     {
         $site = $page->site;
-        if (!$site->canView($request->user())) {
+        if (! $site->canView($request->user())) {
             abort(403);
         }
 
@@ -70,7 +70,7 @@ class PullRequestController extends Controller
     public function storePageRequest(Request $request, Page $page)
     {
         $site = $page->site;
-        if (!$site->canWrite($request->user())) {
+        if (! $site->canWrite($request->user())) {
             abort(403, 'You explicitly need write access to create a request.');
         }
 
@@ -80,16 +80,17 @@ class PullRequestController extends Controller
             'status' => 'nullable|in:draft,open',
         ]);
 
-        $sourceBranchId = $page->branch_id;
+        // Get source branch from request (prefer explicit value over page's branch)
+        $sourceBranchId = $request->input('source_branch_id', $page->branch_id);
         $targetBranchId = $request->input('target_branch_id');
-        
+
         // Default to main/master if no target specified
-        if (!$targetBranchId) {
+        if (! $targetBranchId) {
             $defaultBranch = Branch::where('site_id', $site->id)
                 ->whereIn('name', ['main', 'master'])
                 ->orderBy('name', 'asc')
                 ->first();
-            
+
             if ($defaultBranch) {
                 $targetBranchId = $defaultBranch->id;
             }
@@ -98,11 +99,12 @@ class PullRequestController extends Controller
         if ($sourceBranchId === $targetBranchId) {
             return response()->json([
                 'message' => 'You cannot create a pull request where the source and target branches are the same.',
-                'code' => 'SAME_BRANCH_ERROR'
+                'code' => 'SAME_BRANCH_ERROR',
+                'debug' => ['source' => $sourceBranchId, 'target' => $targetBranchId, 'page_branch' => $page->branch_id],
             ], 422);
         }
 
-        if (!$targetBranchId) {
+        if (! $targetBranchId) {
             return response()->json(['message' => 'Target branch not found.'], 422);
         }
 
@@ -144,7 +146,7 @@ class PullRequestController extends Controller
      */
     public function store(Request $request, Site $site)
     {
-        if (!$site->canWrite($request->user())) {
+        if (! $site->canWrite($request->user())) {
             abort(403, 'You need write access to create pull requests.');
         }
 
@@ -198,7 +200,7 @@ class PullRequestController extends Controller
      */
     public function commits(Request $request, PullRequest $pullRequest)
     {
-        if (!$pullRequest->site->canView($request->user())) {
+        if (! $pullRequest->site->canView($request->user())) {
             abort(403);
         }
 
@@ -223,7 +225,7 @@ class PullRequestController extends Controller
      */
     public function sync(Request $request, PullRequest $pullRequest)
     {
-        if (!$pullRequest->site->canWrite($request->user())) {
+        if (! $pullRequest->site->canWrite($request->user())) {
             abort(403, 'Write access required to sync.');
         }
 
@@ -237,7 +239,7 @@ class PullRequestController extends Controller
             ->flip(); // logical_id => index map for fast lookup
 
         $synced = 0;
-        DB::transaction(function () use ($targetPages, $pullRequest, $sourcePages, &$synced) {
+        DB::transaction(function () use ($targetPages, $pullRequest, &$synced) {
             foreach ($targetPages as $targetPage) {
                 // Update existing source page if it exists in source branch
                 $sourcePage = Page::where('branch_id', $pullRequest->source_branch_id)
@@ -246,9 +248,9 @@ class PullRequestController extends Controller
 
                 if ($sourcePage) {
                     $sourcePage->update([
-                        'title'   => $targetPage->title,
+                        'title' => $targetPage->title,
                         'content' => $targetPage->content,
-                        'order'   => $targetPage->order,
+                        'order' => $targetPage->order,
                     ]);
                     $synced++;
                 }
@@ -259,7 +261,7 @@ class PullRequestController extends Controller
 
         return response()->json([
             'message' => "Synced {$synced} page(s) from target branch.",
-            'synced'  => $synced,
+            'synced' => $synced,
         ]);
     }
 
@@ -268,7 +270,7 @@ class PullRequestController extends Controller
      */
     public function show(Request $request, Site $site, PullRequest $pullRequest)
     {
-        if (!$site->canView($request->user())) {
+        if (! $site->canView($request->user())) {
             abort(403);
         }
 
@@ -291,7 +293,7 @@ class PullRequestController extends Controller
      */
     public function update(Request $request, Site $site, PullRequest $pullRequest)
     {
-        if ($pullRequest->author_id !== $request->user()->id && !$site->canAdmin($request->user())) {
+        if ($pullRequest->author_id !== $request->user()->id && ! $site->canAdmin($request->user())) {
             abort(403, 'Only the author or admin can edit this PR.');
         }
 
@@ -301,7 +303,7 @@ class PullRequestController extends Controller
             'status' => 'nullable|in:draft,open',
         ]);
 
-        $pullRequest->update(array_filter($validated, fn($v) => $v !== null));
+        $pullRequest->update(array_filter($validated, fn ($v) => $v !== null));
 
         return response()->json([
             'message' => 'Pull request updated.',
@@ -314,7 +316,7 @@ class PullRequestController extends Controller
      */
     public function merge(Request $request, Site $site, PullRequest $pullRequest)
     {
-        if (!$site->canMaintain($request->user())) {
+        if (! $site->canMaintain($request->user())) {
             abort(403, 'You need maintain access to merge pull requests.');
         }
 
@@ -324,13 +326,13 @@ class PullRequestController extends Controller
 
         return DB::transaction(function () use ($request, $pullRequest) {
             $changes = $this->calculateChanges($pullRequest);
-            
+
             // Block merge if conflicts exist
             $hasConflicts = collect($changes)->contains('has_conflict', true);
             if ($hasConflicts) {
                 return response()->json([
                     'message' => 'This pull request has conflicts that must be resolved before merging.',
-                    'conflicts' => collect($changes)->where('has_conflict', true)->values()
+                    'conflicts' => collect($changes)->where('has_conflict', true)->values(),
                 ], 422);
             }
 
@@ -338,7 +340,7 @@ class PullRequestController extends Controller
 
             foreach ($changes as $change) {
                 $logicalId = $change['logical_id'];
-                
+
                 if ($change['type'] === 'deleted') {
                     // Delete page from target branch
                     Page::where('branch_id', $targetBranchId)
@@ -346,7 +348,7 @@ class PullRequestController extends Controller
                         ->delete();
                 } else {
                     $sourcePage = $change['page'];
-                    
+
                     // Find matching page on target branch by logical_id
                     $targetPage = Page::where('branch_id', $targetBranchId)
                         ->where('logical_id', $logicalId)
@@ -392,7 +394,7 @@ class PullRequestController extends Controller
      */
     public function close(Request $request, Site $site, PullRequest $pullRequest)
     {
-        if ($pullRequest->author_id !== $request->user()->id && !$site->canMaintain($request->user())) {
+        if ($pullRequest->author_id !== $request->user()->id && ! $site->canMaintain($request->user())) {
             abort(403, 'Only the author or maintainer can close this PR.');
         }
 
@@ -419,7 +421,7 @@ class PullRequestController extends Controller
         $isAuthor = $pullRequest->author_id === $request->user()->id;
         $isAdmin = $site->canAdmin($request->user());
 
-        if (!$isAuthor && !$isAdmin) {
+        if (! $isAuthor && ! $isAdmin) {
             abort(403, 'Only the author or admin can delete this PR.');
         }
 
@@ -437,7 +439,7 @@ class PullRequestController extends Controller
      */
     public function compare(Request $request, Site $site)
     {
-        if (!$site->canView($request->user())) {
+        if (! $site->canView($request->user())) {
             abort(403);
         }
 
@@ -491,7 +493,7 @@ class PullRequestController extends Controller
             ->get()
             ->keyBy('logical_id');
 
-        // Identification logic: 
+        // Identification logic:
         // Only consider pages that have actually been COMMITTED in the source branch.
         // This prevents overwriting target pages that changed in the target but were NOT touched in the source.
         $sourceCommits = Commit::where('branch_id', $sourceBranchId)
@@ -515,13 +517,13 @@ class PullRequestController extends Controller
             ->orderBy('commit_pages.id', 'desc') // UUID v7 is time-ordered; reliable even within same second
             ->get()
             ->groupBy('logical_id')
-            ->map(function($group) {
+            ->map(function ($group) {
                 return $group->first(); // First of desc = latest
             });
 
         // Also include pages that currently exist in source but have no logical_id in target (New pages)
         $newPagesLogicalIds = $sourcePages->keys()->diff($targetPages->keys())->toArray();
-        
+
         $relevantLogicalIds = array_unique(array_merge($committedLogicalIds, $newPagesLogicalIds));
 
         // Check source pages against target
@@ -530,7 +532,7 @@ class PullRequestController extends Controller
             $targetPage = $targetPages->get($logicalId);
             $baseVersion = $baseVersions->get($logicalId);
 
-            if ($sourcePage && !$targetPage) {
+            if ($sourcePage && ! $targetPage) {
                 // New page (exists in source, not in target)
                 $changes[] = [
                     'logical_id' => $logicalId,
@@ -542,7 +544,7 @@ class PullRequestController extends Controller
                     'target_content' => null,
                     'has_conflict' => false,
                 ];
-            } elseif (!$sourcePage && $targetPage) {
+            } elseif (! $sourcePage && $targetPage) {
                 // Deleted in source branch
                 $changes[] = [
                     'logical_id' => $logicalId,
@@ -576,10 +578,10 @@ class PullRequestController extends Controller
                     if ($baseVersion) {
                         $targetChangedFromBase = json_encode($targetPage->content) !== json_encode($baseVersion->previous_content) ||
                                               $targetPage->title !== $baseVersion->previous_title;
-                        
+
                         if ($targetChangedFromBase) {
                             $hasConflict = true;
-                            $conflictReason = "Both branches modified this page.";
+                            $conflictReason = 'Both branches modified this page.';
                         }
                     }
 
@@ -601,16 +603,15 @@ class PullRequestController extends Controller
             }
         }
 
-
-
         return $changes;
     }
+
     /**
      * Resolve merge conflicts
      */
     public function resolve(Request $request, Site $site, PullRequest $pullRequest)
     {
-        if (!$site->canMaintain($request->user())) {
+        if (! $site->canMaintain($request->user())) {
             abort(403, 'You need maintain access to resolve pull request conflicts.');
         }
 
@@ -638,7 +639,7 @@ class PullRequestController extends Controller
                 'site_id' => $pullRequest->site_id,
                 'branch_id' => $pullRequest->source_branch_id,
                 'user_id' => $request->user()->id,
-                'message' => 'Resolve merge conflicts in PR #' . $pullRequest->number,
+                'message' => 'Resolve merge conflicts in PR #'.$pullRequest->number,
             ]);
 
             foreach ($resolutions as $res) {
@@ -653,28 +654,28 @@ class PullRequestController extends Controller
                     // This makes calculateBranchDiff() see the base as already synced
                     // with target, so it won't flag this page as conflicted again.
                     $previousContent = $targetPage?->content ?? $page->content;
-                    $previousTitle   = $targetPage?->title   ?? $page->title;
+                    $previousTitle = $targetPage?->title ?? $page->title;
 
                     $page->update([
                         'content' => $res['content'],
-                        'title'   => $res['title'],
+                        'title' => $res['title'],
                     ]);
 
                     CommitPage::create([
-                        'commit_id'        => $commit->id,
-                        'page_id'          => $page->id,
-                        'action'           => 'modified',
-                        'title'            => $page->title,
-                        'content'          => $page->content,
+                        'commit_id' => $commit->id,
+                        'page_id' => $page->id,
+                        'action' => 'modified',
+                        'title' => $page->title,
+                        'content' => $page->content,
                         'previous_content' => $previousContent,
-                        'previous_title'   => $previousTitle,
+                        'previous_title' => $previousTitle,
                     ]);
                 }
             }
 
             return response()->json([
                 'message' => 'Conflicts resolved successfully. A resolution commit has been added to the branch.',
-                'commit'  => $commit,
+                'commit' => $commit,
             ]);
         });
     }

@@ -19,8 +19,9 @@ export default function CommitHistory({ requestId }) {
         setRequestDetail(requestRes.data);
 
         // Fetch commits
-        const commitsData = await getCommits(requestId);
-        setCommits(commitsData);
+        const response = await getCommits(requestId);
+        const commitsData = response.data || response;
+        setCommits(Array.isArray(commitsData) ? commitsData : []);
       } catch (error) {
         console.error("Failed to fetch commit history", error);
       } finally {
@@ -52,20 +53,31 @@ export default function CommitHistory({ requestId }) {
         <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-[color:var(--color-border-primary)] opacity-50" />
         
         <div className="space-y-6">
-          {commits.map((commit, index) => {
+          {Array.isArray(commits) && commits.map((commit, index) => {
             const isExpanded = expandedCommitId === commit.id;
+            const isFix = commit.message.toLowerCase().includes('fix');
+            const isNew = commit.message.toLowerCase().includes('new') || commit.message.toLowerCase().includes('create');
             
+            // Determine actual content for this commit (commits in this view are matched to the PR)
+            const commitContent = commit.content || commit.pages?.[0]?.content;
+
             // Determine base content for this commit diff
-            // If it's the oldest commit (last in array), its base is the request's base_content
-            // Otherwise, its base is the commit immediately after it in the array (the previous commit in time)
-            const baseContentForThisDiff = (index === commits.length - 1)
-              ? requestDetail?.base_content
-              : commits[index + 1]?.content;
+            // If it's the oldest commit (last in array), its base is the original content
+            // Otherwise, its base is the commit immediately after it in the array
+            let baseContentForThisDiff = null;
+            if (index === commits.length - 1) {
+              // Try to find the base content from the changes array if it exists
+              const firstChange = requestDetail?.changes?.[0];
+              baseContentForThisDiff = firstChange?.base_content || requestDetail?.pull_request?.base_content;
+            } else {
+              const nextCommit = commits[index + 1];
+              baseContentForThisDiff = nextCommit?.content || nextCommit?.pages?.[0]?.content;
+            }
 
             return (
               <div key={commit.id} className="relative pl-12 group">
                 {/* Node */}
-                <div className="absolute left-[13px] top-1.5 w-[10px] h-[10px] rounded-full bg-[color:var(--color-bg-primary)] border-2 border-blue-500 z-10" />
+                <div className={`absolute left-[13px] top-1.5 w-[10px] h-[10px] rounded-full bg-[color:var(--color-bg-primary)] border-2 ${isFix ? 'border-red-500' : isNew ? 'border-green-500' : 'border-blue-500'} z-10 transition-colors`} />
                 
                 <div className={`bg-[color:var(--color-bg-secondary)] border ${isExpanded ? 'border-blue-500 ring-1 ring-blue-500/20' : 'border-[color:var(--color-border-primary)] hover:border-blue-500/50'} rounded-xl overflow-hidden shadow-sm transition-all`}>
                   {/* Header UI */}
@@ -119,7 +131,7 @@ export default function CommitHistory({ requestId }) {
                       <div className="p-4 overflow-hidden">
                         <DiffViewer 
                           oldContent={baseContentForThisDiff} 
-                          newContent={commit.content} 
+                          newContent={commitContent} 
                         />
                       </div>
                     </div>

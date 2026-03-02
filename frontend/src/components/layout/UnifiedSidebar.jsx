@@ -603,8 +603,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
                             <img
                                 src={user.avatar_url}
                                 alt={user.name}
-                                className="w-8 h-8 rounded-full ring-2 ring-[var(--color-border-secondary)]"
-                            />
+                                className="w-8 h-8 rounded-full ring-2 ring-[var(--color-border-secondary)]" referrerPolicy="no-referrer" />
                         ) : (
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-accent)] to-teal-500 flex items-center justify-center text-white text-xs font-medium">
                                 {user?.name?.charAt(0)?.toUpperCase() || "U"}

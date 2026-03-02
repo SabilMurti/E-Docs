@@ -409,6 +409,7 @@ export default function PageContent() {
                 title: prTitle,
                 description: prDescription,
                 content: localContent,
+                source_branch_id: currentPage.branch_id,
                 target_branch_id: targetBranchId,
             });
 

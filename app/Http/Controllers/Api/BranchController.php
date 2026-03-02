@@ -8,8 +8,8 @@ use App\Models\Branch;
 use App\Models\Page;
 use App\Models\Site;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class BranchController extends Controller
 {
@@ -18,12 +18,12 @@ class BranchController extends Controller
      */
     public function index(Request $request, Site $site)
     {
-        if (!$site->canView($request->user())) {
+        if (! $site->canView($request->user())) {
             abort(403);
         }
 
         return response()->json([
-            'data' => $site->branches()->orderBy('is_default', 'desc')->orderBy('name')->get()
+            'data' => $site->branches()->orderBy('is_default', 'desc')->orderBy('name')->get(),
         ]);
     }
 
@@ -32,7 +32,7 @@ class BranchController extends Controller
      */
     public function store(Request $request, Site $site)
     {
-        if (!$site->canEdit($request->user())) {
+        if (! $site->canEdit($request->user())) {
             abort(403, 'Permission denied.');
         }
 
@@ -44,18 +44,18 @@ class BranchController extends Controller
         // Check if branch name is reserved
         if (BranchName::isReserved($validated['name'])) {
             return response()->json([
-                'message' => 'Branch name "' . $validated['name'] . '" is reserved.'
+                'message' => 'Branch name "'.$validated['name'].'" is reserved.',
             ], 422);
         }
 
-        // Check if branch exists
-        if ($site->branches()->where('name', $validated['name'])->exists()) {
-             return response()->json(['message' => 'Branch already exists.'], 422);
+        // Check if branch exists (including soft deleted)
+        if ($site->branches()->withTrashed()->where('name', $validated['name'])->exists()) {
+            return response()->json(['message' => 'Branch already exists.'], 422);
         }
 
         $sourceBranch = $site->branches()->where('name', $validated['source_branch'])->firstOrFail();
 
-        return DB::transaction(function () use ($site, $validated, $sourceBranch, $request) {
+        return DB::transaction(function () use ($site, $validated, $sourceBranch) {
             // Create Branch
             $newBranch = $site->branches()->create([
                 'name' => $validated['name'],
@@ -63,46 +63,47 @@ class BranchController extends Controller
                 'is_default' => false,
             ]);
 
-            // Clone Pages
-            $sourcePages = Page::where('branch_id', $sourceBranch->id)->get();
-            
-            // Map old ID to new UUID
-            $idMap = [];
-            foreach ($sourcePages as $page) {
-                $idMap[$page->id] = (string) Str::uuid();
-            }
-
-            // Pass 1: Create pages with null parent_id to avoid FK constraint violations
-            foreach ($sourcePages as $page) {
-                // replicate() copies attributes but we need to change specific ones
-                $newPage = $page->replicate([
-                    'id', 
-                    'branch_id', 
-                    'created_at', 
-                    'updated_at', 
-                    'deleted_at'
-                ]);
-                
-                $newPage->id = $idMap[$page->id]; // Force new UUID
-                $newPage->branch_id = $newBranch->id;
-                $newPage->site_id = $site->id; // Ensure site_id is set
-                $newPage->parent_id = null; // Temporarily null
-                
-                $newPage->save();
-            }
-
-            // Pass 2: Restore parent_id hierarchy
-            foreach ($sourcePages as $page) {
-                if ($page->parent_id && isset($idMap[$page->parent_id])) {
-                    Page::where('id', $idMap[$page->id])->update(['parent_id' => $idMap[$page->parent_id]]);
-                }
-            }
+            // Clone pages recursively
+            $this->clonePagesRecursive($site, $sourceBranch, $newBranch, null, null);
 
             return response()->json([
                 'message' => 'Branch created successfully.',
-                'data' => $newBranch
+                'data' => $newBranch,
             ], 201);
         });
+    }
+
+    /**
+     * Recursively clone pages from source branch to new branch
+     */
+    private function clonePagesRecursive(Site $site, Branch $sourceBranch, Branch $newBranch, ?string $sourceParentId, ?string $newParentId): void
+    {
+        // Get pages at this level from source branch
+        $sourcePages = Page::where('branch_id', $sourceBranch->id)
+            ->whereNull('deleted_at')
+            ->where('parent_id', $sourceParentId)
+            ->orderBy('order')
+            ->get();
+
+        foreach ($sourcePages as $sourcePage) {
+            // Create new page
+            $newPage = new Page;
+            $newPage->id = (string) Str::uuid();
+            $newPage->site_id = $site->id;
+            $newPage->branch_id = $newBranch->id;
+            $newPage->logical_id = $sourcePage->logical_id;
+            $newPage->title = $sourcePage->title;
+            $newPage->slug = $sourcePage->slug;
+            $newPage->icon = $sourcePage->icon;
+            $newPage->content = $sourcePage->content;
+            $newPage->order = $sourcePage->order;
+            $newPage->parent_id = $newParentId;
+
+            $newPage->save();
+
+            // Recursively clone children
+            $this->clonePagesRecursive($site, $sourceBranch, $newBranch, $sourcePage->id, $newPage->id);
+        }
     }
 
     /**
@@ -110,7 +111,7 @@ class BranchController extends Controller
      */
     public function destroy(Request $request, Site $site, Branch $branch)
     {
-        if (!$site->canEdit($request->user())) {
+        if (! $site->canEdit($request->user())) {
             abort(403);
         }
 
@@ -122,7 +123,7 @@ class BranchController extends Controller
             return response()->json(['message' => 'Cannot delete default branch.'], 400);
         }
 
-        DB::transaction(function () use ($branch, $site) {
+        DB::transaction(function () use ($branch) {
             Page::where('branch_id', $branch->id)->delete();
             $branch->delete();
         });

@@ -409,17 +409,26 @@ function PageConflictEditor({ conflict, resolution, onResolve }) {
                   ? "incoming"
                   : "both";
 
-            // Build a simple Tiptap doc from resolved lines
-            const resolvedContent = {
-                type: "doc",
-                content: resolvedLines
-                    .filter((l) => l !== "(empty)")
-                    .map((line) => ({
-                        type: "paragraph",
-                        attrs: { textAlign: null, dataDraggable: "true" },
-                        content: line ? [{ type: "text", text: line }] : [],
-                    })),
-            };
+            // Build resolved content
+            let resolvedContent;
+            
+            if (choiceLabel === "current") {
+                resolvedContent = conflict.source_content;
+            } else if (choiceLabel === "incoming") {
+                resolvedContent = conflict.target_content;
+            } else {
+                // Construct a simple Tiptap doc from resolved lines (formatting is lost for mixed content)
+                resolvedContent = {
+                    type: "doc",
+                    content: resolvedLines
+                        .filter((l) => l !== "(empty)")
+                        .map((line) => ({
+                            type: "paragraph",
+                            attrs: { textAlign: null, dataDraggable: "true" },
+                            content: line ? [{ type: "text", text: line }] : [],
+                        })),
+                };
+            }
 
             onResolve(conflict.logical_id, choiceLabel, {
                 title:

@@ -6,7 +6,8 @@ import {
   ChevronDown,
   ChevronUp,
   ListChecks,
-  Check
+  Check,
+  ArrowDownToLine
 } from 'lucide-react';
 
 export default function StepsBlock({ node, updateAttributes, editor, getPos }) {
@@ -31,6 +32,12 @@ export default function StepsBlock({ node, updateAttributes, editor, getPos }) {
       type: 'step',
       content: [{ type: 'paragraph' }]
     }).run();
+  };
+  
+  const exitSteps = () => {
+    if (typeof getPos !== 'function') return;
+    const pos = getPos() + node.nodeSize;
+    editor.chain().focus().insertContentAt(pos, { type: 'paragraph' }).run();
   };
 
   return (
@@ -64,6 +71,13 @@ export default function StepsBlock({ node, updateAttributes, editor, getPos }) {
                 title="Add step"
               >
                 <Plus size={16} />
+              </button>
+              <button
+                onClick={exitSteps}
+                className="steps-action-btn"
+                title="Exit steps (insert text below)"
+              >
+                <ArrowDownToLine size={16} />
               </button>
               <button
                 onClick={() => setCollapsed(!collapsed)}
