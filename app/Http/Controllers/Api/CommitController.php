@@ -103,7 +103,7 @@ class CommitController extends Controller
     /**
      * Create a commit for a single page (direct from editor)
      */
-    public function storePage(Request $request, Site $site, Page $page)
+    public function storePage(Request $request, Site $site, $page)
     {
         if (!$site->canWrite($request->user())) {
             abort(403, 'You do not have write access to this site.');
@@ -114,6 +114,16 @@ class CommitController extends Controller
             'content' => 'nullable|array',
             'title' => 'nullable|string',
         ]);
+
+        $query = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        });
+
+        if ($request->has('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        $page = $query->firstOrFail();
 
         return DB::transaction(function () use ($site, $page, $validated, $request) {
             // Create commit record

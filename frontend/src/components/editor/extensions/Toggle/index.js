@@ -7,7 +7,8 @@ export const Toggle = Node.create({
   group: 'block',
   content: 'block+',
   draggable: true,
-  isolating: true,
+  // Removed isolating: true — it was making content disappear when typing,
+  // because isolating blocks normal cursor/content flow in unexpected ways.
 
   addAttributes() {
     return {
@@ -50,6 +51,38 @@ export const Toggle = Node.create({
 
   addNodeView() {
     return ReactNodeViewRenderer(ToggleComponent);
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      // On Enter at the very end of a toggle's last block, exit the toggle
+      Enter: ({ editor }) => {
+        const { state } = editor;
+        const { selection } = state;
+        const { $from } = selection;
+
+        let toggleDepth = -1;
+        for (let depth = $from.depth; depth >= 0; depth--) {
+          if ($from.node(depth).type.name === 'toggle') {
+            toggleDepth = depth;
+            break;
+          }
+        }
+        if (toggleDepth === -1) return false;
+
+        const toggleEnd = $from.end(toggleDepth);
+        const isAtEnd = $from.pos === toggleEnd - 1;
+        if (!isAtEnd) return false;
+
+        const afterToggle = $from.after(toggleDepth);
+        editor
+          .chain()
+          .insertContentAt(afterToggle, { type: 'paragraph' })
+          .setTextSelection(afterToggle + 1)
+          .run();
+        return true;
+      },
+    };
   },
 
   addCommands() {

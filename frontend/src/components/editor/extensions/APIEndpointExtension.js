@@ -14,23 +14,22 @@ export const APIEndpoint = Node.create({
       method: {
         default: 'GET',
         parseHTML: element => element.getAttribute('data-method'),
-        renderHTML: attributes => ({
-          'data-method': attributes.method,
-        }),
+        renderHTML: attributes => ({ 'data-method': attributes.method }),
       },
       endpoint: {
         default: '/api/v1/endpoint',
         parseHTML: element => element.getAttribute('data-endpoint'),
-        renderHTML: attributes => ({
-          'data-endpoint': attributes.endpoint,
-        }),
+        renderHTML: attributes => ({ 'data-endpoint': attributes.endpoint }),
       },
       description: {
-        default: 'API endpoint description...',
+        default: '',
         parseHTML: element => element.getAttribute('data-description'),
-        renderHTML: attributes => ({
-          'data-description': attributes.description,
-        }),
+        renderHTML: attributes => ({ 'data-description': attributes.description }),
+      },
+      lang: {
+        default: 'bash',
+        parseHTML: element => element.getAttribute('data-lang'),
+        renderHTML: attributes => ({ 'data-lang': attributes.lang }),
       },
     };
   },

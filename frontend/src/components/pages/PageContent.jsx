@@ -39,7 +39,7 @@ export default function PageContent() {
     const { pageSlug, siteSlug } = useParams();
     const rawNavigate = useNavigate();
 
-    const { currentPage, fetchPage, saveDraft, isLoading, isSaving } =
+    const { currentPage, fetchPage, saveDraft, isLoading, isSaving, error } =
         usePageStore();
     const { currentSite, currentBranch } = useSiteStore();
 
@@ -88,6 +88,13 @@ export default function PageContent() {
         hasUnsavedRef.current = hasUnsavedChanges;
     }, [hasUnsavedChanges]);
 
+    // Keep refs for currentPage and branchParams so unmount/cleanup always has fresh values
+    const currentPageRef = useRef(currentPage);
+    const branchParamsRef = useRef({});
+    useEffect(() => {
+        currentPageRef.current = currentPage;
+    }, [currentPage]);
+
     // Guarded navigate - intercepts navigation when unsaved changes exist
     const navigate = useCallback(
         (to, options) => {
@@ -105,20 +112,70 @@ export default function PageContent() {
         localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(autoSaveEnabled));
     }, [autoSaveEnabled]);
 
-    // Fetch page on mount
+    // Track the branch that was active the last time we fetched — used to detect branch switches.
+    const lastFetchedBranchRef = useRef(null);
+
+    // Fetch page on mount, slug change, OR branch switch
     useEffect(() => {
         if (siteSlug && pageSlug) {
-            fetchPage(siteSlug, pageSlug);
-        }
-    }, [siteSlug, pageSlug, fetchPage]);
+            const branchSwitched = lastFetchedBranchRef.current !== null &&
+                                   lastFetchedBranchRef.current !== currentBranch;
 
-    // Set local content when page loads
-    useEffect(() => {
-        if (currentPage?.content) {
-            setLocalContent(currentPage.content);
-            setHasUnsavedChanges(false);
+            // Optimistically clear editor state when navigating to a new page
+            if (currentPage?.slug && currentPage.slug !== pageSlug) {
+                setLocalContent(null);
+                setHasUnsavedChanges(false);
+            }
+
+            // BRANCH ISOLATION FIX:
+            // If the user switched branches, ALWAYS fetch by branch NAME — never reuse
+            // the branch_id from currentPage (which belongs to the OLD branch).
+            // Only use branch_id shortcut when we're already on the correct branch.
+            const samePageSameBranch =
+                currentPage?.branch_id &&
+                currentPage.slug === pageSlug &&
+                !branchSwitched &&
+                currentPage.branch_name === currentBranch;
+
+            const branchParam = samePageSameBranch
+                ? { branch_id: currentPage.branch_id }
+                : { branch: currentBranch };
+
+            lastFetchedBranchRef.current = currentBranch;
+            fetchPage(siteSlug, pageSlug, branchParam);
         }
+    }, [siteSlug, pageSlug, fetchPage, currentBranch]);
+
+    const prevPageIdRef = useRef(null);
+
+    // Set local content when page loads or switches
+    useEffect(() => {
+        if (!currentPage) {
+            prevPageIdRef.current = null;
+            return;
+        }
+
+        const isNewPage = currentPage.id !== prevPageIdRef.current && currentPage.slug !== undefined;
+        const isFirstLoad = prevPageIdRef.current === null;
+
+        if (isNewPage || isFirstLoad) {
+            setLocalContent(currentPage.content || '');
+            setHasUnsavedChanges(false);
+            prevPageIdRef.current = currentPage.id;
+        }
+        // If same page after saveDraft, do NOT reset localContent — editor is source of truth.
     }, [currentPage]);
+
+    // Derive active branchId from currentPage (most reliable source)
+    const activeBranchId = currentPage?.branch_id ?? null;
+
+    // Helper: build params with branch_id if we know it
+    const branchParams = activeBranchId ? { branch_id: activeBranchId } : {};
+
+    // Keep branchParams ref in sync for use in cleanup/unmount
+    useEffect(() => {
+        branchParamsRef.current = branchParams;
+    }, [activeBranchId]);
 
     // --- SAVE DRAFT ---
     const handleSave = useCallback(async () => {
@@ -126,9 +183,12 @@ export default function PageContent() {
 
         setDraftSaving(true);
         try {
-            const result = await saveDraft(siteSlug, currentPage.slug, {
+            // Use page UUID (not slug) as pageId — UUID is unique per branch,
+            // while slug is shared. This guarantees we update the RIGHT page record.
+            const pageIdentifier = currentPage.id || currentPage.slug;
+            const result = await saveDraft(siteSlug, pageIdentifier, {
                 content: localContent,
-            });
+            }, branchParams);
 
             if (result.success) {
                 setHasUnsavedChanges(false);
@@ -143,56 +203,52 @@ export default function PageContent() {
         } finally {
             setDraftSaving(false);
         }
-    }, [currentPage, localContent, siteSlug, hasUnsavedChanges, saveDraft]);
+    }, [currentPage, localContent, siteSlug, hasUnsavedChanges, saveDraft, branchParams]);
 
     useEffect(() => {
-        if (!autoSaveEnabled || !currentPage) return;
+        if (!autoSaveEnabled || !hasUnsavedChanges || !currentPageRef.current) return;
 
-        // Auto-save timer
-        if (hasUnsavedChanges) {
-            // Clear existing timer
-            if (autoSaveTimerRef.current) {
-                clearTimeout(autoSaveTimerRef.current);
-            }
-
-            autoSaveTimerRef.current = setTimeout(async () => {
-                const content = localContentRef.current;
-                if (!content) return;
-
-                setDraftSaving(true);
-                try {
-                    const result = await saveDraft(siteSlug, currentPage.slug, {
-                        content,
-                    });
-
-                    if (result.success) {
-                        setHasUnsavedChanges(false);
-                        setLastSaved(new Date());
-                    }
-                } catch (error) {
-                    console.error("Auto-save error:", error);
-                } finally {
-                    setDraftSaving(false);
-                }
-            }, AUTO_SAVE_DELAY);
+        // Set a debounce timer — only the latest change fires a save
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
         }
 
-        // Cleanup: Save on unmount if dirty and auto-save is on
+        autoSaveTimerRef.current = setTimeout(async () => {
+            const content = localContentRef.current;
+            const page = currentPageRef.current;
+            const params = branchParamsRef.current;
+            if (!content || !page) return;
+
+            // Use UUID when available — bypasses branch ambiguity for same-slug pages
+            const pageIdentifier = page.id || page.slug;
+
+            setDraftSaving(true);
+            try {
+                const result = await saveDraft(siteSlug, pageIdentifier, { content }, params);
+                if (result.success) {
+                    setHasUnsavedChanges(false);
+                    setLastSaved(new Date());
+                }
+            } catch (error) {
+                console.error('Auto-save error:', error);
+            } finally {
+                setDraftSaving(false);
+            }
+        }, AUTO_SAVE_DELAY);
+
         return () => {
             if (autoSaveTimerRef.current) {
                 clearTimeout(autoSaveTimerRef.current);
             }
-
-            if (hasUnsavedRef.current && autoSaveEnabled) {
-                const content = localContentRef.current;
-                if (content) {
-                    saveDraft(siteSlug, currentPage.slug, { content }).catch((e) =>
-                        console.error("Unmount save failed", e),
-                    );
-                }
-            }
         };
-    }, [autoSaveEnabled, hasUnsavedChanges, currentPage, siteSlug, saveDraft]);
+    // Only re-run when these actually change — NOT when currentPage/saveDraft change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [autoSaveEnabled, hasUnsavedChanges, siteSlug]);
+
+    // NOTE: The unmount-save was removed because it was overwriting content with stale
+    // localContentRef values when the component unmounted before localContent state was
+    // synced to the ref. The 3-second auto-save timer handles all saves during editing.
+
 
     // --- CONTENT CHANGE ---
     const handleContentChange = useCallback((newContent) => {
@@ -222,7 +278,7 @@ export default function PageContent() {
                 toast.success('Page settings updated');
                 setShowSettingsModal(false);
                 // Refetch to get updated page
-                await fetchPage(siteSlug, pageSlug);
+                await fetchPage(siteSlug, pageSlug, { branch: currentBranch });
             } else {
                 toast.error(result.error || 'Failed to update page settings');
             }
@@ -288,13 +344,15 @@ export default function PageContent() {
 
         setDraftSaving(true);
         try {
+            // Use UUID for commit too — ensures commit targets the correct branch's page
+            const pageIdentifier = currentPage.id || currentPage.slug;
             const result = await usePageStore
                 .getState()
-                .commitChange(siteSlug, currentPage.slug, {
+                .commitChange(siteSlug, pageIdentifier, {
                     content: localContent,
                     title: currentPage.title,
                     message: commitMessage || "Update content",
-                });
+                }, branchParams);
 
             if (result.success) {
                 setHasUnsavedChanges(false);
@@ -311,7 +369,7 @@ export default function PageContent() {
         } finally {
             setDraftSaving(false);
         }
-    }, [currentPage, localContent, siteSlug, commitMessage]);
+    }, [currentPage, localContent, siteSlug, commitMessage, branchParams]);
 
     // --- SYNC/PULL ---
     const { currentRequest, fetchRequestDetails } = usePageStore();
@@ -389,6 +447,7 @@ export default function PageContent() {
                 title: prTitle,
                 description: prDescription,
                 content: localContent,
+                source_branch_id: currentPage.branch_id,
                 target_branch_id: targetBranchId,
             });
 
@@ -513,10 +572,31 @@ export default function PageContent() {
         return () => clearInterval(interval);
     }, [lastSaved]);
 
-    if (isLoading || !currentPage) {
+    if (isLoading) {
         return (
             <div className="h-full flex items-center justify-center">
                 <LoadingSpinner size="lg" />
+            </div>
+        );
+    }
+
+    if (error === 'Page not found' || !currentPage) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-center px-4 animate-in fade-in duration-300">
+                <div className="w-16 h-16 rounded-3xl bg-red-500/10 flex items-center justify-center mb-6 shadow-inner">
+                    <CloudOff className="text-red-500" size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">Page Not Found</h2>
+                <p className="text-[var(--color-text-muted)] max-w-sm mb-8">
+                    The page you're looking for doesn't exist, has been deleted, or you don't have permission to view it.
+                </p>
+                <Link 
+                    to={`/sites/${siteSlug}`}
+                    className="px-5 py-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl text-sm font-medium hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-accent)]/30 hover:text-[var(--color-accent)] transition-all shadow-sm flex items-center gap-2"
+                >
+                    <ChevronRight className="rotate-180" size={16} />
+                    Back to Dashboard
+                </Link>
             </div>
         );
     }
@@ -565,7 +645,7 @@ export default function PageContent() {
                                     const nav = pendingNavigation;
                                     setHasUnsavedChanges(false);
                                     setPendingNavigation(null);
-                                    rawNavigate(nav.to, nav.options);
+                                    if (nav.to) rawNavigate(nav.to, nav.options);
                                 }}
                                 className="px-4 py-2 text-xs font-medium rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
                             >
@@ -576,7 +656,7 @@ export default function PageContent() {
                                     await handleSave();
                                     const nav = pendingNavigation;
                                     setPendingNavigation(null);
-                                    rawNavigate(nav.to, nav.options);
+                                    if (nav.to) rawNavigate(nav.to, nav.options);
                                 }}
                                 className="px-4 py-2 text-xs font-medium rounded-lg bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] transition-colors flex items-center gap-1.5"
                             >
@@ -587,6 +667,7 @@ export default function PageContent() {
                     </div>
                 </div>
             )}
+
 
             {/* Page Header */}
             <header className="sticky top-0 z-20 bg-[color:var(--color-bg-primary)] border-b border-[color:var(--color-border-primary)]">
@@ -888,7 +969,7 @@ export default function PageContent() {
                     <div className="max-w-3xl mx-auto">
                         {mode === "edit" ? (
                             <PageEditor
-                                content={localContent}
+                                content={localContent ?? currentPage?.content}
                                 onChange={handleContentChange}
                                 editable={true}
                             />

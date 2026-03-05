@@ -66,8 +66,7 @@ function MemberItem({ member, siteSlug, currentUserId, isOwner, onUpdate }) {
           <img 
             src={member.user.avatar_url} 
             alt={member.user.name}
-            className="w-10 h-10 rounded-full"
-          />
+            className="w-10 h-10 rounded-full" referrerPolicy="no-referrer" />
         ) : (
           <div className="
             w-10 h-10 rounded-full

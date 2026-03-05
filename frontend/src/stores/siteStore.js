@@ -1,11 +1,29 @@
 import { create } from 'zustand';
 import * as sitesApi from '../api/sites';
 
+// ─── Persist active branch per site in localStorage ──────────────────────────
+const BRANCH_KEY = (siteSlug) => `edocs-branch-${siteSlug}`;
+
+export function getSavedBranch(siteSlug) {
+  try {
+    return localStorage.getItem(BRANCH_KEY(siteSlug)) || 'main';
+  } catch {
+    return 'main';
+  }
+}
+
+function saveBranch(siteSlug, branchName) {
+  try {
+    if (siteSlug) localStorage.setItem(BRANCH_KEY(siteSlug), branchName);
+  } catch { /* ignore */ }
+}
+
 const useSiteStore = create((set, get) => ({
   sites: [],
   currentSite: null,
   branches: [],
-  currentBranch: 'main',
+  currentBranch: 'main',   // will be overwritten from localStorage on first siteSlug load
+  currentSiteSlug: null,   // tracked so we know which key to use for localStorage
   isLoading: false,
   error: null,
 
@@ -99,7 +117,6 @@ const useSiteStore = create((set, get) => ({
       const response = await sitesApi.publishSite(siteSlug);
       const updatedSite = response.data;
       set((state) => ({
-        // Site list is keyed by slug, not UUID
         sites: state.sites.map((s) => (s.slug === siteSlug ? updatedSite : s)),
         currentSite: state.currentSite?.slug === siteSlug ? updatedSite : state.currentSite,
       }));
@@ -115,7 +132,6 @@ const useSiteStore = create((set, get) => ({
       const response = await sitesApi.unpublishSite(siteSlug);
       const updatedSite = response.data;
       set((state) => ({
-        // Site list is keyed by slug, not UUID
         sites: state.sites.map((s) => (s.slug === siteSlug ? updatedSite : s)),
         currentSite: state.currentSite?.slug === siteSlug ? updatedSite : state.currentSite,
       }));
@@ -126,7 +142,7 @@ const useSiteStore = create((set, get) => ({
   },
 
   // Clear current site
-  clearCurrentSite: () => set({ currentSite: null, branches: [], currentBranch: 'main' }),
+  clearCurrentSite: () => set({ currentSite: null, branches: [], currentBranch: 'main', currentSiteSlug: null }),
 
   // --- BRANCHES ---
 
@@ -167,10 +183,21 @@ const useSiteStore = create((set, get) => ({
     }
   },
 
-  // Switch Branch (UI state only, pages fetch depends on this)
-  switchBranch: (branchName) => {
+  // ─── Switch Branch (persists to localStorage per site) ───────────────────
+  switchBranch: (branchName, siteSlug) => {
+    // Persist to localStorage so it survives page refresh
+    const slug = siteSlug || get().currentSiteSlug;
+    saveBranch(slug, branchName);
     set({ currentBranch: branchName });
-  }
+  },
+
+  // ─── Initialize branch for a site (called when entering a site) ──────────
+  // Reads from localStorage first, falls back to 'main'.
+  // Does NOT reset to main if user was previously on a feature branch.
+  initBranchForSite: (siteSlug) => {
+    const saved = getSavedBranch(siteSlug);
+    set({ currentBranch: saved, currentSiteSlug: siteSlug });
+  },
 }));
 
 export default useSiteStore;

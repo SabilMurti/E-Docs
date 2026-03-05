@@ -40,8 +40,8 @@ class Site extends Model
                 $slug = $baseSlug;
                 $counter = 1;
 
-                // Check if slug exists, if so append number
-                while (Site::where('slug', $slug)->exists()) {
+                // Check if slug exists (including deleted), if so append number
+                while (Site::withTrashed()->where('slug', $slug)->exists()) {
                     $slug = $baseSlug . '-' . $counter;
                     $counter++;
                 }
@@ -54,6 +54,17 @@ class Site extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    /**
+     * Resolve the model by slug or UUID (id).
+     * This lets routes work whether the URL contains a slug or a UUID.
+     */
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        return $this->where('slug', $value)
+            ->orWhere('id', $value)
+            ->first();
     }
 
     /**

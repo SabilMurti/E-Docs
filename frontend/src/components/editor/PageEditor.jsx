@@ -20,15 +20,58 @@ import MediaInsertModal from "./MediaInsertModal";
 import { TableToolbar } from "./TablePlus";
 
 // Normalize content: Tiptap requires a valid doc object or empty string
+/**
+ * Recursively sanitize a Tiptap node tree.
+ * Fixes: text nodes with `text: null` → `text: ""`, removes structurally broken nodes.
+ * ProseMirror requires every {type:"text"} node to have a non-null string `text` field.
+ */
+function sanitizeNode(node) {
+    if (!node || typeof node !== 'object') return null;
+
+    // Remove invalid text nodes entirely
+    // ProseMirror does NOT allow: text:null, text:'', or text:undefined
+    if (node.type === 'text') {
+        if (!node.text || node.text.trim() === '') return null; // remove empty text nodes
+        return node;
+    }
+
+    // Recursively sanitize children
+    if (Array.isArray(node.content)) {
+        const cleanContent = node.content
+            .map(sanitizeNode)
+            .filter(Boolean);
+        return { ...node, content: cleanContent };
+    }
+
+    return node;
+}
+
 function normalizeContent(c) {
     if (!c) return '';
     if (Array.isArray(c)) return ''; // [] is not valid Tiptap content
+
+    // Handle double-encoded JSON strings from backend
+    if (typeof c === 'string') {
+        try {
+            const parsed = JSON.parse(c);
+            if (parsed && typeof parsed === 'object' && parsed.type === 'doc') {
+                return sanitizeNode(parsed);
+            }
+        } catch (e) {
+            return c; // assume valid HTML string
+        }
+    }
+
     if (typeof c === 'object') {
         if (c.type !== 'doc') return ''; // must be a Tiptap doc node
-        return c;
+        return sanitizeNode(c); // sanitize before returning
     }
+
+    if (c === undefined || c === null) return '';
+
     return c;
 }
+
 
 export default function PageEditor({
     content,
@@ -39,6 +82,7 @@ export default function PageEditor({
     const wrapperRef = useRef(null);
     const editorContainerRef = useRef(null);
     const editorRef = useRef(null);
+    const isProgrammaticUpdateRef = useRef(false);
 
     const [slashMenu, setSlashMenu] = useState({
         visible: false,
@@ -60,16 +104,16 @@ export default function PageEditor({
         extensions,
         content: normalizeContent(content),
         editable,
-        onUpdate: ({ editor }) => {
-            onChange?.(editor.getJSON());
+        onUpdate: ({ editor: ed }) => {
+            if (isProgrammaticUpdateRef.current) return;
+            onChange?.(ed.getJSON());
         },
         editorProps: {
-            attributes: {
-                class: "page-editor-content focus:outline-none min-h-[400px] px-4 py-4 text-left",
-            },
+            attributes: { class: 'page-editor-content focus:outline-none min-h-[400px] px-4 py-4 text-left' },
         },
         immediatelyRender: false,
     });
+
 
     // Sync editor to ref
     useEffect(() => {
@@ -116,9 +160,10 @@ export default function PageEditor({
             const { $from } = selection;
 
             if (!selection.empty) {
-                if (slashMenu.visible) {
-                    setSlashMenu((prev) => ({ ...prev, visible: false }));
-                }
+                setSlashMenu((prev) => {
+                    if (prev.visible) return { ...prev, visible: false };
+                    return prev;
+                });
                 return;
             }
 
@@ -137,18 +182,20 @@ export default function PageEditor({
 
                 const coords = editor.view.coordsAtPos(startPos);
 
-                setSlashMenu({
+                setSlashMenu((prev) => ({
+                    ...prev,
                     visible: true,
                     query,
                     position: {
                         top: coords.bottom + 4,
                         left: coords.left,
                     },
-                });
+                }));
             } else {
-                if (slashMenu.visible) {
-                    setSlashMenu((prev) => ({ ...prev, visible: false }));
-                }
+                setSlashMenu((prev) => {
+                    if (prev.visible) return { ...prev, visible: false };
+                    return prev;
+                });
             }
         };
 
@@ -156,7 +203,7 @@ export default function PageEditor({
         return () => {
             editor.off("transaction", handleTransaction);
         };
-    }, [editor, slashMenu.visible]);
+    }, [editor]);
 
     // Close slash menu on click outside
     useEffect(() => {
@@ -172,17 +219,28 @@ export default function PageEditor({
         return () => document.removeEventListener("click", handleClick);
     }, [slashMenu.visible]);
 
-    // Sync content changes from parent (e.g. when switching pages)
+    // Sync content changes from parent (e.g. when switching pages or after initial load)
+    // Runs when content changes OR when editor first becomes ready (fixes refresh race condition)
     useEffect(() => {
         const currentEditor = editorRef.current;
         const normalized = normalizeContent(content);
-        if (currentEditor && normalized && !currentEditor.isFocused) {
-            const currentContent = currentEditor.getJSON();
-            if (JSON.stringify(currentContent) !== JSON.stringify(normalized)) {
-                currentEditor.commands.setContent(normalized);
+        if (!currentEditor || normalized === undefined || normalized === null) return;
+        if (currentEditor.isFocused) return; // Don't override while user is typing
+
+        const currentContent = currentEditor.getJSON();
+        if (JSON.stringify(currentContent) !== JSON.stringify(normalized)) {
+            isProgrammaticUpdateRef.current = true;
+            try {
+                if (normalized === '' || (normalized.type === 'doc' && (!normalized.content || normalized.content.length === 0))) {
+                    currentEditor.commands.clearContent(false);
+                } else {
+                    currentEditor.commands.setContent(normalized, false); // false = don't emit onUpdate
+                }
+            } finally {
+                Promise.resolve().then(() => { isProgrammaticUpdateRef.current = false; });
             }
         }
-    }, [content]);
+    }, [content, editor]); // Include 'editor' so we retry when editor becomes ready
 
     if (!editor) {
         return (
@@ -194,6 +252,7 @@ export default function PageEditor({
 
     return (
         <div ref={wrapperRef} className="page-editor relative group">
+
             {/* Toolbar - Fixed at top */}
             {editable && (
                 <div className="editor-toolbar sticky top-0 z-20 bg-[var(--color-bg-primary)] border-b border-[var(--color-border-secondary)] px-4 py-2 flex items-center gap-2">

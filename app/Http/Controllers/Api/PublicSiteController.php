@@ -137,7 +137,7 @@ class PublicSiteController extends Controller
         }
 
         $pages = $pagesQuery->orderBy('order', 'asc')
-            ->select(['id', 'site_id', 'parent_id', 'slug', 'title', 'icon', 'order', 'branch_id', 'content'])
+            ->select(['id', 'site_id', 'parent_id', 'slug', 'title', 'icon', 'order', 'branch_id'])
             ->get();
 
         return response()->json([

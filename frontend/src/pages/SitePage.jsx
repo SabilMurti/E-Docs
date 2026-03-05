@@ -6,7 +6,6 @@ import usePageStore from '../stores/pageStore';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
 import PageContent from '../components/pages/PageContent';
-
 // Welcome/Dashboard page when no page is selected
 function SiteDashboard({ site, pages, onCreatePage, isCreating }) {
   const navigate = useNavigate();
@@ -102,7 +101,7 @@ function SiteDashboard({ site, pages, onCreatePage, isCreating }) {
 
 function SitePage() {
   const { siteSlug, pageSlug } = useParams();
-  const { currentSite, fetchSite, isLoading: siteLoading } = useSiteStore();
+  const { currentSite, fetchSite, isLoading: siteLoading, currentBranch } = useSiteStore();
   const { pages, fetchPages, createPage } = usePageStore();
   const [isCreating, setIsCreating] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -113,12 +112,12 @@ function SitePage() {
       hasFetched.current = true;
       Promise.all([
         fetchSite(siteSlug),
-        fetchPages(siteSlug)
+        fetchPages(siteSlug, currentBranch)  // Always use the active branch!
       ]).finally(() => {
         setInitialLoading(false);
       });
     }
-  }, [siteSlug, fetchSite, fetchPages]);
+  }, [siteSlug, fetchSite, fetchPages, currentBranch]);
 
   // Reset when siteSlug changes
   useEffect(() => {

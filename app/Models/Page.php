@@ -59,6 +59,16 @@ class Page extends Model
     }
 
     /**
+     * Resolve the model by slug or UUID (id).
+     */
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        return $this->where('slug', $value)
+            ->orWhere('id', $value)
+            ->first();
+    }
+
+    /**
      * The site this page belongs to
      */
     public function site(): BelongsTo

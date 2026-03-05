@@ -1,6 +1,6 @@
 import { NodeViewWrapper, NodeViewContent } from '@tiptap/react';
-import React, { useState } from 'react';
-import { Palette, ChevronDown, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Palette, Check } from 'lucide-react';
 
 const THEMES = [
   { id: 'surface', label: 'Default', bg: 'bg-[var(--color-bg-primary)]', border: 'border-gray-300 dark:border-gray-600' },
@@ -15,12 +15,25 @@ export default function CardComponent(props) {
   const { node, updateAttributes, selected } = props;
   const { theme } = node.attrs;
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
 
   const currentTheme = THEMES.find(t => t.id === theme) || THEMES[0];
 
+  // Close dropdown when clicking outside — without a fixed overlay that blocks the editor
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
+
   return (
-    <NodeViewWrapper className="card-block my-6 relative group isolate">
-      <div 
+    <NodeViewWrapper className="card-block my-6 relative group">
+      <div
         className={`
           relative rounded-xl border-2 p-5 transition-all duration-300
           ${currentTheme.bg} ${currentTheme.border}
@@ -28,47 +41,47 @@ export default function CardComponent(props) {
           ${selected ? 'ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-[var(--color-bg-primary)] shadow-lg' : ''}
         `}
       >
-        {/* Helper Menu (Visible on hover/select) */}
-        <div 
+        {/* Theme picker — uses mousedown+preventDefault to avoid losing editor focus */}
+        <div
+          ref={menuRef}
           className={`absolute top-2 right-2 z-10 transition-opacity duration-200 ${selected || showMenu ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
         >
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-1 rounded bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-sm hover:text-[var(--color-accent)] transition-colors"
-              title="Change Card Theme"
-            >
-              <Palette size={14} />
-            </button>
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowMenu(prev => !prev);
+            }}
+            className="p-1 rounded bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-sm hover:text-[var(--color-accent)] transition-colors"
+            title="Change Card Theme"
+          >
+            <Palette size={14} />
+          </button>
 
-            {showMenu && (
-              <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setShowMenu(false)} 
-                />
-                <div className="absolute right-0 top-full mt-1 w-32 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-lg shadow-xl z-20 overflow-hidden py-1">
-                  {THEMES.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => {
-                        updateAttributes({ theme: t.id });
-                        setShowMenu(false);
-                      }}
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-[var(--color-bg-hover)] text-left"
-                    >
-                      <div className={`w-3 h-3 rounded-full border ${t.bg.split(' ')[0]} ${t.border.split(' ')[0]}`} />
-                      <span className="flex-1 text-[var(--color-text-primary)]">{t.label}</span>
-                      {theme === t.id && <Check size={12} className="text-[var(--color-accent)]" />}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          {showMenu && (
+            <div className="absolute right-0 top-full mt-1 w-32 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] rounded-lg shadow-xl z-20 overflow-hidden py-1">
+              {THEMES.map(t => (
+                <button
+                  key={t.id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateAttributes({ theme: t.id });
+                    setShowMenu(false);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs hover:bg-[var(--color-bg-hover)] text-left"
+                >
+                  <div className={`w-3 h-3 rounded-full border ${t.bg.split(' ')[0]} ${t.border.split(' ')[0]}`} />
+                  <span className="flex-1 text-[var(--color-text-primary)]">{t.label}</span>
+                  {theme === t.id && <Check size={12} className="text-[var(--color-accent)]" />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        
-        <NodeViewContent />
+
+        {/* Editable card content */}
+        <NodeViewContent className="card-content" />
       </div>
     </NodeViewWrapper>
   );

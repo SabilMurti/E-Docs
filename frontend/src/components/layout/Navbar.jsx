@@ -105,8 +105,7 @@ function Navbar({ onMenuClick }) {
                     <img 
                       src={user.avatar_url} 
                       alt={user.name}
-                      className="w-8 h-8 rounded-full ring-2 ring-[var(--color-border)]"
-                    />
+                      className="w-8 h-8 rounded-full ring-2 ring-[var(--color-border)]" referrerPolicy="no-referrer" />
                   ) : (
                     <div className="
                       w-8 h-8 rounded-full

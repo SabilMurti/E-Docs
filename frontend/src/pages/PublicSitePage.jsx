@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     FileText,
     ChevronRight,
+    ChevronLeft,
     Menu,
     X,
     ExternalLink,
@@ -153,53 +154,25 @@ function PageFeedback() {
     }
 
     return (
-        <div className="mt-14 pt-8 border-t" style={{ borderColor: 'var(--public-border)' }}>
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-sm font-medium" style={{ color: 'var(--public-text-secondary)' }}>
-                    Was this page helpful?
-                </p>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setVoted('up')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150"
-                        style={{
-                            border: '1px solid var(--public-border)',
-                            backgroundColor: 'var(--public-card-bg)',
-                            color: 'var(--public-text-secondary)',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#10b981';
-                            e.currentTarget.style.color = '#10b981';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--public-border)';
-                            e.currentTarget.style.color = 'var(--public-text-secondary)';
-                        }}
-                    >
-                        <ThumbsUp size={14} />
-                        Yes
-                    </button>
-                    <button
-                        onClick={() => setVoted('down')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150"
-                        style={{
-                            border: '1px solid var(--public-border)',
-                            backgroundColor: 'var(--public-card-bg)',
-                            color: 'var(--public-text-secondary)',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#ef4444';
-                            e.currentTarget.style.color = '#ef4444';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--public-border)';
-                            e.currentTarget.style.color = 'var(--public-text-secondary)';
-                        }}
-                    >
-                        <ThumbsDown size={14} />
-                        No
-                    </button>
-                </div>
+        <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 py-8 border-t border-[var(--public-border)]">
+            <p className="text-sm font-medium text-[var(--public-text-secondary)]">
+                Was this page helpful?
+            </p>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => setVoted('up')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-[var(--public-border)] bg-[var(--public-card-bg)] text-[var(--public-text-secondary)] hover:border-emerald-500 hover:text-emerald-500"
+                >
+                    <ThumbsUp size={14} />
+                    Yes
+                </button>
+                <button
+                    onClick={() => setVoted('down')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-[var(--public-border)] bg-[var(--public-card-bg)] text-[var(--public-text-secondary)] hover:border-red-500 hover:text-red-500"
+                >
+                    <ThumbsDown size={14} />
+                    No
+                </button>
             </div>
         </div>
     );
@@ -306,6 +279,29 @@ export default function PublicSitePage() {
         navigate(`/public/${siteSlug}/${page.slug || page.id}`);
     };
 
+    // Navigation Logic: Flatten tree for correct Next/Prev order
+    const flattenedPages = useMemo(() => {
+        const result = [];
+        const processNode = (page) => {
+            result.push(page);
+            const children = pages
+                .filter((p) => p.parent_id === page.id)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+            children.forEach(processNode);
+        };
+
+        const rootNodes = pages
+            .filter((p) => !p.parent_id)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        rootNodes.forEach(processNode);
+        return result;
+    }, [pages]);
+
+    const currentIndex = flattenedPages.findIndex((p) => p.id === currentPage?.id);
+    const prevPage = currentIndex > 0 ? flattenedPages[currentIndex - 1] : null;
+    const nextPage = currentIndex < flattenedPages.length - 1 ? flattenedPages[currentIndex + 1] : null;
+
     if (isLoading && !site) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-(--color-bg-primary) text-(--color-text-primary)">
@@ -335,12 +331,6 @@ export default function PublicSitePage() {
             </div>
         );
     }
-
-    // Navigation Logic
-    const currentIndex = pages.findIndex((p) => p.id === currentPage?.id);
-    const prevPage = currentIndex > 0 ? pages[currentIndex - 1] : null;
-    const nextPage =
-        currentIndex < pages.length - 1 ? pages[currentIndex + 1] : null;
 
     // Root pages for sidebar
     const rootPages = pages
@@ -373,7 +363,7 @@ export default function PublicSitePage() {
                     backdropFilter: 'blur(12px)',
                 }}
             >
-                <div className="h-full px-4 max-w-[1400px] mx-auto flex items-center justify-between">
+                <div className="h-full w-full px-4 lg:px-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button
                             className="lg:hidden p-2 -ml-2 rounded-md transition-colors"
@@ -442,7 +432,7 @@ export default function PublicSitePage() {
                 </div>
             </header>
 
-            <div className="flex flex-1 max-w-[1400px] mx-auto w-full">
+            <div className="flex flex-1 w-full relative">
                 {/* Sidebar - GitBook style */}
                 <aside
                     className={`
@@ -452,7 +442,7 @@ export default function PublicSitePage() {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
                     style={{
-                        width: '256px',
+                        width: '280px',
                         backgroundColor: 'var(--public-sidebar-bg)',
                         borderRight: '1px solid var(--public-border)',
                     }}
@@ -501,10 +491,10 @@ export default function PublicSitePage() {
 
                 {/* Content Area */}
                 <main className="flex-1 min-w-0" style={{ backgroundColor: 'var(--public-bg)' }}>
-                    <div className="flex">
+                    <div className="flex justify-center xl:justify-start">
                         {/* Main Content */}
-                        <div className="flex-1 min-w-0">
-                            <div className="max-w-[750px] mx-auto px-8 py-10">
+                        <div className="flex-1 min-w-0 max-w-full">
+                            <div className="max-w-[850px] xl:max-w-[960px] mx-auto px-6 md:px-10 lg:px-16 py-10">
                                 {currentPage ? (
                                     <article className="animate-in fade-in slide-in-from-bottom-2 duration-400">
                                         {/* Breadcrumb */}
@@ -539,14 +529,6 @@ export default function PublicSitePage() {
                                                 style={{ color: 'var(--public-text-primary)' }}>
                                                 {currentPage.title || "Untitled Page"}
                                             </h1>
-                                            {currentPage.updated_at && (
-                                                <p className="text-xs" style={{ color: 'var(--public-text-muted)' }}>
-                                                    Last updated{" "}
-                                                    {new Date(currentPage.updated_at).toLocaleDateString('en-US', {
-                                                        year: 'numeric', month: 'long', day: 'numeric'
-                                                    })}
-                                                </p>
-                                            )}
                                         </header>
 
                                         {/* Divider */}
@@ -557,62 +539,62 @@ export default function PublicSitePage() {
                                             <PageViewer content={currentPage.content} />
                                         </div>
 
+                                        {/* Page Feedback */}
+                                        <PageFeedback />
+
                                         {/* Next/Prev Navigation */}
-                                        <div className="mt-14 pt-8 border-t flex flex-col sm:flex-row gap-4" style={{ borderColor: 'var(--public-border)' }}>
+                                        <div className="mt-8 flex flex-col md:flex-row gap-4">
                                             {prevPage && (
                                                 <button
                                                     onClick={() => handlePageSelect(prevPage)}
-                                                    className="flex-1 flex flex-col p-5 rounded-xl transition-all group text-left"
-                                                    style={{
-                                                        border: '1px solid var(--public-border)',
-                                                        backgroundColor: 'var(--public-card-bg)',
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.borderColor = '#10b981';
-                                                        e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.04)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.borderColor = 'var(--public-border)';
-                                                        e.currentTarget.style.backgroundColor = 'var(--public-card-bg)';
-                                                    }}
+                                                    className="group flex-1 flex items-center justify-between p-4 rounded-xl transition-all border border-[var(--public-border)] bg-[var(--public-bg)] hover:border-[var(--public-text-muted)] text-left"
                                                 >
-                                                    <span className="text-[10px] uppercase tracking-wider font-semibold mb-1.5" style={{ color: 'var(--public-text-muted)' }}>
-                                                        ← Previous
-                                                    </span>
-                                                    <span className="text-sm font-semibold group-hover:text-emerald-600 transition-colors" style={{ color: 'var(--public-text-primary)' }}>
-                                                        {prevPage.title}
-                                                    </span>
+                                                    <div className="flex items-center gap-3 w-full">
+                                                        <ChevronLeft size={20} className="text-[var(--public-text-muted)] transition-colors" />
+                                                        <div className="flex flex-col flex-1">
+                                                            <span className="text-xs font-medium text-[var(--public-text-muted)] mb-1">
+                                                                Previous
+                                                            </span>
+                                                            <span className="text-[15px] font-semibold text-[var(--public-text-primary)] transition-colors">
+                                                                {prevPage.title}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </button>
                                             )}
+                                            {/* Spacer flex if only one button exists, or just flex-1 for both */}
                                             {nextPage && (
                                                 <button
                                                     onClick={() => handlePageSelect(nextPage)}
-                                                    className="flex-1 flex flex-col p-5 rounded-xl transition-all group text-right ml-auto"
-                                                    style={{
-                                                        border: '1px solid var(--public-border)',
-                                                        backgroundColor: 'var(--public-card-bg)',
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.borderColor = '#10b981';
-                                                        e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.04)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.borderColor = 'var(--public-border)';
-                                                        e.currentTarget.style.backgroundColor = 'var(--public-card-bg)';
-                                                    }}
+                                                    className="group flex-1 flex items-center justify-between p-4 rounded-xl transition-all border border-[var(--public-border)] bg-[var(--public-bg)] hover:border-[var(--public-text-muted)] text-right"
+                                                    style={{ marginLeft: !prevPage ? 'auto' : '0' }}
                                                 >
-                                                    <span className="text-[10px] uppercase tracking-wider font-semibold mb-1.5" style={{ color: 'var(--public-text-muted)' }}>
-                                                        Next →
-                                                    </span>
-                                                    <span className="text-sm font-semibold group-hover:text-emerald-600 transition-colors" style={{ color: 'var(--public-text-primary)' }}>
-                                                        {nextPage.title}
-                                                    </span>
+                                                    <div className="flex items-center gap-3 w-full justify-end">
+                                                        <div className="flex flex-col flex-1">
+                                                            <span className="text-xs font-medium text-[var(--public-text-muted)] mb-1">
+                                                                Next
+                                                            </span>
+                                                            <span className="text-[15px] font-semibold text-[var(--public-text-primary)] transition-colors">
+                                                                {nextPage.title}
+                                                            </span>
+                                                        </div>
+                                                        <ChevronRight size={20} className="text-[var(--public-text-muted)] transition-colors" />
+                                                    </div>
                                                 </button>
                                             )}
                                         </div>
 
-                                        {/* Page Feedback */}
-                                        <PageFeedback />
+                                        {/* Last Updated */}
+                                        {currentPage.updated_at && (
+                                            <div className="mt-12 pt-6 flex">
+                                                <p className="text-[13px] text-[var(--public-text-muted)]">
+                                                    Last updated{" "}
+                                                    {new Date(currentPage.updated_at).toLocaleDateString('en-US', {
+                                                        year: 'numeric', month: 'long', day: 'numeric'
+                                                    })}
+                                                </p>
+                                            </div>
+                                        )}
                                     </article>
                                 ) : (
                                     <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -632,8 +614,8 @@ export default function PublicSitePage() {
                         </div>
 
                         {/* Right Sidebar - ToC */}
-                        <aside className="hidden xl:block w-56 shrink-0">
-                            <div className="sticky top-24 pt-10 pr-6">
+                        <aside className="hidden xl:block w-64 shrink-0 border-l border-[var(--public-border)]/50 bg-[var(--public-bg)]">
+                            <div className="sticky top-14 pt-10 px-6 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
                                 <TableOfContents content={currentPage?.content} />
                             </div>
                         </aside>

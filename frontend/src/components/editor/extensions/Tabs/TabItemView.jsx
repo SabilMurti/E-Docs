@@ -1,50 +1,26 @@
 import { NodeViewWrapper, NodeViewContent } from '@tiptap/react';
-import { useEffect, useState } from 'react';
 
-export function TabItemView({ node, editor, getPos }) {
-  const [isActive, setIsActive] = useState(false);
+export function TabItemView({ node }) {
+  const isActive = node.attrs.isActive ?? false;
 
-  useEffect(() => {
-    if (!editor || !getPos) return;
-
-    const checkActive = () => {
-      try {
-        const pos = getPos();
-        if (typeof pos !== 'number') return;
-
-        // Find parent tabs node
-        const $pos = editor.state.doc.resolve(pos);
-        for (let d = $pos.depth; d >= 1; d--) {
-          const parentNode = $pos.node(d);
-          if (parentNode?.type.name === 'tabs') {
-            const activeTab = parentNode.attrs.activeTab ?? 0;
-            
-            // Calculate our index within the parent
-            let ourIndex = 0;
-            const parentPos = $pos.before(d);
-            parentNode.content.forEach((child, offset) => {
-              if (parentPos + 1 + offset === pos) {
-                setIsActive(ourIndex === activeTab);
-              }
-              ourIndex++;
-            });
-            break;
-          }
-        }
-      } catch (e) {
-        // Ignore errors
-      }
-    };
-
-    checkActive();
-    editor.on('update', checkActive);
-    return () => editor.off('update', checkActive);
-  }, [editor, getPos]);
+  // CRITICAL: Do NOT use display:none on NodeViewWrapper.
+  // display:none removes the element from DOM flow, causing ProseMirror to
+  // lose cursor position tracking and the cursor "escapes" after one keystroke.
+  //
+  // Instead, use height:0 + overflow:hidden for inactive tabs — the nodes
+  // stay in the DOM so ProseMirror can track them, but they are visually hidden.
+  const hiddenStyle = {
+    height: 0,
+    overflow: 'hidden',
+    pointerEvents: 'none',
+    userSelect: 'none',
+    opacity: 0,
+  };
 
   return (
-    <NodeViewWrapper 
+    <NodeViewWrapper
       className="tab-item-wrapper"
-      style={{ display: isActive ? 'block' : 'none' }}
+      style={isActive ? { minHeight: '1px' } : hiddenStyle}
     >
       <NodeViewContent className="tab-item-content" />
     </NodeViewWrapper>

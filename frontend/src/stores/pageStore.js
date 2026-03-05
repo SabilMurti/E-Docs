@@ -10,31 +10,42 @@ const usePageStore = create((set, get) => ({
   error: null,
 
   // Fetch page tree for a site
-  fetchPages: async (siteId, branchName = 'main') => {
-    set({ isLoading: true, error: null });
+  fetchPages: async (siteId, branchName = 'main', silent = false) => {
+    if (!silent) set({ isLoading: true, error: null });
     try {
       // Pass branch as query param
       const response = await pagesApi.getPages(siteId, { branch: branchName });
       const data = response.data || response;
-      set({ 
+      set((state) => ({ 
         pages: data,
-        isLoading: false 
-      });
+        ...(!silent && { isLoading: false })
+      }));
       return data;
     } catch (error) {
-      set({ 
-        error: error.message, 
-        isLoading: false 
-      });
+      if (!silent) {
+        set({ 
+          error: error.message, 
+          isLoading: false 
+        });
+      }
       return null;
     }
   },
 
   // Fetch single page
-  fetchPage: async (siteId, pageId) => {
-    set({ isLoading: true, error: null });
+  fetchPage: async (siteId, pageId, params = {}) => {
+    // If we're fetching a completely different page, clear the current one out
+    // so the UI knows to show a loading state instead of the old page's content
+    const current = get().currentPage;
+    const isNewPage = current && current.slug !== pageId && current.id !== pageId;
+
+    set({ 
+      isLoading: true, 
+      error: null,
+      ...(isNewPage ? { currentPage: null } : {})
+    });
     try {
-      const response = await pagesApi.getPage(siteId, pageId);
+      const response = await pagesApi.getPage(siteId, pageId, params);
       const page = response.data || response;
       set({ 
         currentPage: page,
@@ -43,7 +54,8 @@ const usePageStore = create((set, get) => ({
       return page;
     } catch (error) {
       set({ 
-        error: error.message, 
+        error: error.response?.status === 404 ? 'Page not found' : error.message,
+        currentPage: null,
         isLoading: false 
       });
       return null;
@@ -51,14 +63,15 @@ const usePageStore = create((set, get) => ({
   },
 
   // Create page
-  createPage: async (siteId, data, branchName = 'main') => {
-    set({ isLoading: true, error: null });
+  createPage: async (siteId, data, branchName = 'main', silent = false) => {
+    if (!silent) set({ isLoading: true, error: null });
     try {
       const payload = { ...data, branch: branchName };
       const response = await pagesApi.createPage(siteId, payload);
       const page = response.data || response;
-      // Refetch the tree to get updated structure
-      await get().fetchPages(siteId, branchName);
+      // Refetch the tree to get updated structure silently
+      await get().fetchPages(siteId, branchName, true);
+      if (!silent) set({ isLoading: false });
       return { success: true, page };
     } catch (error) {
       set({ 
@@ -79,9 +92,9 @@ const usePageStore = create((set, get) => ({
         currentPage: state.currentPage?.slug === pageId ? updatedPage : state.currentPage,
         isSaving: false 
       }));
-      // Refetch tree if title changed — pass current branch!
+      // Refetch tree if title changed — pass current branch silently!
       if (data.title) {
-        await get().fetchPages(siteId, branchName);
+        await get().fetchPages(siteId, branchName, true);
       }
       return { success: true, page: updatedPage };
     } catch (error) {
@@ -95,20 +108,20 @@ const usePageStore = create((set, get) => ({
 
   // Delete page
   deletePage: async (siteId, pageId, branchName = 'main') => {
-    set({ isLoading: true, error: null });
+    set({ isSaving: true, error: null }); // Use isSaving instead of isLoading to not unmount modals
     try {
       await pagesApi.deletePage(siteId, pageId);
-      // Refetch tree — pass current branch!
-      await get().fetchPages(siteId, branchName);
+      // Refetch tree silently!
+      await get().fetchPages(siteId, branchName, true);
       set((state) => ({ 
         currentPage: state.currentPage?.slug === pageId ? null : state.currentPage,
-        isLoading: false 
+        isSaving: false 
       }));
       return { success: true };
     } catch (error) {
       set({ 
         error: error.message, 
-        isLoading: false 
+        isSaving: false 
       });
       return { success: false, error: error.message };
     }
@@ -118,7 +131,7 @@ const usePageStore = create((set, get) => ({
   reorderPages: async (siteId, pageUpdates, branchName = 'main') => {
     try {
       await pagesApi.reorderPages(siteId, pageUpdates);
-      await get().fetchPages(siteId, branchName);
+      await get().fetchPages(siteId, branchName, true);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -127,16 +140,16 @@ const usePageStore = create((set, get) => ({
 
   // Duplicate page
   duplicatePage: async (siteId, pageSlug, branchName = 'main') => {
-    set({ isLoading: true, error: null });
+    set({ isSaving: true, error: null }); // Avoid global isLoading
     try {
       const response = await pagesApi.duplicatePage(siteId, pageSlug);
       const newPage = response.data;
-      // Refresh tree so duplicate appears in sidebar
-      await get().fetchPages(siteId, branchName);
-      set({ isLoading: false });
+      // Refresh tree silhouette silently
+      await get().fetchPages(siteId, branchName, true);
+      set({ isSaving: false });
       return { success: true, page: newPage };
     } catch (error) {
-      set({ error: error.message, isLoading: false });
+      set({ error: error.message, isSaving: false });
       return { success: false, error: error.message };
     }
   },
@@ -151,17 +164,29 @@ const usePageStore = create((set, get) => ({
   clearError: () => set({ error: null }),
 
   // Save draft (lightweight save without commit)
-  saveDraft: async (siteId, pageId, data) => {
+  // IMPORTANT: Does NOT update currentPage.content in the store — the editor is the
+  // source of truth during an active edit session. Only metadata (updated_at) is synced.
+  saveDraft: async (siteId, pageId, data, params = {}) => {
     set({ isSaving: true, error: null });
     try {
-      const response = await pagesApi.updatePage(siteId, pageId, data);
-      const updatedPage = response.data || response;
+      const response = await pagesApi.updatePage(siteId, pageId, data, params);
+
+      const updatedPage = (response?.id || response?.data?.id)
+        ? (response.id ? response : response.data)
+        : null;
+
       set((state) => ({
-        // Use slug (same as pageId from URL) — consistent with updatePage & deletePage
-        currentPage: state.currentPage?.slug === pageId ? updatedPage : state.currentPage,
+        // Only sync safe metadata — never overwrite content (editor owns content)
+        currentPage: updatedPage && state.currentPage?.slug === pageId
+          ? { 
+              ...state.currentPage, 
+              updated_at: updatedPage.updated_at ?? state.currentPage.updated_at,
+              // Deliberately NOT spreading content from server response
+            }
+          : state.currentPage,
         isSaving: false,
       }));
-      return { success: true, page: updatedPage };
+      return { success: true, page: updatedPage || response };
     } catch (error) {
       set({ error: error.message, isSaving: false });
       return { success: false, error: error.message };
@@ -172,14 +197,22 @@ const usePageStore = create((set, get) => ({
   currentRequest: null,
   commits: [],
 
-  commitChange: async (siteId, pageId, data) => {
+  commitChange: async (siteId, pageId, data, params = {}) => {
     set({ isSaving: true, error: null });
     try {
-      const response = await pagesApi.commitChange(siteId, pageId, data);
-      set({ 
-        currentRequest: response.request,
-        isSaving: false 
-      });
+      const response = await pagesApi.commitChange(siteId, pageId, data, params);
+
+      // Refetch the page so currentPage reflects the just-committed content.
+      // This prevents auto-save from re-saving stale local state after a commit.
+      try {
+        const fetchParams = params.branch_id ? { branch_id: params.branch_id } : {};
+        const refreshed = await pagesApi.getPage(siteId, pageId, fetchParams);
+        const page = refreshed.data || refreshed;
+        set({ currentPage: page, isSaving: false });
+      } catch (_) {
+        set({ isSaving: false });
+      }
+
       return { success: true, commit: response.commit };
     } catch (error) {
       set({ error: error.message, isSaving: false });

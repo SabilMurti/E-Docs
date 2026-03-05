@@ -164,8 +164,7 @@ export default function SiteMembers({ siteSlug }) {
                       <img
                         src={member.avatar_url}
                         alt={member.name}
-                        className="w-9 h-9 rounded-full ring-2 ring-[var(--color-bg-secondary)] object-cover"
-                      />
+                        className="w-9 h-9 rounded-full ring-2 ring-[var(--color-bg-secondary)] object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-[var(--color-bg-secondary)] shrink-0">
                         {member.name.charAt(0).toUpperCase()}

@@ -96,13 +96,18 @@ class PageController extends Controller
             ->where('parent_id', $validated['parent_id'] ?? null)
             ->max('order') + 1;
 
+        // Sanitize content on create too
+        $content = isset($validated['content']) && is_array($validated['content'])
+            ? $this->sanitizeTiptapContent($validated['content'])
+            : ($validated['content'] ?? null);
+
         $page = $site->pages()->create([
-            'title' => $validated['title'],
-            'branch_id' => $branch->id,
+            'title'      => $validated['title'],
+            'branch_id'  => $branch->id,
             'logical_id' => \Illuminate\Support\Str::uuid(),
-            'parent_id' => $validated['parent_id'] ?? null,
-            'content' => $validated['content'] ?? null,
-            'order' => $order,
+            'parent_id'  => $validated['parent_id'] ?? null,
+            'content'    => $content,
+            'order'      => $order,
         ]);
 
         $page->load('branch');
@@ -112,46 +117,141 @@ class PageController extends Controller
     /**
      * Get page details
      */
-    public function show(Request $request, Site $site, Page $page)
+    public function show(Request $request, Site $site, $page)
     {
         if (!$site->canView($request->user())) {
             abort(403);
         }
 
-        if ($page->site_id !== $site->id) {
-            abort(404);
+        $query = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        });
+
+        // Filter by branch — support both branch name (from URL query ?branch=main)
+        // and branch_id (from internal calls). This is the critical fix for content loss.
+        if ($request->has('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        } elseif ($request->has('branch')) {
+            $branchName = $request->branch;
+            $branch = $site->branches()->where('name', $branchName)->first();
+            if ($branch) {
+                $query->where('branch_id', $branch->id);
+            }
+        } else {
+            // No branch filter provided: default to the site's default branch
+            // to prevent accidentally returning a page from an unexpected branch.
+            $defaultBranch = $site->branches()->where('is_default', true)->first()
+                ?? $site->branches()->first();
+            if ($defaultBranch) {
+                $query->where('branch_id', $defaultBranch->id);
+            }
         }
 
-        $page->load(['branch', 'parent']);
+        $pageModel = $query->firstOrFail();
 
-        return new PageResource($page);
+        $pageModel->load(['branch', 'parent']);
+
+        return new PageResource($pageModel);
     }
 
     /**
      * Update page
      */
-    public function update(UpdatePageRequest $request, Site $site, Page $page)
+    public function update(UpdatePageRequest $request, Site $site, $page)
     {
+        $query = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        });
+
+        // Filter by branch — ensure we update the correct branch's page.
+        if ($request->has('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        } elseif ($request->has('branch')) {
+            $branchName = $request->branch;
+            $branch = $site->branches()->where('name', $branchName)->first();
+            if ($branch) {
+                $query->where('branch_id', $branch->id);
+            }
+        } else {
+            // Default to the site's default branch.
+            $defaultBranch = $site->branches()->where('is_default', true)->first()
+                ?? $site->branches()->first();
+            if ($defaultBranch) {
+                $query->where('branch_id', $defaultBranch->id);
+            }
+        }
+
+        $pageModel = $query->firstOrFail();
         $validated = $request->validated();
 
-        $page->update($validated);
-        $page->load('branch');
+        // Sanitize content before saving — fix text nodes with null text values
+        // caused by some custom Tiptap extensions (Toggle, Button, etc.)
+        if (isset($validated['content']) && is_array($validated['content'])) {
+            $validated['content'] = $this->sanitizeTiptapContent($validated['content']);
+        }
 
-        return new PageResource($page);
+        $pageModel->update($validated);
+        $pageModel->load('branch');
+
+        return new PageResource($pageModel);
     }
+
+    /**
+     * Recursively sanitize Tiptap content JSON.
+     * Fixes text nodes with null/missing text field that cause ProseMirror
+     * "Invalid text node in JSON" error on the frontend.
+     */
+    private function sanitizeTiptapContent(array $doc): array
+    {
+        if (!isset($doc['content']) || !is_array($doc['content'])) {
+            return $doc;
+        }
+
+        $doc['content'] = array_values(array_filter(
+            array_map([$this, 'sanitizeNode'], $doc['content'])
+        ));
+
+        return $doc;
+    }
+
+    private function sanitizeNode(?array $node): ?array
+    {
+        if (!$node || !is_array($node)) return null;
+
+        // Remove invalid text nodes — ProseMirror rejects text:null AND text:''
+        if (($node['type'] ?? '') === 'text') {
+            $text = $node['text'] ?? null;
+            if ($text === null || $text === '' || trim($text) === '') {
+                return null; // remove entirely
+            }
+            return $node;
+        }
+
+        // Recurse into children
+        if (isset($node['content']) && is_array($node['content'])) {
+            $node['content'] = array_values(array_filter(
+                array_map([$this, 'sanitizeNode'], $node['content'])
+            ));
+        }
+
+        return $node;
+    }
+
+
+
 
     /**
      * Delete page
      */
-    public function destroy(Request $request, Site $site, Page $page): JsonResponse
+    public function destroy(Request $request, Site $site, $page): JsonResponse
     {
         if (!$site->canEdit($request->user())) {
             abort(403);
         }
 
-        if ($page->site_id !== $site->id) {
-            abort(404);
-        }
+        $page = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        })->firstOrFail();
 
         $page->delete();
 
@@ -161,15 +261,15 @@ class PageController extends Controller
     /**
      * Duplicate a page (create a copy with same content)
      */
-    public function duplicate(Request $request, Site $site, Page $page): \Illuminate\Http\JsonResponse
+    public function duplicate(Request $request, Site $site, $page): \Illuminate\Http\JsonResponse
     {
         if (!$site->canEdit($request->user())) {
             abort(403);
         }
 
-        if ($page->site_id !== $site->id) {
-            abort(404);
-        }
+        $page = $site->pages()->where(function ($q) use ($page) {
+            $q->where('id', $page)->orWhere('slug', $page);
+        })->firstOrFail();
 
         // Calculate order — place copy right after the original
         $order = Page::where('site_id', $site->id)

@@ -177,6 +177,22 @@
   color: var(--color-text-primary);
 }
 
+/* Aggressive fix for unreadable pasted dark colors in Dark Mode */
+.dark .ProseMirror [style*="color: rgb(0, 0, 0)"],
+.dark .ProseMirror [style*="color: #000"],
+.dark .ProseMirror [style*="color: #111"],
+.dark .ProseMirror [style*="color: #222"],
+.dark .ProseMirror [style*="color: #333"],
+.dark .ProseMirror [style*="color: black"],
+.dark .page-viewer [style*="color: rgb(0, 0, 0)"],
+.dark .page-viewer [style*="color: #000"],
+.dark .page-viewer [style*="color: #111"],
+.dark .page-viewer [style*="color: #222"],
+.dark .page-viewer [style*="color: #333"],
+.dark .page-viewer [style*="color: black"] {
+  color: var(--color-text-primary) !important;
+}
+
 /* =============================================
    Global Styles
    ============================================= */
@@ -430,8 +446,68 @@ body {
 }
 
 /* =============================================
+   Highlight.js Syntax Highlighting (for Code Blocks & API Endpoints)
+   One Dark / Atom inspired scheme
+   ============================================= */
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section { color: #c678dd !important; }
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-attribute, .hljs-meta-string { color: #98c379 !important; }
+.hljs-number, .hljs-built_in, .hljs-builtin-name, .hljs-type, .hljs-params { color: #d19a66 !important; }
+.hljs-comment, .hljs-quote, .hljs-deletion { color: #abb2bf !important; font-style: italic; opacity: 0.7; }
+.hljs-variable, .hljs-template-variable, .hljs-class .hljs-title { color: #e06c75 !important; }
+.hljs-title.function_, .hljs-function, .hljs-title { color: #61afef !important; }
+.hljs-meta, .hljs-operator, .hljs-punctuation { color: #56b6c2 !important; }
+.hljs-property, .hljs-attr, .hljs-name { color: #e06c75 !important; }
+
+/* =============================================
+   API Endpoint Block - Theme-aware body background
+   ============================================= */
+.api-endpoint-body {
+  background-color: var(--color-bg-secondary);
+}
+
+.dark .api-endpoint-body {
+  background-color: #13131f;
+}
+
+/* Ensure hljs colors render well on light bg */
+.api-endpoint-body .hljs-comment,
+.api-endpoint-body .hljs-quote,
+.api-endpoint-body .hljs-deletion {
+  opacity: 1;
+}
+
+
+/* =============================================
    TipTap Editor - Core Styles
    ============================================= */
+
+/* Custom dark I-beam mouse cursor in light mode — always visible */
+.page-editor .ProseMirror,
+.page-editor .page-editor-content {
+  /* 7x16px I-beam — proportional to system cursor */
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='16' viewBox='0 0 7 16'%3E%3Cline x1='0' y1='1' x2='6' y2='1' stroke='%23111' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='3' y1='1' x2='3' y2='15' stroke='%23111' stroke-width='1.5'/%3E%3Cline x1='0' y1='15' x2='6' y2='15' stroke='%23111' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 3 8, text;
+  caret-color: #111111;
+}
+
+/* White I-beam mouse cursor in dark mode */
+.dark .page-editor .ProseMirror,
+.dark .page-editor .page-editor-content {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='16' viewBox='0 0 7 16'%3E%3Cline x1='0' y1='1' x2='6' y2='1' stroke='%23fff' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='3' y1='1' x2='3' y2='15' stroke='%23fff' stroke-width='1.5'/%3E%3Cline x1='0' y1='15' x2='6' y2='15' stroke='%23fff' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 3 8, text;
+  caret-color: #ffffff;
+}
+
+/* Inputs inside custom extensions — keep default */
+.page-editor input[type="text"],
+.page-editor textarea {
+  caret-color: #111111;
+}
+.dark .page-editor input[type="text"],
+.dark .page-editor textarea {
+  caret-color: #ffffff;
+}
+
+
+/* ProseMirror base layout */
 .ProseMirror {
   min-height: 400px;
   outline: none;
@@ -507,8 +583,6 @@ body {
 .ProseMirror h2 {
   font-size: 1.75rem;
   letter-spacing: -0.02em;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border-primary);
 }
 
 .ProseMirror h3 {
@@ -1973,85 +2047,65 @@ body {
   -moz-tab-size: 2;
 }
 
-/* Syntax Highlighting Colors - Theme Connected */
+/* =============================================
+   ADAPTIVE SYNTAX HIGHLIGHTING (Light Mode Base)
+   ============================================= */
 .code-block-plus .hljs-comment,
 .code-block-plus .hljs-quote {
   color: var(--color-text-muted) !important;
   font-style: italic;
+  background: transparent;
 }
 
-.code-block-plus .hljs-doctag,
 .code-block-plus .hljs-keyword,
-.code-block-plus .hljs-formula {
-  color: var(--color-accent-600) !important;
-}
-
-.dark .code-block-plus .hljs-keyword {
-  color: var(--color-accent-400) !important;
-}
-
-.code-block-plus .hljs-section,
-.code-block-plus .hljs-name,
 .code-block-plus .hljs-selector-tag,
-.code-block-plus .hljs-deletion,
-.code-block-plus .hljs-subst {
-  color: var(--color-error) !important;
+.code-block-plus .hljs-built_in,
+.code-block-plus .hljs-name,
+.code-block-plus .hljs-tag {
+  color: #d73a49 !important; /* GitHub Red/Pink */
 }
 
-.code-block-plus .hljs-literal {
-  color: var(--color-info) !important;
+.code-block-plus .hljs-type,
+.code-block-plus .hljs-class .hljs-title {
+  color: #6f42c1 !important; /* GitHub Purple */
+}
+
+.code-block-plus .hljs-function,
+.code-block-plus .hljs-title,
+.code-block-plus .hljs-section {
+  color: #6f42c1 !important; /* GitHub Purple */
+}
+
+.code-block-plus .hljs-variable,
+.code-block-plus .hljs-template-variable,
+.code-block-plus .hljs-attr,
+.code-block-plus .hljs-attribute,
+.code-block-plus .hljs-property {
+  color: #005cc5 !important; /* GitHub Blue */
 }
 
 .code-block-plus .hljs-string,
-.code-block-plus .hljs-regexp,
-.code-block-plus .hljs-addition,
-.code-block-plus .hljs-attribute,
-.code-block-plus .hljs-meta .hljs-string {
-  color: var(--color-success) !important;
+.code-block-plus .hljs-meta .hljs-string,
+.code-block-plus .hljs-doctag,
+.code-block-plus .hljs-regexp {
+  color: #032f62 !important; /* GitHub Dark Blue */
 }
 
-.code-block-plus .hljs-attr,
-.code-block-plus .hljs-variable,
-.code-block-plus .hljs-template-variable,
-.code-block-plus .hljs-type,
-.code-block-plus .hljs-selector-class,
-.code-block-plus .hljs-selector-attr,
-.code-block-plus .hljs-selector-pseudo,
-.code-block-plus .hljs-number {
-  color: var(--color-warning) !important;
+.code-block-plus .hljs-number,
+.code-block-plus .hljs-boolean,
+.code-block-plus .hljs-literal {
+  color: #005cc5 !important; /* GitHub Blue */
 }
 
-.code-block-plus .hljs-symbol,
-.code-block-plus .hljs-bullet,
-.code-block-plus .hljs-link,
-.code-block-plus .hljs-meta,
-.code-block-plus .hljs-selector-id,
-.code-block-plus .hljs-title {
-  color: var(--color-info) !important;
+.code-block-plus .hljs-punctuation {
+  color: var(--color-text-secondary) !important;
 }
 
-.code-block-plus .hljs-built_in,
-.code-block-plus .hljs-title.class_,
-.code-block-plus .hljs-class .hljs-title {
-  color: var(--color-accent-600) !important;
-}
-
-.dark .code-block-plus .hljs-built_in,
-.dark .code-block-plus .hljs-title.class_ {
-  color: var(--color-accent-300) !important;
-}
-
-.code-block-plus .hljs-emphasis {
-  font-style: italic;
-}
-
-.code-block-plus .hljs-strong {
-  font-weight: bold;
-}
-
-/* Ensure text color adapts to theme */
 .code-block-plus code {
   color: var(--color-text-primary) !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-weight: 500;
+  text-shadow: none !important; /* Fix light mode blur */
 }
 
 /* =============================================
@@ -2066,49 +2120,49 @@ body {
   background: transparent; /* Wrapper transparent, inner has color */
 }
 
-/* 2. SUPER VIBRANT TOKYO NIGHT THEME */
-.code-block-plus .hljs-keyword,
-.code-block-plus .hljs-selector-tag,
-.code-block-plus .hljs-literal,
-.code-block-plus .hljs-section,
-.code-block-plus .hljs-link {
+/* 2. SUPER VIBRANT TOKYO NIGHT THEME (DARK MODE ONLY) */
+.dark .code-block-plus .hljs-keyword,
+.dark .code-block-plus .hljs-selector-tag,
+.dark .code-block-plus .hljs-literal,
+.dark .code-block-plus .hljs-section,
+.dark .code-block-plus .hljs-link {
   color: #bb9af7 !important; /* Neon Purple */
   font-weight: bold;
 }
 
-.code-block-plus .hljs-function, 
-.code-block-plus .hljs-title {
+.dark .code-block-plus .hljs-function, 
+.dark .code-block-plus .hljs-title {
   color: #7aa2f7 !important; /* Neon Blue */
 }
 
-.code-block-plus .hljs-string,
-.code-block-plus .hljs-doctag,
-.code-block-plus .hljs-regexp {
+.dark .code-block-plus .hljs-string,
+.dark .code-block-plus .hljs-doctag,
+.dark .code-block-plus .hljs-regexp {
   color: #9ece6a !important; /* Neon Green */
 }
 
-.code-block-plus .hljs-type,
-.code-block-plus .hljs-class .hljs-title,
-.code-block-plus .hljs-attr,
-.code-block-plus .hljs-attribute,
-.code-block-plus .hljs-symbol,
-.code-block-plus .hljs-bullet,
-.code-block-plus .hljs-addition,
-.code-block-plus .hljs-variable,
-.code-block-plus .hljs-template-variable {
+.dark .code-block-plus .hljs-type,
+.dark .code-block-plus .hljs-class .hljs-title,
+.dark .code-block-plus .hljs-attr,
+.dark .code-block-plus .hljs-attribute,
+.dark .code-block-plus .hljs-symbol,
+.dark .code-block-plus .hljs-bullet,
+.dark .code-block-plus .hljs-addition,
+.dark .code-block-plus .hljs-variable,
+.dark .code-block-plus .hljs-template-variable {
   color: #2ac3de !important; /* Neon Cyan */
 }
 
-.code-block-plus .hljs-number, 
-.code-block-plus .hljs-meta, 
-.code-block-plus .hljs-built_in, 
-.code-block-plus .hljs-builtin-name, 
-.code-block-plus .hljs-params {
+.dark .code-block-plus .hljs-number, 
+.dark .code-block-plus .hljs-meta, 
+.dark .code-block-plus .hljs-built_in, 
+.dark .code-block-plus .hljs-builtin-name, 
+.dark .code-block-plus .hljs-params {
   color: #ff9e64 !important; /* Neon Orange */
 }
 
-.code-block-plus .hljs-comment,
-.code-block-plus .hljs-quote {
+.dark .code-block-plus .hljs-comment,
+.dark .code-block-plus .hljs-quote {
   color: #a9b1d6 !important; /* Bright Gray */
   background: rgba(169, 177, 214, 0.1);
   padding: 0 4px;
@@ -2116,12 +2170,12 @@ body {
   font-style: italic;
 }
 
-.code-block-plus .hljs-deletion {
+.dark .code-block-plus .hljs-deletion {
   color: #f7768e !important; /* Neon Red */
 }
 
 /* Ensure code text contrast */
-.code-block-plus code {
+.dark .code-block-plus code {
   color: #c0caf5 !important; /* Bright White-ish Blue */
   font-weight: 500;
   text-shadow: 0 0 2px rgba(0,0,0,0.5); /* Pop out text */
@@ -2129,85 +2183,86 @@ body {
 
 
 /* =============================================
-   VS CODE DARK+ THEME (ACCURATE)
+   VS CODE DARK+ THEME (ACCURATE) (DARK MODE ONLY)
    ============================================= */
 
 /* Base Text */
-.code-block-plus code {
+.dark .code-block-plus code {
   color: #D4D4D4 !important; /* VSCode Default Text */
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
 /* Keywords (import, export, return, if, else -> Pink/Purple) */
-.code-block-plus .hljs-keyword,
-.code-block-plus .hljs-selector-tag,
-.code-block-plus .hljs-built_in,
-.code-block-plus .hljs-name,
-.code-block-plus .hljs-tag {
+.dark .code-block-plus .hljs-keyword,
+.dark .code-block-plus .hljs-selector-tag,
+.dark .code-block-plus .hljs-built_in,
+.dark .code-block-plus .hljs-name,
+.dark .code-block-plus .hljs-tag {
   color: #C586C0 !important;
 }
 
 /* Storage types (const, let, var, function -> Blue) */
 /* highlight.js kadang menyatukan keyword, jadi kita override umum dulu */
-.code-block-plus .hljs-type {
+.dark .code-block-plus .hljs-type {
   color: #4EC9B0 !important; /* Class types -> Teal */
 }
 
 /* Functions (Yellow) */
-.code-block-plus .hljs-function,
-.code-block-plus .hljs-title,
-.code-block-plus .hljs-section,
-.code-block-plus .hljs-title.function_ {
+.dark .code-block-plus .hljs-function,
+.dark .code-block-plus .hljs-title,
+.dark .code-block-plus .hljs-section,
+.dark .code-block-plus .hljs-title.function_ {
   color: #DCDCAA !important;
 }
 
 /* Variables & Properties (Light Blue) */
-.code-block-plus .hljs-variable,
-.code-block-plus .hljs-template-variable,
-.code-block-plus .hljs-attr,
-.code-block-plus .hljs-attribute,
-.code-block-plus .hljs-property {
+.dark .code-block-plus .hljs-variable,
+.dark .code-block-plus .hljs-template-variable,
+.dark .code-block-plus .hljs-attr,
+.dark .code-block-plus .hljs-attribute,
+.dark .code-block-plus .hljs-property {
   color: #9CDCFE !important;
 }
 
 /* Strings (Orange/Brown) */
-.code-block-plus .hljs-string,
-.code-block-plus .hljs-meta .hljs-string {
+.dark .code-block-plus .hljs-string,
+.dark .code-block-plus .hljs-meta .hljs-string {
   color: #CE9178 !important;
 }
 
 /* Comments (Green) */
-.code-block-plus .hljs-comment,
-.code-block-plus .hljs-quote {
+.dark .code-block-plus .hljs-comment,
+.dark .code-block-plus .hljs-quote {
   color: #6A9955 !important;
   font-style: italic;
+  background: transparent;
 }
 
 /* Numbers & Booleans (Light Green) */
-.code-block-plus .hljs-number,
-.code-block-plus .hljs-boolean,
-.code-block-plus .hljs-literal {
+.dark .code-block-plus .hljs-number,
+.dark .code-block-plus .hljs-boolean,
+.dark .code-block-plus .hljs-literal {
   color: #B5CEA8 !important;
 }
 
 /* HTML Tags (Blue) */
-.code-block-plus .hljs-tag .hljs-name {
+.dark .code-block-plus .hljs-tag .hljs-name {
   color: #569CD6 !important;
 }
 
 /* JSX/TSX Component Tags (Green/Teal) */
-.code-block-plus .hljs-tag .hljs-title, 
-.code-block-plus .hljs-class .hljs-title {
+.dark .code-block-plus .hljs-tag .hljs-title, 
+.dark .code-block-plus .hljs-class .hljs-title {
   color: #4EC9B0 !important;
 }
 
 /* Punctuation (Default/White-ish) */
-.code-block-plus .hljs-punctuation {
+.dark .code-block-plus .hljs-punctuation {
   color: #D4D4D4 !important;
 }
 
 /* Special fix for 'function' keyword which nicely is blue in VSCode but sometimes pink in others */
-.code-block-plus .hljs-keyword.function {
+.dark .code-block-plus .hljs-keyword.function {
   color: #569CD6 !important;
 }
 

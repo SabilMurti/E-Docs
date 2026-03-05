@@ -6,7 +6,8 @@ import {
   ChevronDown,
   ChevronUp,
   ListChecks,
-  Check
+  Check,
+  ArrowDownToLine
 } from 'lucide-react';
 
 export default function StepsBlock({ node, updateAttributes, editor, getPos }) {
@@ -25,12 +26,28 @@ export default function StepsBlock({ node, updateAttributes, editor, getPos }) {
     updateAttributes({ completedSteps: newCompleted });
   };
 
-  const addStep = () => {
+  const addStep = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const pos = getPos() + node.nodeSize - 1;
     editor.chain().focus().insertContentAt(pos, {
       type: 'step',
       content: [{ type: 'paragraph' }]
     }).run();
+  };
+  
+  const exitSteps = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof getPos !== 'function') return;
+    const pos = getPos() + node.nodeSize;
+    editor.chain().focus().insertContentAt(pos, { type: 'paragraph' }).run();
+  };
+
+  const toggleCollapse = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCollapsed(!collapsed);
   };
 
   return (
@@ -59,14 +76,21 @@ export default function StepsBlock({ node, updateAttributes, editor, getPos }) {
             
             <div className="steps-header-actions">
               <button
-                onClick={addStep}
+                onMouseDown={addStep}
                 className="steps-action-btn steps-add-btn"
                 title="Add step"
               >
                 <Plus size={16} />
               </button>
               <button
-                onClick={() => setCollapsed(!collapsed)}
+                onMouseDown={exitSteps}
+                className="steps-action-btn"
+                title="Exit steps (insert text below)"
+              >
+                <ArrowDownToLine size={16} />
+              </button>
+              <button
+                onMouseDown={toggleCollapse}
                 className="steps-action-btn"
                 title={collapsed ? 'Expand' : 'Collapse'}
               >

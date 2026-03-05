@@ -6,8 +6,8 @@ import {
   ChevronRight, ChevronDown, List,
   Copy, Check
 } from 'lucide-react';
-import { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, X, Layers } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { resolveImageUrl } from '../../api/client';
 
 // Copy button with visual confirmation for code blocks
@@ -113,12 +113,14 @@ function PageViewer({ content }) {
     
     return doc.content.map((node, i) => {
       switch (node.type) {
-        case 'paragraph':
+        case 'paragraph': {
+          const textAlign = node.attrs?.textAlign || 'left';
+          
           if (!node.content || node.content.length === 0) {
-            return <div key={i} className="h-4" />;
+            return <div key={i} className="h-4" style={{ textAlign }} />;
           }
           return (
-            <p key={i} className="mb-4 leading-7 text-[var(--color-text-primary)]">
+            <p key={i} className="mb-4 leading-7 text-[var(--color-text-primary)]" style={{ textAlign }}>
               {node.content.map((c, j) => {
                 if (c.type === 'text') return renderText(c, j);
                 if (c.type === 'image') {
@@ -141,9 +143,11 @@ function PageViewer({ content }) {
               })}
             </p>
           );
+        }
           
         case 'heading': {
           const level = node.attrs?.level || 1;
+          const textAlign = node.attrs?.textAlign || 'left';
           const Tag = `h${level}`;
           const styles = {
             1: 'text-3xl font-extrabold mb-6 mt-10 pb-2 border-b border-[var(--color-border-secondary)]',
@@ -153,7 +157,12 @@ function PageViewer({ content }) {
           };
           
           return (
-            <Tag key={i} className={`${styles[level] || styles[1]} text-[var(--color-text-primary)] scroll-mt-20`} id={`heading-${i}`}>
+            <Tag 
+              key={i} 
+              className={`${styles[level] || styles[1]} text-[var(--color-text-primary)] scroll-mt-20`} 
+              id={`heading-${i}`}
+              style={{ textAlign }}
+            >
               {node.content?.map((c, j) => renderText(c, j)) || ''}
             </Tag>
           );
@@ -263,31 +272,66 @@ function PageViewer({ content }) {
            );
         }
 
-        case 'youtube':
+        case 'youtube': {
+           // Convert any YouTube URL format → embed URL
+           const toYouTubeEmbed = (url) => {
+             if (!url) return null;
+             // Already an embed URL — use as-is
+             if (url.includes('/embed/')) return url;
+             let videoId = null;
+             try {
+               const u = new URL(url);
+               if (u.hostname.includes('youtu.be')) {
+                 videoId = u.pathname.slice(1);
+               } else if (u.hostname.includes('youtube.com')) {
+                 videoId = u.searchParams.get('v') || u.pathname.split('/').pop();
+               }
+             } catch { videoId = null; }
+             return videoId
+               ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`
+               : url;
+           };
+           const embedSrc = toYouTubeEmbed(node.attrs.src);
+           if (!embedSrc) return null;
            return (
              <div key={i} className="my-8 aspect-video rounded-lg overflow-hidden shadow-sm border border-[var(--color-border-primary)] bg-black">
-               <iframe 
-                 src={node.attrs.src} 
-                 width="100%" 
-                 height="100%" 
-                 allowFullScreen 
+               <iframe
+                 src={embedSrc}
+                 width="100%"
+                 height="100%"
+                 allowFullScreen
                  frameBorder="0"
                  title="YouTube video"
                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                />
              </div>
            );
+        }
 
-        case 'fileAttachment':
+        case 'fileAttachment': {
+            const fileSrc = resolveImageUrl(node.attrs.src);
+            const fileTitle = node.attrs.title || node.attrs.src?.split('/').pop() || 'download';
+
+            const handleFileDownload = async (e) => {
+              e.preventDefault();
+              try {
+                const response = await fetch(fileSrc);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileTitle;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } catch {
+                window.open(fileSrc, '_blank');
+              }
+            };
+
             return (
-              <a 
-                key={i} 
-                href={node.attrs.src} 
-                download 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block mb-6 no-underline group"
-              >
+              <div key={i} className="block mb-6 group cursor-pointer" onClick={handleFileDownload}>
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] transition-all group-hover:border-[var(--color-accent)] group-hover:shadow-md">
                     <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg">
                         {getFileIcon(node.attrs.type)}
@@ -304,8 +348,9 @@ function PageViewer({ content }) {
                         <Download size={20} />
                     </div>
                 </div>
-              </a>
+              </div>
             );
+        }
 
         case 'horizontalRule':
            return <hr key={i} className="my-10 border-t border-[var(--color-border-secondary)]" />;
@@ -456,6 +501,137 @@ function PageViewer({ content }) {
 
         case 'tabItem':
           return <div key={i}>{renderContent(node)}</div>;
+
+        case 'button': {
+          const variant = node.attrs?.variant || 'primary';
+          const btnText = node.attrs?.text || 'Click here';
+          const btnUrl  = node.attrs?.url  || '#';
+
+          // Use inline styles to override .page-viewer a global CSS (color, text-decoration, etc.)
+          const variantStyle = {
+            primary: {
+              background: 'var(--color-accent)',
+              color: '#ffffff',
+              border: 'none',
+            },
+            secondary: {
+              background: 'var(--color-bg-primary)',
+              color: 'var(--color-text-primary)',
+              border: '1px solid var(--color-border-primary)',
+            },
+            outline: {
+              background: 'transparent',
+              color: 'var(--color-accent)',
+              border: '2px solid var(--color-accent)',
+            },
+          }[variant] || {};
+
+          return (
+            <div key={i} className="my-4">
+              <a
+                href={btnUrl}
+                target={btnUrl.startsWith('http') ? '_blank' : '_self'}
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 24px',
+                  borderRadius: '8px',
+                  fontWeight: 500,
+                  textDecoration: 'none',        // override .page-viewer a underline
+                  textDecorationLine: 'none',    // extra safety
+                  transition: 'opacity 0.15s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  ...variantStyle,
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                {btnText}
+                {btnUrl.startsWith('http') && <ExternalLink size={14} />}
+              </a>
+            </div>
+          );
+        }
+
+
+        case 'steps':
+          return (
+            <div key={i} className="steps-block my-8 space-y-0">
+              {node.content?.map((step, j) => (
+                <div key={j} className="flex gap-4 items-start relative">
+                  {/* Connector line between steps */}
+                  {j < (node.content?.length ?? 0) - 1 && (
+                    <div className="absolute left-3.5 top-7 bottom-0 w-px bg-[var(--color-border-primary)]" />
+                  )}
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[var(--color-accent)] text-white text-xs font-bold flex items-center justify-center z-10">{j + 1}</div>
+                  <div className="flex-1 pb-6 pt-0.5 min-w-0">{renderContent(step)}</div>
+                </div>
+              ))}
+            </div>
+          );
+
+        case 'step':
+          // Individual step child — rendered by the steps case above via renderContent
+          return <div key={i} className="min-w-0">{renderContent(node)}</div>;
+
+        case 'mermaid': {
+          const mermaidCode = node.attrs?.code || '';
+          return (
+            <div key={i} className="my-6 rounded-xl border border-[var(--color-border-primary)] overflow-hidden">
+              <div className="px-3 py-1.5 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] flex items-center gap-2">
+                <span className="text-xs font-mono text-[var(--color-text-muted)]">mermaid</span>
+              </div>
+              <pre className="p-4 text-sm font-mono text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] overflow-x-auto whitespace-pre">{mermaidCode}</pre>
+            </div>
+          );
+        }
+
+        case 'iframe': {
+          const iframeSrc = node.attrs?.src;
+          if (!iframeSrc) return null;
+          // Use explicit height if set (e.g. "500px" or 500), else fill 16:9 aspect ratio
+          const explicitHeight = node.attrs?.height && node.attrs.height !== '100%'
+            ? node.attrs.height
+            : null;
+          return (
+            <div key={i} className="my-8 rounded-xl overflow-hidden border border-[var(--color-border-primary)] shadow-md">
+              <div
+                style={{
+                  position: 'relative',
+                  paddingBottom: explicitHeight ? 0 : '56.25%', // 16:9
+                  height: explicitHeight ? (typeof explicitHeight === 'number' ? `${explicitHeight}px` : explicitHeight) : 0,
+                  overflow: 'hidden',
+                }}
+              >
+                <iframe
+                  src={iframeSrc}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                  allowFullScreen
+                  title="Embedded content"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                />
+              </div>
+            </div>
+          );
+        }
+
+        case 'apiEndpoint': {
+          const method = node.attrs?.method || 'GET';
+          const methodColors = { GET: '#22c55e', POST: '#3b82f6', PUT: '#f59e0b', PATCH: '#a855f7', DELETE: '#ef4444' };
+          return (
+            <div key={i} className="my-6 rounded-xl overflow-hidden border border-[var(--color-border-primary)] shadow-sm font-mono text-sm">
+              <div className="flex items-center gap-3 px-4 py-3 bg-[var(--color-bg-secondary)]">
+                <span className="font-bold text-xs px-2 py-0.5 rounded" style={{ background: methodColors[method] + '22', color: methodColors[method] }}>{method}</span>
+                <span className="text-[var(--color-text-secondary)] truncate">{node.attrs?.url || '/'}</span>
+              </div>
+              {node.attrs?.description && (
+                <p className="px-4 py-2 text-[var(--color-text-muted)] text-sm border-t border-[var(--color-border-primary)] font-sans">{node.attrs.description}</p>
+              )}
+            </div>
+          );
+        }
 
         default:
           return null;

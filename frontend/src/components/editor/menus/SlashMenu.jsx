@@ -42,13 +42,19 @@ export default function SlashMenu({
   }, [selectedIndex]);
 
   // Select and execute block action
-  const selectItem = useCallback((item) => {
+  const selectItem = useCallback((item, e) => {
     if (!item || !editor) return;
+    if (e) { e.preventDefault(); e.stopPropagation(); }
 
-    // Delete the slash command text first
+    // Re-focus editor first to ensure selection is valid
+    editor.view.focus();
+
+    // Delete the slash command text (slash + query)
     const { from } = editor.state.selection;
     const deleteFrom = from - (query.length + 1); // +1 for the slash
-    editor.commands.deleteRange({ from: deleteFrom, to: from });
+    if (deleteFrom >= 0) {
+      editor.commands.deleteRange({ from: deleteFrom, to: from });
+    }
 
     // Execute the block action
     try {
@@ -175,7 +181,7 @@ export default function SlashMenu({
                   <button
                     key={block.id}
                     ref={(el) => itemRefs.current[currentIndex] = el}
-                    onClick={() => selectItem(block)}
+                    onMouseDown={(e) => selectItem(block, e)}
                     onMouseEnter={() => setSelectedIndex(currentIndex)}
                     className={`
                       w-full flex items-center gap-3 px-2 py-1.5 rounded-lg text-left transition-colors

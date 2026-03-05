@@ -31,24 +31,42 @@ export const Tabs = Node.create({
   
   addCommands() {
     return {
-      setTabs: () => ({ commands }) => {
-        return commands.insertContent({
-          type: 'tabs',
-          attrs: { activeTab: 0 },
-          content: [
-            { 
-              type: 'tabItem', 
-              attrs: { title: 'Tab 1', isActive: true }, 
-              content: [{ type: 'paragraph' }] 
-            },
-            { 
-              type: 'tabItem', 
-              attrs: { title: 'Tab 2', isActive: false }, 
-              content: [{ type: 'paragraph' }] 
-            }
-          ]
-        });
+      setTabs: () => ({ state, dispatch, editor }) => {
+        const { schema, selection } = state;
+        const { $from } = selection;
+
+        // Build tab nodes with correct isActive attrs from the start
+        const tab1 = schema.nodes.tabItem.create(
+          { title: 'Tab 1', isActive: true },
+          schema.nodes.paragraph.create()
+        );
+        const tab2 = schema.nodes.tabItem.create(
+          { title: 'Tab 2', isActive: false },
+          schema.nodes.paragraph.create()
+        );
+        const tabsNode = schema.nodes.tabs.create(
+          { activeTab: 0 },
+          [tab1, tab2]
+        );
+
+        if (dispatch) {
+          // Insert the tabs block at the current block position
+          const insertAt = $from.before($from.depth) < 0 ? 0 : $from.before($from.depth === 0 ? 1 : $from.depth);
+          const tr = state.tr.insert(insertAt, tabsNode);
+
+          // Place cursor inside Tab 1's paragraph (insertAt + 1 tabs open + 1 tabItem open + 1 paragraph open = +3)
+          const cursorPos = insertAt + 3;
+          if (cursorPos <= tr.doc.content.size) {
+            tr.setSelection(
+              state.selection.constructor.near(tr.doc.resolve(cursorPos))
+            );
+          }
+
+          dispatch(tr);
+        }
+        return true;
       },
+
       addTab: () => ({ state, dispatch, tr }) => {
         const { selection } = state;
         let tabsPos = -1;

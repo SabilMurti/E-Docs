@@ -55,7 +55,7 @@ export default function CodeBlockComponent({ node, updateAttributes, extension }
 
         {/* Copy Button */}
         <button 
-          onClick={handleCopy}
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy(); }}
           className="p-1 rounded hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           title="Copy code"
         >
