@@ -164,20 +164,25 @@ const usePageStore = create((set, get) => ({
   clearError: () => set({ error: null }),
 
   // Save draft (lightweight save without commit)
+  // IMPORTANT: Does NOT update currentPage.content in the store — the editor is the
+  // source of truth during an active edit session. Only metadata (updated_at) is synced.
   saveDraft: async (siteId, pageId, data, params = {}) => {
     set({ isSaving: true, error: null });
     try {
       const response = await pagesApi.updatePage(siteId, pageId, data, params);
 
-      // Guard: only use the response as page data if it looks like a real page object.
-      // If server returns {success:true} or similar, keep the existing currentPage.
       const updatedPage = (response?.id || response?.data?.id)
         ? (response.id ? response : response.data)
         : null;
 
       set((state) => ({
+        // Only sync safe metadata — never overwrite content (editor owns content)
         currentPage: updatedPage && state.currentPage?.slug === pageId
-          ? { ...state.currentPage, ...updatedPage }  // merge to preserve local fields
+          ? { 
+              ...state.currentPage, 
+              updated_at: updatedPage.updated_at ?? state.currentPage.updated_at,
+              // Deliberately NOT spreading content from server response
+            }
           : state.currentPage,
         isSaving: false,
       }));
@@ -196,10 +201,18 @@ const usePageStore = create((set, get) => ({
     set({ isSaving: true, error: null });
     try {
       const response = await pagesApi.commitChange(siteId, pageId, data, params);
-      set({ 
-        currentRequest: response.request,
-        isSaving: false 
-      });
+
+      // Refetch the page so currentPage reflects the just-committed content.
+      // This prevents auto-save from re-saving stale local state after a commit.
+      try {
+        const fetchParams = params.branch_id ? { branch_id: params.branch_id } : {};
+        const refreshed = await pagesApi.getPage(siteId, pageId, fetchParams);
+        const page = refreshed.data || refreshed;
+        set({ currentPage: page, isSaving: false });
+      } catch (_) {
+        set({ isSaving: false });
+      }
+
       return { success: true, commit: response.commit };
     } catch (error) {
       set({ error: error.message, isSaving: false });

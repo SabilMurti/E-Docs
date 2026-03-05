@@ -332,6 +332,7 @@ function UnifiedSidebar({ isOpen, onClose }) {
         fetchBranches,
         createBranch,
         switchBranch,
+        initBranchForSite,
         isLoading: siteLoading,
     } = useSiteStore();
     const {
@@ -377,10 +378,13 @@ function UnifiedSidebar({ isOpen, onClose }) {
 
     useEffect(() => {
         if (siteSlug) {
-            switchBranch("main"); // Reset to main when switching sites
+            // Restore the branch the user was on previously (from localStorage)
+            // instead of always resetting to 'main'. This is the key fix for
+            // branch isolation: user stays on their working branch after refresh.
+            initBranchForSite(siteSlug);
             fetchBranches(siteSlug);
         }
-    }, [siteSlug, fetchBranches, switchBranch]);
+    }, [siteSlug, fetchBranches, initBranchForSite]);
 
     useEffect(() => {
         fetchSites();
@@ -407,17 +411,16 @@ function UnifiedSidebar({ isOpen, onClose }) {
     const handleSwitchBranch = async (branchName) => {
         if (branchName === currentBranch) return;
 
-        // 1. Switch the store state first for UI responsiveness (optimistic)
-        switchBranch(branchName);
+        // 1. Switch the store's active branch name (persists to localStorage)
+        switchBranch(branchName, siteSlug);
 
-        // 2. Determine current location context
+        // 2. CRITICAL: Clear currentPage so PageContent cannot reuse the stale branch_id
+        //    from the old branch. Without this, "same slug" check in PageContent would
+        //    incorrectly reuse the previous branch's page ID for the fetch.
+        usePageStore.getState().setCurrentPage(null);
+
+        // 3. Determine current location context (which logical page was viewed)
         let currentLogicalId = null;
-
-        // We try to find the logical ID of the *currently viewing* page
-        // We must use the 'pages' from store which are presumably the *old* branch's pages
-        // (since we just switched branch name but haven't fetched new pages yet)
-
-        // Use the URL to get the slug, as it is the most reliable source of truth for "where am I"
         const pathParts = location.pathname.split("/pages/");
         const currentPageSlug = pathParts.length > 1 ? pathParts[1] : null;
 
@@ -431,10 +434,10 @@ function UnifiedSidebar({ isOpen, onClose }) {
             }
         }
 
-        // 3. Fetch pages for the NEW branch
+        // 4. Fetch pages for the NEW branch
         const newPages = await fetchPages(siteSlug, branchName);
 
-        // 4. Navigate to the equivalent page or root
+        // 5. Navigate to the equivalent page or root
         if (currentPageSlug && currentLogicalId && newPages) {
             const targetPage = findPageInTree(
                 newPages,
@@ -445,18 +448,17 @@ function UnifiedSidebar({ isOpen, onClose }) {
                 navigate(`/sites/${siteSlug}/pages/${targetPage.slug}`);
                 toast.success(`Switched to branch '${branchName}'`);
             } else {
-                // Page deleted or doesn't exist in new branch
                 navigate(`/sites/${siteSlug}`);
                 toast.success(
                     `Switched to '${branchName}' (Page not found in this branch)`,
                 );
             }
         } else {
-            // Was on root or unknown page
             navigate(`/sites/${siteSlug}`);
             toast.success(`Switched to branch '${branchName}'`);
         }
     };
+
 
     const handleCreateBranch = async (e) => {
         e.preventDefault();

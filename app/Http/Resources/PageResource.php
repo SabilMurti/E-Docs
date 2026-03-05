@@ -31,9 +31,7 @@ class PageResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'children' => PageResource::collection($this->whenLoaded('allChildren')),
-            'excerpt' => $this->when($this->content, function () {
-                return null;
-            }),
+            'excerpt' => $this->when($this->content, fn() => $this->excerpt),
         ];
     }
 }

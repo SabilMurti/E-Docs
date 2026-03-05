@@ -458,41 +458,63 @@ body {
 .hljs-meta, .hljs-operator, .hljs-punctuation { color: #56b6c2 !important; }
 .hljs-property, .hljs-attr, .hljs-name { color: #e06c75 !important; }
 
-/* In Light Mode, we adjust some colors to remain visible on the dark #1e1e2e or #13131f background 
-   typically used for our code blocks regardless of theme. The above colors are optimized for dark 
-   backgrounds, so they work great! */
+/* =============================================
+   API Endpoint Block - Theme-aware body background
+   ============================================= */
+.api-endpoint-body {
+  background-color: var(--color-bg-secondary);
+}
+
+.dark .api-endpoint-body {
+  background-color: #13131f;
+}
+
+/* Ensure hljs colors render well on light bg */
+.api-endpoint-body .hljs-comment,
+.api-endpoint-body .hljs-quote,
+.api-endpoint-body .hljs-deletion {
+  opacity: 1;
+}
+
 
 /* =============================================
    TipTap Editor - Core Styles
    ============================================= */
+
+/* Custom dark I-beam mouse cursor in light mode — always visible */
+.page-editor .ProseMirror,
+.page-editor .page-editor-content {
+  /* 7x16px I-beam — proportional to system cursor */
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='16' viewBox='0 0 7 16'%3E%3Cline x1='0' y1='1' x2='6' y2='1' stroke='%23111' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='3' y1='1' x2='3' y2='15' stroke='%23111' stroke-width='1.5'/%3E%3Cline x1='0' y1='15' x2='6' y2='15' stroke='%23111' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 3 8, text;
+  caret-color: #111111;
+}
+
+/* White I-beam mouse cursor in dark mode */
+.dark .page-editor .ProseMirror,
+.dark .page-editor .page-editor-content {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='16' viewBox='0 0 7 16'%3E%3Cline x1='0' y1='1' x2='6' y2='1' stroke='%23fff' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='3' y1='1' x2='3' y2='15' stroke='%23fff' stroke-width='1.5'/%3E%3Cline x1='0' y1='15' x2='6' y2='15' stroke='%23fff' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 3 8, text;
+  caret-color: #ffffff;
+}
+
+/* Inputs inside custom extensions — keep default */
+.page-editor input[type="text"],
+.page-editor textarea {
+  caret-color: #111111;
+}
+.dark .page-editor input[type="text"],
+.dark .page-editor textarea {
+  caret-color: #ffffff;
+}
+
+
+/* ProseMirror base layout */
 .ProseMirror {
   min-height: 400px;
   outline: none;
   padding-bottom: 50vh;
   font-size: 1rem;
   line-height: 1.75;
-  /* Visible dark cursor in light mode */
-  caret-color: #111111 !important;
 }
-
-/* Cursor stays light in dark mode */
-.dark .ProseMirror {
-  caret-color: #ffffff !important;
-}
-
-/* Also target all contenteditable in the editor area */
-.page-editor [contenteditable],
-.page-editor-content,
-[contenteditable].page-editor-content {
-  caret-color: #111111 !important;
-}
-
-.dark .page-editor [contenteditable],
-.dark .page-editor-content,
-.dark [contenteditable].page-editor-content {
-  caret-color: #ffffff !important;
-}
-
 
 .ProseMirror > * + * {
   margin-top: 0.75em;

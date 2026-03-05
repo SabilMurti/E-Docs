@@ -58,29 +58,29 @@ export default function APIEndpointBlock({ node, updateAttributes, selected }) {
       <div className={`rounded-xl overflow-hidden border transition-all duration-200 ${selected ? 'border-[var(--color-accent)] ring-2 ring-[var(--color-accent)]/20' : 'border-[var(--color-border-primary)]'}`}>
 
         {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-[#1e1e2e] border-b border-white/10 flex-wrap gap-y-2">
+        <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] flex-wrap gap-y-2">
           {METHODS.map(m => (
             <button key={m}
               onMouseDown={e => { e.preventDefault(); updateAttributes({ method: m }); }}
-              className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide transition-all ${method === m ? `${METHOD_COLORS[m]} text-white` : 'text-slate-500 hover:text-slate-300 hover:bg-white/10'}`}
+              className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wide transition-all ${method === m ? `${METHOD_COLORS[m]} text-white` : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}`}
             >{m}</button>
           ))}
-          <span className="text-white/20">|</span>
+          <span className="text-[var(--color-border-primary)]">|</span>
           <input type="text" value={endpoint}
             onChange={e => updateAttributes({ endpoint: e.target.value })}
             onMouseDown={e => e.stopPropagation()}
-            className="flex-1 bg-transparent outline-none text-sm font-mono text-slate-200 placeholder-slate-600 min-w-0 border-none"
+            className="flex-1 bg-transparent outline-none text-sm font-mono text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] min-w-0 border-none"
             placeholder="/api/v1/endpoint"
           />
           <select value={lang}
             onChange={e => updateAttributes({ lang: e.target.value })}
             onMouseDown={e => e.stopPropagation()}
-            className="bg-white/10 border border-white/10 text-slate-300 text-[11px] rounded px-2 py-0.5 outline-none"
+            className="bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] text-[11px] rounded px-2 py-0.5 outline-none"
           >
-            {LANGUAGES.map(l => <option key={l} value={l} className="bg-[#1e1e2e]">{l}</option>)}
+            {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
           <button onMouseDown={handleCopy}
-            className="p-1.5 rounded text-slate-500 hover:text-slate-200 hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
             title="Copy endpoint"
           >
             {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
@@ -89,7 +89,7 @@ export default function APIEndpointBlock({ node, updateAttributes, selected }) {
 
         {/* Body: Highlighting wrapper */}
         <div 
-          className="bg-[#13131f] relative min-h-[80px] max-h-[350px] overflow-y-auto cursor-text group" 
+          className="api-endpoint-body relative min-h-[80px] max-h-[350px] overflow-y-auto cursor-text group" 
           onClick={(e) => {
             setIsCodeFocused(true);
             // Wait for React to render textarea, then focus it
@@ -115,7 +115,7 @@ export default function APIEndpointBlock({ node, updateAttributes, selected }) {
               className="absolute inset-0 w-full h-full resize-none bg-transparent border-none outline-none text-sm font-mono leading-relaxed px-4 py-3"
               style={{
                 color: 'transparent',
-                caretColor: '#cbd5e1', // slate-300
+                caretColor: 'var(--color-text-primary)',
                 WebkitTextFillColor: 'transparent',
                 overflow: 'hidden'
               }}

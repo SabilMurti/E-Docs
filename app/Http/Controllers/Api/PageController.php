@@ -96,13 +96,18 @@ class PageController extends Controller
             ->where('parent_id', $validated['parent_id'] ?? null)
             ->max('order') + 1;
 
+        // Sanitize content on create too
+        $content = isset($validated['content']) && is_array($validated['content'])
+            ? $this->sanitizeTiptapContent($validated['content'])
+            : ($validated['content'] ?? null);
+
         $page = $site->pages()->create([
-            'title' => $validated['title'],
-            'branch_id' => $branch->id,
+            'title'      => $validated['title'],
+            'branch_id'  => $branch->id,
             'logical_id' => \Illuminate\Support\Str::uuid(),
-            'parent_id' => $validated['parent_id'] ?? null,
-            'content' => $validated['content'] ?? null,
-            'order' => $order,
+            'parent_id'  => $validated['parent_id'] ?? null,
+            'content'    => $content,
+            'order'      => $order,
         ]);
 
         $page->load('branch');
@@ -177,14 +182,63 @@ class PageController extends Controller
         }
 
         $pageModel = $query->firstOrFail();
-
         $validated = $request->validated();
+
+        // Sanitize content before saving — fix text nodes with null text values
+        // caused by some custom Tiptap extensions (Toggle, Button, etc.)
+        if (isset($validated['content']) && is_array($validated['content'])) {
+            $validated['content'] = $this->sanitizeTiptapContent($validated['content']);
+        }
 
         $pageModel->update($validated);
         $pageModel->load('branch');
 
         return new PageResource($pageModel);
     }
+
+    /**
+     * Recursively sanitize Tiptap content JSON.
+     * Fixes text nodes with null/missing text field that cause ProseMirror
+     * "Invalid text node in JSON" error on the frontend.
+     */
+    private function sanitizeTiptapContent(array $doc): array
+    {
+        if (!isset($doc['content']) || !is_array($doc['content'])) {
+            return $doc;
+        }
+
+        $doc['content'] = array_values(array_filter(
+            array_map([$this, 'sanitizeNode'], $doc['content'])
+        ));
+
+        return $doc;
+    }
+
+    private function sanitizeNode(?array $node): ?array
+    {
+        if (!$node || !is_array($node)) return null;
+
+        // Remove invalid text nodes — ProseMirror rejects text:null AND text:''
+        if (($node['type'] ?? '') === 'text') {
+            $text = $node['text'] ?? null;
+            if ($text === null || $text === '' || trim($text) === '') {
+                return null; // remove entirely
+            }
+            return $node;
+        }
+
+        // Recurse into children
+        if (isset($node['content']) && is_array($node['content'])) {
+            $node['content'] = array_values(array_filter(
+                array_map([$this, 'sanitizeNode'], $node['content'])
+            ));
+        }
+
+        return $node;
+    }
+
+
+
 
     /**
      * Delete page

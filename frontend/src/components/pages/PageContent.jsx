@@ -112,15 +112,37 @@ export default function PageContent() {
         localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(autoSaveEnabled));
     }, [autoSaveEnabled]);
 
-    // Fetch page on mount or slug change
+    // Track the branch that was active the last time we fetched — used to detect branch switches.
+    const lastFetchedBranchRef = useRef(null);
+
+    // Fetch page on mount, slug change, OR branch switch
     useEffect(() => {
         if (siteSlug && pageSlug) {
-            // Optimistically clear the local editor state if navigating to a new page
+            const branchSwitched = lastFetchedBranchRef.current !== null &&
+                                   lastFetchedBranchRef.current !== currentBranch;
+
+            // Optimistically clear editor state when navigating to a new page
             if (currentPage?.slug && currentPage.slug !== pageSlug) {
                 setLocalContent(null);
                 setHasUnsavedChanges(false);
             }
-            fetchPage(siteSlug, pageSlug, { branch: currentBranch });
+
+            // BRANCH ISOLATION FIX:
+            // If the user switched branches, ALWAYS fetch by branch NAME — never reuse
+            // the branch_id from currentPage (which belongs to the OLD branch).
+            // Only use branch_id shortcut when we're already on the correct branch.
+            const samePageSameBranch =
+                currentPage?.branch_id &&
+                currentPage.slug === pageSlug &&
+                !branchSwitched &&
+                currentPage.branch_name === currentBranch;
+
+            const branchParam = samePageSameBranch
+                ? { branch_id: currentPage.branch_id }
+                : { branch: currentBranch };
+
+            lastFetchedBranchRef.current = currentBranch;
+            fetchPage(siteSlug, pageSlug, branchParam);
         }
     }, [siteSlug, pageSlug, fetchPage, currentBranch]);
 
@@ -133,18 +155,15 @@ export default function PageContent() {
             return;
         }
 
-        const isNewPage =
-            currentPage.id !== prevPageIdRef.current &&  // different page id
-            currentPage.slug !== undefined;               // valid page
+        const isNewPage = currentPage.id !== prevPageIdRef.current && currentPage.slug !== undefined;
+        const isFirstLoad = prevPageIdRef.current === null;
 
-        if (isNewPage) {
-            // Only reset content if we genuinely navigated to a different page
+        if (isNewPage || isFirstLoad) {
             setLocalContent(currentPage.content || '');
             setHasUnsavedChanges(false);
             prevPageIdRef.current = currentPage.id;
         }
-        // If it's the same page (e.g. after saveDraft), do NOT reset localContent
-        // — any content update from the server is irrelevant since the editor holds truth.
+        // If same page after saveDraft, do NOT reset localContent — editor is source of truth.
     }, [currentPage]);
 
     // Derive active branchId from currentPage (most reliable source)
@@ -164,7 +183,10 @@ export default function PageContent() {
 
         setDraftSaving(true);
         try {
-            const result = await saveDraft(siteSlug, currentPage.slug, {
+            // Use page UUID (not slug) as pageId — UUID is unique per branch,
+            // while slug is shared. This guarantees we update the RIGHT page record.
+            const pageIdentifier = currentPage.id || currentPage.slug;
+            const result = await saveDraft(siteSlug, pageIdentifier, {
                 content: localContent,
             }, branchParams);
 
@@ -184,55 +206,49 @@ export default function PageContent() {
     }, [currentPage, localContent, siteSlug, hasUnsavedChanges, saveDraft, branchParams]);
 
     useEffect(() => {
-        if (!autoSaveEnabled || !currentPage) return;
+        if (!autoSaveEnabled || !hasUnsavedChanges || !currentPageRef.current) return;
 
-        // Auto-save timer
-        if (hasUnsavedChanges) {
-            // Clear existing timer
-            if (autoSaveTimerRef.current) {
-                clearTimeout(autoSaveTimerRef.current);
-            }
-
-            autoSaveTimerRef.current = setTimeout(async () => {
-                const content = localContentRef.current;
-                if (content === null || content === undefined) return;
-
-                setDraftSaving(true);
-                try {
-                    const result = await saveDraft(siteSlug, currentPage.slug, {
-                        content,
-                    }, branchParams);
-
-                    if (result.success) {
-                        setHasUnsavedChanges(false);
-                        setLastSaved(new Date());
-                    }
-                } catch (error) {
-                    console.error("Auto-save error:", error);
-                } finally {
-                    setDraftSaving(false);
-                }
-            }, AUTO_SAVE_DELAY);
+        // Set a debounce timer — only the latest change fires a save
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
         }
 
-        // Cleanup: Save on unmount if dirty and auto-save is on
+        autoSaveTimerRef.current = setTimeout(async () => {
+            const content = localContentRef.current;
+            const page = currentPageRef.current;
+            const params = branchParamsRef.current;
+            if (!content || !page) return;
+
+            // Use UUID when available — bypasses branch ambiguity for same-slug pages
+            const pageIdentifier = page.id || page.slug;
+
+            setDraftSaving(true);
+            try {
+                const result = await saveDraft(siteSlug, pageIdentifier, { content }, params);
+                if (result.success) {
+                    setHasUnsavedChanges(false);
+                    setLastSaved(new Date());
+                }
+            } catch (error) {
+                console.error('Auto-save error:', error);
+            } finally {
+                setDraftSaving(false);
+            }
+        }, AUTO_SAVE_DELAY);
+
         return () => {
             if (autoSaveTimerRef.current) {
                 clearTimeout(autoSaveTimerRef.current);
             }
-
-            if (hasUnsavedRef.current && autoSaveEnabled) {
-                const content = localContentRef.current;
-                const page = currentPageRef.current;
-                const params = branchParamsRef.current;
-                if (content && page?.slug) {
-                    saveDraft(siteSlug, page.slug, { content }, params).catch((e) =>
-                        console.error("Unmount save failed", e),
-                    );
-                }
-            }
         };
-    }, [autoSaveEnabled, hasUnsavedChanges, currentPage, siteSlug, saveDraft]);
+    // Only re-run when these actually change — NOT when currentPage/saveDraft change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [autoSaveEnabled, hasUnsavedChanges, siteSlug]);
+
+    // NOTE: The unmount-save was removed because it was overwriting content with stale
+    // localContentRef values when the component unmounted before localContent state was
+    // synced to the ref. The 3-second auto-save timer handles all saves during editing.
+
 
     // --- CONTENT CHANGE ---
     const handleContentChange = useCallback((newContent) => {
@@ -328,9 +344,11 @@ export default function PageContent() {
 
         setDraftSaving(true);
         try {
+            // Use UUID for commit too — ensures commit targets the correct branch's page
+            const pageIdentifier = currentPage.id || currentPage.slug;
             const result = await usePageStore
                 .getState()
-                .commitChange(siteSlug, currentPage.slug, {
+                .commitChange(siteSlug, pageIdentifier, {
                     content: localContent,
                     title: currentPage.title,
                     message: commitMessage || "Update content",
@@ -351,7 +369,7 @@ export default function PageContent() {
         } finally {
             setDraftSaving(false);
         }
-    }, [currentPage, localContent, siteSlug, commitMessage]);
+    }, [currentPage, localContent, siteSlug, commitMessage, branchParams]);
 
     // --- SYNC/PULL ---
     const { currentRequest, fetchRequestDetails } = usePageStore();
@@ -951,7 +969,7 @@ export default function PageContent() {
                     <div className="max-w-3xl mx-auto">
                         {mode === "edit" ? (
                             <PageEditor
-                                content={localContent}
+                                content={localContent ?? currentPage?.content}
                                 onChange={handleContentChange}
                                 editable={true}
                             />

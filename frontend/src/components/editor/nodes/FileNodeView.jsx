@@ -1,6 +1,6 @@
 import { NodeViewWrapper } from '@tiptap/react';
 import { FileText, Download, FileAudio, FileVideo, FileImage, File } from 'lucide-react';
-import { ReactNodeViewRenderer } from '@tiptap/react';
+import { resolveImageUrl } from '../../../api/client';
 
 export default function FileNodeView(props) {
   const { node, selected } = props;
@@ -20,6 +20,33 @@ export default function FileNodeView(props) {
     if (type?.startsWith('audio/')) return <FileAudio size={24} className="text-pink-400" />;
     if (type?.includes('pdf')) return <FileText size={24} className="text-red-400" />;
     return <File size={24} className="text-gray-400" />;
+  };
+
+  // Programmatic download so we can set the correct filename from `title`
+  // The HTML `download` attr is ignored by browsers for cross-origin URLs
+  const handleDownload = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!src) return;
+
+    const filename = title || src.split('/').pop() || 'download';
+    const resolvedSrc = resolveImageUrl(src);
+
+    try {
+      const response = await fetch(resolvedSrc);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback: open in new tab if fetch fails
+      window.open(resolvedSrc, '_blank');
+    }
   };
 
   return (
@@ -44,18 +71,15 @@ export default function FileNodeView(props) {
           </p>
         </div>
 
-        <a
-          href={src}
-          download={title || true}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={handleDownload}
           className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors"
           title={`Download ${title || 'File'}`}
-          onClick={(e) => e.stopPropagation()}
         >
           <Download size={20} />
-        </a>
+        </button>
       </div>
     </NodeViewWrapper>
   );
 }
+
